@@ -1,0 +1,42 @@
+# editing: step entry, the chopper, undo, the grid, the CASSE bank, saving
+1700 enc 6 5
+1800 btn 13
+1900 keys 0x80
+2000 keys 0
+2100 keys 0x200
+2200 keys 0
+2300 keys 0x800
+2400 keys 0
+2500 enc 4 4
+2550 enc 5 2
+2600 shot 20-rec
+2700 btn 13
+2800 enc 1 5
+2900 btn 5
+3000 keys 0x1
+3100 keys 0
+3200 shot 21-magie
+3300 btn 5
+3400 shot 22-hachoir
+3500 press 9
+4200 release 9
+4300 shot 23-annule
+4400 btn 11
+4500 keys 0x1
+4600 keys 0
+4700 keys 0x4
+4800 keys 0
+4900 shot 24-grille
+5000 btn 12
+5600 btn 2
+5700 btn 1
+5800 keys 0x10
+6400 shot 25-fx-casse
+6500 keys 0
+6600 btn 2
+6700 btn 9
+6800 enc 2 1
+6900 btn 1
+7000 btn 1
+7200 shot 26-sauve
+7300 end

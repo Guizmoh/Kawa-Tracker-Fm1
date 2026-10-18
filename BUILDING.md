@@ -121,7 +121,7 @@ Everything that comes from a slot goes through `prj_sanitize` before the audio i
 
 ## Memory and flash
 
-The 0.2 build uses an image of about 414 KB of the 568 KB available (the boot picture is 58 KB of it), 43 KB of the 96 KB of RAM and 292 KB
+The 0.3 build uses an image of about 423 KB of the 568 KB available (the boot picture is 58 KB of it), 46 KB of the 96 KB of RAM and 292 KB
 of the 336 KB pool (the effects' capture, the echo, the project and the screen bands). Projects are kept in
 four 36 KB slots from `0x97000` (slot 0 is the autosave) and the user samples in four 37 KB slots from
 `0xBB000` up to `0xE0000`: the store is `0x97000..0xE0000`, the part of the flash an update never erases.

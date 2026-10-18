@@ -1,0 +1,48 @@
+# the PROJECTS menu, undo/redo, row insert, the engine strip, MOD page
+2600 btn 9
+2900 shot m01-menu
+3000 enc 0 1
+3100 btn 1
+3400 shot m02-saveas-slot
+3500 btn 1
+3800 shot m03-name
+3900 enc 2 3
+4000 enc 0 1
+4100 enc 2 -2
+4300 shot m04-name-edit
+4400 btn 1
+4700 shot m05-saved
+4800 btn 9
+4900 btn 8
+5200 enc 2 2
+5300 enc 2 3
+5500 press 9
+5700 btn 0
+5900 btn 0
+6100 btn 1
+6200 release 9
+6400 shot m06-undo-redo
+6500 press 10
+6600 enc 0 2
+6700 release 10
+6900 shot m07-row-in
+7000 btn 6
+7300 shot m08-sound-strip
+7400 enc 0 1
+7700 shot m09-engine-wave
+7800 btn 6
+7900 btn 6
+8000 btn 6
+8100 btn 6
+8300 enc 2 6
+8400 enc 3 9
+8500 enc 4 -5
+8700 shot m10-mod
+8800 btn 9
+8900 btn 1
+9000 enc 0 -10
+9200 btn 1
+9400 shot m11-new-ask
+9500 btn 1
+9800 shot m12-new
+9900 end

@@ -1,0 +1,9 @@
+# the whole demo song, from the start (the screen follows)
+2600 btn 12
+6000 shot d01
+12000 shot d02
+20000 shot d03
+28000 shot d04
+34000 shot d05
+40000 shot d06
+44000 end

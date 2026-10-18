@@ -1,0 +1,35 @@
+# the screens of the docs, in language L (tests/run_host.sh tests/docs-L.txt)
+10 lang 0
+300 shot boot
+1800 btn 12
+3400 shot tracks
+3500 enc 1 5
+3800 press 2
+3900 keys 0x1
+4100 shot effects
+4300 keys 0
+4310 release 2
+4400 btn 6
+4900 shot sound-break
+5000 enc 1 -5
+5200 shot sound-pulse
+5300 btn 11
+5700 shot grid
+5800 btn 4
+6200 shot mix
+6300 btn 5
+6600 shot magic
+6700 btn 3
+6900 shot scale
+7000 btn 7
+7300 shot song
+7400 btn 8
+7500 press 8
+8200 shot help
+8300 release 8
+8400 btn 2
+8450 btn 1
+8500 keys 0x10
+8800 shot effects-2
+8900 keys 0
+9000 end

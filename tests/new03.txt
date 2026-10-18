@@ -1,0 +1,67 @@
+# KAWA 0.3's pages: TABLE, SAMPLE EDIT, GROOVE, the MIDI clock, the second trick column
+2600 btn 6
+2700 btn 6
+2800 btn 6
+2900 btn 6
+3000 btn 6
+3100 btn 6
+3300 enc 5 1
+3400 enc 2 -3
+3500 enc 3 -2
+3600 enc 0 1
+3700 enc 2 12
+3800 enc 0 1
+3900 enc 2 7
+4000 enc 4 1
+4100 enc 0 1
+4200 enc 2 3
+4300 enc 3 9
+4400 enc 4 3
+4500 enc 5 -2
+4600 enc 0 1
+4700 enc 2 -5
+4800 enc 4 1
+5000 keys 0x10
+5300 shot t01-table
+5600 keys 0
+5800 enc 1 5
+6000 btn 6
+6100 btn 6
+6200 btn 6
+6400 enc 2 20
+6600 shot t02-sample-edit
+6700 enc 0 6
+6800 enc 2 -6
+6900 enc 3 9
+7000 enc 4 1
+7100 enc 5 1
+7300 shot t03-sample-slice
+7500 btn 7
+7600 btn 7
+7700 enc 4 2
+7800 enc 0 3
+7900 enc 2 2
+8000 shot t04-groove
+8100 btn 12
+9500 shot t05-groove-play
+9600 btn 12
+9800 btn 7
+9900 enc 4 2
+10000 shot t06-options-clock
+10100 btn 8
+10200 btn 8
+10300 enc 1 -5
+10400 enc 2 24
+10500 enc 4 5
+10600 press 10
+10700 enc 4 13
+10800 enc 5 7
+10900 shot t07-fx2
+11000 release 10
+11100 shot t08-fx2-off
+11200 btn 7
+11300 btn 7
+11400 press 8
+12000 shot t09-help-groove
+12100 release 8
+12400 end

@@ -1,0 +1,42 @@
+# a tour of KAWA: boot, the demo playing, the pages, live effects (ids: see tests/host.c)
+300 shot 01-boot
+1700 shot 02-pistes
+1800 btn 12
+3400 shot 03-pistes-lecture
+3500 enc 1 5
+3700 shot 04-piste-casse
+3800 press 2
+3900 keys 0x1
+4100 shot 05-effets-boucle
+4600 keys 0x0
+4700 keys 0x4
+5200 keys 0
+5300 release 2
+5400 btn 6
+5900 shot 06-son-casse
+6000 enc 1 -5
+6200 shot 07-son-carre
+6300 btn 11
+6700 shot 08-grille
+6800 btn 4
+7200 shot 09-mix
+7300 btn 5
+7600 shot 10-magie
+7700 btn 3
+7900 shot 11-gamme
+8000 btn 7
+8300 shot 12-chaine
+8400 btn 9
+8700 shot 13-projets
+8800 btn 8
+8900 press 8
+9600 shot 14-aide
+9700 release 8
+9800 btn 2
+10000 press 2
+10050 release 2
+10100 btn 2
+10200 keys 0x80
+10400 shot 15-effets-casse
+10600 keys 0
+11000 end
