@@ -1,5 +1,7 @@
 # KAWA — Pocket Tracker by Omnipotard
 
+![KAWA, Pocket Tracker for the M-VAVE FM-1](manual/img/kawa-preview.png)
+
 [English](README.md) · [Français](README.fr.md) · **Español**
 
 KAWA es un firmware tracker para el **M-VAVE FM-1**, para componer en cualquier estilo: pop, techno, hip hop,
@@ -10,18 +12,18 @@ español, inglés o francés.
 
 | | | |
 | --- | --- | --- |
-| ![Las pistas](docs/manual/img/es/02-tracks.png) | ![La FM y sus operadores](docs/manual/img/es/53-fm-operator.png) | ![Los efectos en directo](docs/manual/img/es/60-fx.png) |
-| ![La cadena: cada patrón tocado N veces](docs/manual/img/es/34-song-play.png) | ![La envolvente](docs/manual/img/es/50-envelope.png) | ![El menú de proyectos](docs/manual/img/es/10-projects-menu.png) |
+| ![Las pistas](manual/img/es/02-tracks.png) | ![La FM y sus operadores](manual/img/es/53-fm-operator.png) | ![Los efectos en directo](manual/img/es/60-fx.png) |
+| ![La cadena: cada patrón tocado N veces](manual/img/es/34-song-play.png) | ![La envolvente](manual/img/es/50-envelope.png) | ![El menú de proyectos](manual/img/es/10-projects-menu.png) |
 
-> **Estado: 0.3, beta.** KAWA compila para el FM-1 y pasa todas las comprobaciones de su plataforma: tamaño,
+> **Estado: 0.4, beta.** KAWA compila para el FM-1 y pasa todas las comprobaciones de su plataforma: tamaño,
 > memoria, acceso al hardware, y una instalación probada con cortes de corriente simulados. Funciona en el
 > simulador y en el emulador web. **Todavía no se ha probado en un FM-1 real.** Instalar un firmware no
 > oficial es bajo tu responsabilidad: lee [Instalar](#instalar) y
 > [Volver al firmware oficial](#volver-al-firmware-oficial) antes de empezar.
 
 **El manual**, con tutoriales ilustrados (una canción nueva, escribir un patrón, encadenar patrones,
-guardar): [docs/manual/es.html](docs/manual/es.html) ([EN](docs/manual/en.html),
-[FR](docs/manual/index.html)).
+guardar): [manual/es.html](manual/es.html) ([EN](manual/index.html),
+[FR](manual/fr.html)).
 
 ## Componer con un tracker
 
@@ -42,7 +44,7 @@ terminada.
 
 ## Pruébalo en el navegador
 
-El propio firmware, compilado en WebAssembly, funciona en [`emulateur/index.html`](emulateur/index.html), con
+El propio firmware, compilado en WebAssembly, funciona en [`emulator/index.html`](emulator/index.html), con
 el panel del FM-1 alrededor. Pulsa **ENCENDER** y luego **PLAY**: suena la demo «KAWA QUEST». Puedes soltar
 tus propios sonidos en él y enviarlos a tu FM-1 por USB.
 
@@ -71,18 +73,26 @@ tus propios sonidos en él y enviarlos a tu FM-1 por USB.
   MAMBO, GRENIER: cada uno con su groove, su batería y su disco), y **tus propios samples** (4 ranuras).
 - **Un potenciómetro, un color.** KNOB 1 rojo, 2 amarillo, 3 verde, 4 azul, en todas las páginas. La línea de
   abajo dice qué hace cada uno. HOME mantenido abre la ayuda de la página en la que estás.
-- **Tres temas** (KAWA, GAME BOY, BONBON), el **reloj MIDI** de salida o de entrada (KAWA sigue el tempo y el
+- **Tres temas** (KAWA, GAME BOY, BONBON), **cuatro fuentes de pantalla** (SUAVE, BASE, CLARA, 8-BIT), el **reloj MIDI** de salida o de entrada (KAWA sigue el tempo y el
   START / STOP de otra máquina) y un indicador de CPU.
 - **Un perro** con cascos que te recibe al encender y vive en la esquina de la pantalla.
 
 ## Instalar
 
-Necesitas el paquete `release/kawa-0.3.fwsc` (o tu propia compilación), un cable USB de datos, y Python 3
-con `pip3 install mido python-rtmidi`.
+Necesitas un cable USB de datos y Python 3 ([python.org](https://www.python.org/downloads/)). Enciende el
+FM-1, conéctalo, cierra cualquier otro programa MIDI y abre el instalador de tu ordenador:
+
+- **Windows:** doble clic en `INSTALL-Windows.bat`
+- **Mac:** doble clic en `INSTALL-Mac.command` (la primera vez: clic derecho y Abrir)
+- **Linux:** `./INSTALL-Linux.sh` en un terminal
+
+La primera vez descarga lo que necesita (rtmidi2, en `install/.venv`). Busca el FM-1, pregunta antes de
+escribir `install/kawa-0.4.fwsc` y reinicia el FM-1 en KAWA. A mano:
 
 ```sh
-python3 tools/fm1_install.py --info                 # qué ejecuta el FM-1 conectado
-python3 tools/fm1_install.py release/kawa-0.3.fwsc  # pregunta antes de escribir y reinicia en KAWA
+pip3 install rtmidi2                                  # (Python 3.9 o anterior: pip3 install mido python-rtmidi)
+python3 install/fm1_install.py --info                 # qué ejecuta el FM-1 conectado
+python3 install/fm1_install.py install/kawa-0.4.fwsc  # pregunta antes de escribir y reinicia en KAWA
 ```
 
 Lo que protege tu FM-1:
@@ -93,7 +103,7 @@ Lo que protege tu FM-1:
 - Una instalación cortada se reanuda al volver a encender.
 - Mantén **OCT−** al encender para el rescate USB. Si KAWA falla dos veces al arrancar, el FM-1 va ahí solo.
 
-Los detalles están en [BUILDING.md](BUILDING.md) (en inglés) y en el manual.
+Los detalles están en [BUILDING.md](source/BUILDING.md) (en inglés) y en el manual.
 
 ## Volver al firmware oficial
 
@@ -106,13 +116,13 @@ Los detalles están en [BUILDING.md](BUILDING.md) (en inglés) y en el manual.
    KAWA sigue funcionando.
 5. **No desconectes nada durante la transferencia.** Es el paso más delicado, porque el firmware oficial
    también reescribe el bootloader. Si se detiene, vuelve a conectar y empieza de nuevo.
-6. `python3 tools/fm1_install.py --info` debe responder `FM-1_015`.
+6. `python3 install/fm1_install.py --info` debe responder `FM-1_015`.
 
 ## Tus samples en el FM-1
 
 ```sh
-python3 tools/kawa_samples.py put 1 mi-sonido.wav   # en MI 1 (KAWA parado)
-python3 tools/kawa_samples.py list
+python3 install/kawa_samples.py put 1 mi-sonido.wav   # en MI 1 (KAWA parado)
+python3 install/kawa_samples.py list
 ```
 
 El sonido se pasa a mono, a 22 kHz y se normaliza, hasta 1,66 s por ranura. En una pista SAMPLE, elige
@@ -120,10 +130,12 @@ FUENTE = MI 1 a 4.
 
 ## Compilarlo
 
+Desde la carpeta `source/`:
+
 - `tests/run_host.sh [script]` ejecuta KAWA en tu ordenador: pantallas en PNG, sonido en WAV.
 - `web/make_emulator.sh` construye el emulador web. Necesita clang con el destino wasm32, y wasm-ld.
 - `./build.sh` construye el paquete del FM-1. Necesita el compilador de JieLi (`tools/get_toolchain.sh`) y
-  tres archivos del SDK JieLi AC79. Ver [BUILDING.md](BUILDING.md).
+  tres archivos del SDK JieLi AC79. Ver [BUILDING.md](source/BUILDING.md).
 - `tests/run_loader_tests.sh` prueba la instalación: paquetes dañados, cortes de corriente, un chip
   desconocido.
 - `tests/run_kits_test.sh` y `tests/breaks_check.py` miden los kits de batería y los breaks.

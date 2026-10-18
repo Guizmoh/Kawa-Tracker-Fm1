@@ -1,0 +1,1565 @@
+<title>KAWA Pocket Tracker</title>
+<meta name="description" content="KAWA, Pocket Tracker by Omnipotard: a tracker firmware for the M-VAVE FM-1, running in the browser.">
+<meta name="theme-color" content="#15111d">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334313b'/%3E%3Crect x='6' y='6' width='20' height='14' rx='2' fill='%23120c24'/%3E%3Crect x='9' y='10' width='4' height='6' fill='%23ff5fb4'/%3E%3Crect x='15' y='9' width='3' height='7' fill='%23ffb03a'/%3E%3Crect x='20' y='12' width='3' height='4' fill='%233ed8ff'/%3E%3Ccircle cx='10' cy='25' r='2.4' fill='%23FF5C5C'/%3E%3Ccircle cx='16' cy='25' r='2.4' fill='%23FFCC40'/%3E%3Ccircle cx='22' cy='25' r='2.4' fill='%235CE274'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: the FM-1 lies on a dark desk; its panel is laid out as the real one (left knobs, screen,
+   right knobs and buttons, the keybed below) and restacks on a phone, the screen first. One dark look.
+   Below it: the user's samples, the saved projects, the guide, a word from the author. */
+:root {
+  --desk: #15111d;
+  --desk-2: #1d1828;
+  --desk-3: #241f2e;
+  --body: #34313b;
+  --body-hi: #45414e;
+  --bezel: #09080c;
+  --label: #b4adc4;
+  --ink: #f1ecfb;
+  --muted: #8d86a0;
+  --text-2: #d9d3e6;
+  --pink: #ff5fb4;
+  --amber: #ffb03a;
+  --cyan: #3ed8ff;
+  --green: #7ef0a8;
+  --led-off: #2a2731;
+  --k1: #FF5C5C;
+  --k2: #FFCC40;
+  --k3: #5CE274;
+  --k4: #54A4FF;
+  --display: "Silkscreen", "Courier New", monospace;
+  --text: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { background: var(--desk); color: var(--ink); }
+body { margin: 0; font-family: var(--text); font-size: 15px; line-height: 1.5; padding-inline: 16px; padding-block: 20px 40px; overflow-x: hidden; }
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.vh { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+a { color: var(--cyan); }
+a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* ---- the header, the beta */
+header.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; }
+.brand { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 6vw, 46px); letter-spacing: 0.04em; margin: 0; line-height: 1; color: var(--ink); }
+h1 span { color: var(--pink); }
+.beta { font-family: var(--mono); font-weight: 600; font-size: 12px; letter-spacing: 0.12em; line-height: 1; color: #1a1026; background: var(--amber); border-radius: 999px; padding: 6px 10px 5px; white-space: nowrap; }
+.tag { font-family: var(--mono); font-size: 13px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+.langs { display: flex; gap: 4px; background: var(--desk-2); border-radius: 10px; padding: 3px; }
+.langs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--mono); font-weight: 600; font-size: 13px; letter-spacing: 0.08em; padding: 5px 10px; border-radius: 7px; cursor: pointer; }
+.langs button[aria-pressed="true"] { background: var(--pink); color: #1a1026; }
+.note { display: flex; gap: 12px; align-items: flex-start; margin: 0; padding: 12px 16px; border-radius: 14px; color: #ece6f6; font-size: 14.5px;
+  background: linear-gradient(90deg, rgba(255,176,58,.14), rgba(255,176,58,.04)); border: 1px solid rgba(255,176,58,.38); }
+.note svg { flex: none; width: 22px; height: 22px; color: var(--amber); margin-top: 1px; }
+.note b { color: var(--amber); }
+
+/* ---- the device */
+.device {
+  position: relative;
+  background: linear-gradient(170deg, var(--body-hi), var(--body) 38%, #2b2831);
+  border-radius: 26px;
+  padding: 26px 26px 22px;
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.08), inset 0 -2px 0 rgba(0,0,0,.35);
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 330px;
+  grid-template-areas: "left screen right" "keys keys keys";
+  gap: 22px 26px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.zone-left { grid-area: left; display: flex; flex-direction: column; gap: 16px; }
+.zone-screen { grid-area: screen; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
+.zone-right { grid-area: right; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.zone-keys { grid-area: keys; }
+.knobs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; }
+.knobs.row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 6px; }
+.knob { --ring: #4b4756; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: ns-resize; touch-action: none; min-width: 0; border-radius: 12px; }
+.knob .lbl { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--label); text-transform: uppercase; white-space: nowrap; }
+.knob .fn { font-family: var(--mono); font-size: 10px; color: var(--amber); letter-spacing: 0.05em; min-height: 1.25em; text-align: center; line-height: 1.25; }
+.knob .fn.live { color: var(--ring); min-height: 2.5em; max-width: 100%; white-space: pre-line; overflow-wrap: anywhere; font-weight: 600; }
+.ring { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; border: 3px solid var(--ring); transition: box-shadow .15s, border-color .15s; }
+.knob.col .ring { box-shadow: 0 0 10px -4px var(--ring), inset 0 0 6px -3px var(--ring); }
+.knob.col .lbl { color: var(--ring); }
+.knob.hot .ring { box-shadow: 0 0 18px 0 var(--ring), inset 0 0 8px -2px var(--ring); }
+.cap {
+  --a: 0deg;
+  width: 54px; height: 54px; border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, #5b5765 0 44%, transparent 45%),
+    repeating-conic-gradient(from 0deg, #23212a 0 6deg, #3c3944 6deg 12deg);
+  box-shadow: 0 6px 10px rgba(0,0,0,.55), inset 0 2px 2px rgba(255,255,255,.12);
+  position: relative;
+  transform: rotate(var(--a));
+  transition: transform .06s linear;
+}
+.cap::after { content: ""; position: absolute; left: 50%; top: 7px; width: 3px; height: 13px; margin-left: -1.5px; border-radius: 2px; background: var(--ink); }
+.knob:focus-visible { outline: none; }
+.knob:focus-visible .ring { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.btn:focus-visible, .key:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+.btns { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px 8px; align-items: start; }
+.oct { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.btn {
+  appearance: none; border: 0; cursor: pointer; color: var(--label); border-radius: 9px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0; background: none;
+  font: inherit; min-width: 0;
+}
+.btn .face {
+  width: 100%; height: 30px; border-radius: 9px;
+  background: linear-gradient(180deg, #2a2730, #1f1d24);
+  box-shadow: 0 3px 0 #121016, inset 0 1px 0 rgba(255,255,255,.07);
+  display: grid; place-items: center;
+  font-family: var(--mono); font-weight: 600; font-size: 11px; letter-spacing: 0.06em; color: var(--label);
+  transition: transform .04s, box-shadow .04s, background .12s, color .12s;
+}
+.btn .fn { font-family: var(--mono); font-size: 9.5px; color: var(--amber); letter-spacing: 0.03em; text-align: center; line-height: 1.2; margin-top: 2px; }
+.btn .alt { font-family: var(--mono); font-size: 8.5px; color: var(--muted); letter-spacing: 0.02em; text-align: center; line-height: 1.15; }
+.btn.on .face { box-shadow: 0 3px 0 #121016, 0 0 14px -2px var(--glow, var(--pink)), inset 0 0 0 1px var(--glow, var(--pink)); color: var(--ink); }
+.btn.dim .face { color: #d6d0e3; box-shadow: 0 3px 0 #121016, inset 0 0 0 1px rgba(255,95,180,.28); }
+.btn.down .face { transform: translateY(2px); box-shadow: 0 1px 0 #121016; }
+.btn[data-id="12"] { --glow: #60ff96; }
+.btn[data-id="13"] { --glow: #ff4060; }
+
+.bezel {
+  background: var(--bezel); border-radius: 18px; padding: 16px;
+  box-shadow: inset 0 0 0 2px #000, 0 1px 0 rgba(255,255,255,.08);
+  width: min(100%, 392px);
+  position: relative;
+}
+.glass { position: relative; aspect-ratio: 1; width: 100%; border-radius: 6px; overflow: hidden; background: #120c24; }
+.glass canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.glass::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,.07), transparent 40%), repeating-linear-gradient(0deg, rgba(0,0,0,.08) 0 1px, transparent 1px 3px); }
+.power {
+  position: absolute; inset: 16px; border-radius: 6px; display: grid; place-items: center; align-content: center; gap: 14px;
+  background: radial-gradient(circle at 50% 38%, #2b1d52, #120c24 70%); text-align: center; padding: 18px;
+}
+.power p { margin: 0; color: var(--label); font-size: 14px; max-width: 26ch; }
+.power button {
+  font-family: var(--display); font-size: 17px; letter-spacing: 0.06em; color: #1a1026; background: var(--pink);
+  border: 0; border-radius: 12px; padding: 12px 20px; cursor: pointer; box-shadow: 0 4px 0 #a33274;
+}
+.power button:active { transform: translateY(2px); box-shadow: 0 2px 0 #a33274; }
+.power button:disabled { opacity: .7; cursor: progress; }
+.power .err { color: var(--amber); font-size: 13px; }
+.scrinfo { width: min(100%, 392px); display: flex; justify-content: space-between; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; color: var(--muted); min-height: 26px; }
+.scrinfo .pg { --acc: var(--pink); color: var(--ink); background: #1f1b27; border-radius: 8px; padding: 3px 10px; border-left: 3px solid var(--acc); font-weight: 600; white-space: nowrap; }
+.scrinfo .pg:empty { visibility: hidden; }
+.scrinfo .trk { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* the keybed: 16 white keys, 11 black, F3 to G5 */
+.keybed { position: relative; height: 150px; background: #24212a; border-radius: 16px; padding: 10px; box-shadow: inset 0 2px 6px rgba(0,0,0,.6); }
+.keys { position: relative; height: 100%; }
+.key { position: absolute; bottom: 0; border-radius: 10px; cursor: pointer; touch-action: none; display: flex; justify-content: center; }
+.key.w { top: 52px; background: linear-gradient(180deg, #3d3945, #302d36); box-shadow: 0 3px 0 #17151b, inset 0 1px 0 rgba(255,255,255,.06); }
+.key.b { top: 0; height: 64px; background: linear-gradient(180deg, #34313a, #29262e); box-shadow: 0 3px 0 #141217, inset 0 1px 0 rgba(255,255,255,.05); z-index: 2; }
+.key::before { content: ""; position: absolute; top: 12px; width: 4px; height: 34%; border-radius: 3px; background: var(--led-off); transition: background .08s, box-shadow .08s; }
+.key.w::before { top: 18px; }
+.key.dim::before { background: #7a3c63; }
+.key.on::before { background: var(--pink); box-shadow: 0 0 10px var(--pink); }
+.key.down { filter: brightness(1.25); transform: translateY(2px); }
+.key .kn { position: absolute; bottom: 6px; font-family: var(--mono); font-size: 9px; color: var(--muted); }
+
+/* ---- panels: the samples, the projects */
+.panel { background: var(--desk-2); border-radius: 16px; padding: 18px 20px; min-width: 0; }
+.panel h2, .guide h2 { font-family: var(--display); font-size: 16px; letter-spacing: 0.05em; margin: 0 0 10px; font-weight: 400; }
+.panel p { margin: 0 0 8px; color: var(--text-2); font-size: 14.5px; max-width: 86ch; }
+.samples h2 { color: var(--cyan); }
+.slots { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.slot { position: relative; background: var(--desk-3); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; border: 1px dashed transparent; transition: border-color .12s, background .12s; }
+body.dragging .slot { border-color: rgba(62,216,255,.45); }
+.slot.over { border-color: var(--cyan); background: #262838; }
+.slot .shead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.slot .sid { font-family: var(--mono); font-weight: 600; font-size: 12px; letter-spacing: 0.1em; color: var(--pink); }
+.slot .smeta { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.slot .sname { font-family: var(--display); font-size: 15px; letter-spacing: 0.03em; color: var(--ink); overflow-wrap: anywhere; min-height: 1.5em; line-height: 1.5; }
+.slot.empty .sname { color: var(--muted); }
+.slot .sacts { display: grid; gap: 6px; }
+.sbtn { appearance: none; border: 0; cursor: pointer; font: 600 12px/1.25 var(--mono); letter-spacing: 0.03em; color: var(--ink); background: #37314b; border-radius: 9px; padding: 8px 10px; text-align: center; display: block; width: 100%; transition: background .12s; }
+.sbtn:hover { background: #443d5d; }
+.sbtn.hot { background: var(--cyan); color: #0c1a22; }
+.sbtn.hot:hover { background: #6fe3ff; }
+.sbtn:disabled { opacity: .42; cursor: default; background: #37314b; color: var(--ink); }
+label.sbtn:focus-within { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.slot progress { width: 100%; height: 6px; appearance: none; -webkit-appearance: none; border: 0; border-radius: 3px; background: #15111d; overflow: hidden; }
+.slot progress::-webkit-progress-bar { background: #15111d; border-radius: 3px; }
+.slot progress::-webkit-progress-value { background: var(--cyan); border-radius: 3px; }
+.slot progress::-moz-progress-bar { background: var(--cyan); border-radius: 3px; }
+.slot .smsg { font-size: 12.5px; color: #cfc8dc; line-height: 1.35; }
+.slot .smsg:empty { display: none; }
+.smsg.err, .pmsg.err { color: var(--amber); }
+.smsg.ok, .pmsg.ok { color: var(--green); }
+.midi-pick { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+.midi-pick label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--label); min-width: 0; max-width: 100%; }
+select { font: 13px var(--mono); background: var(--desk-3); color: var(--ink); border: 1px solid #4a4458; border-radius: 8px; padding: 6px 8px; max-width: 100%; }
+.projects h2 { color: var(--pink); }
+.proj { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; justify-content: space-between; }
+.proj > div:first-child { flex: 1 1 380px; min-width: 0; }
+.proj .acts { display: flex; gap: 10px; flex-wrap: wrap; }
+.proj .sbtn { width: auto; padding: 9px 14px; }
+.pmsg { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+.pmsg:empty { display: none; }
+
+/* ---- the guide */
+.guide { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.guide section { background: var(--desk-2); border-radius: 16px; padding: 18px 20px; min-width: 0; }
+.guide h2 { color: var(--pink); }
+.guide section:nth-child(2) h2 { color: var(--amber); }
+.guide section:nth-child(3) h2 { color: var(--cyan); }
+.guide li { color: var(--text-2); font-size: 14.5px; }
+.guide ul { margin: 0; padding-left: 18px; display: grid; gap: 7px; }
+.guide b { color: var(--ink); }
+kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-radius: 5px; padding: 1px 6px; color: var(--ink); white-space: nowrap; }
+.k1 { color: var(--k1); } .k2 { color: var(--k2); } .k3 { color: var(--k3); } .k4 { color: var(--k4); }
+
+/* ---- a word from the author */
+.donate {
+  border-radius: 18px; padding: 22px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 28px;
+  background: radial-gradient(circle at 8% 0%, rgba(255,95,180,.20), transparent 55%), radial-gradient(circle at 100% 100%, rgba(255,176,58,.18), transparent 50%), var(--desk-2);
+  border: 1px solid rgba(255,176,58,.22);
+}
+.donate > div { flex: 1 1 320px; min-width: 0; }
+.donate h2 { font-family: var(--display); font-weight: 400; font-size: 20px; letter-spacing: 0.04em; margin: 0 0 6px; color: var(--amber); }
+.donate p { margin: 0; color: #ebe4f6; font-size: 15.5px; max-width: 56ch; }
+.donate .sig { color: var(--muted); font-size: 13.5px; margin-top: 6px; }
+.kofi { display: inline-flex; align-items: center; gap: 10px; background: var(--amber); color: #1a1026; font: 700 15.5px/1.2 var(--text); text-decoration: none; padding: 13px 22px; border-radius: 999px; box-shadow: 0 4px 0 #a5660c; transition: filter .12s; }
+.kofi:hover { filter: brightness(1.07); }
+.kofi:active { transform: translateY(2px); box-shadow: 0 2px 0 #a5660c; }
+.kofi:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
+.kofi svg { width: 24px; height: 24px; flex: none; }
+.foot { color: var(--muted); font-size: 13.5px; max-width: 86ch; margin: 0; }
+
+@media (max-width: 940px) {
+  .device { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "screen screen" "right right" "left left" "keys keys"; padding: 18px; }
+  .zone-left { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: end; gap: 14px; }
+  .zone-left .knobs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .guide { grid-template-columns: minmax(0, 1fr); }
+  .slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  body { padding-block: 14px 32px; }
+  .device { padding: 14px; border-radius: 20px; gap: 16px; }
+  .ring { width: 52px; height: 52px; }
+  .cap { width: 42px; height: 42px; }
+  .cap::after { top: 5px; height: 10px; }
+  .knob .lbl { font-size: 9.5px; letter-spacing: 0.04em; }
+  .knob .fn { font-size: 9.5px; }
+  .btns { gap: 8px 5px; }
+  .btn .face { font-size: 10px; height: 28px; }
+  .btn .fn { font-size: 8.5px; letter-spacing: 0; }
+  .btn .alt { font-size: 8px; letter-spacing: 0; }
+  .zone-left { grid-template-columns: minmax(0, 1fr); }
+  .keybed { height: 128px; padding: 6px; }
+  .key.w { top: 44px; }
+  .key.b { height: 54px; }
+  .key .kn { display: none; }
+  .panel, .guide section { padding: 16px; }
+  .slots { gap: 10px; }
+  .slot { padding: 10px; }
+  .donate { padding: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .cap, .btn .face, .key::before, .ring, .slot, .sbtn { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>KA<span>WA</span></h1>
+      <span class="beta" id="beta-badge">__KAWA_VER__ BETA</span>
+    </div>
+    <div class="tag" data-t="tag"></div>
+    <div class="langs" role="group" data-ta="langs" aria-label="Language">
+      <button type="button" data-lang="en" lang="en">EN</button><button type="button" data-lang="fr" lang="fr">FR</button><button type="button" data-lang="es" lang="es">ES</button>
+    </div>
+  </header>
+
+  <p class="note" role="note">
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4.5"/><path d="M12 17.4v.1"/></svg>
+    <span data-t="beta"></span>
+  </p>
+
+  <div class="device" id="device" data-page="-1">
+    <div class="zone-left">
+      <div class="knobs" id="knobs-left"></div>
+      <div class="oct" id="oct"></div>
+    </div>
+    <div class="zone-screen">
+      <div class="bezel">
+        <div class="glass"><canvas id="screen" width="240" height="240" role="img" data-ta="screen" aria-label="The FM-1's screen"></canvas></div>
+        <div class="power" id="power">
+          <p data-t="power"></p>
+          <button id="power-btn" type="button" data-t="powerBtn"></button>
+          <div class="err" id="power-err" role="alert" hidden></div>
+        </div>
+      </div>
+      <div class="scrinfo" aria-live="polite"><span class="pg" id="pg-name"></span><span class="trk" id="trk-name"></span></div>
+    </div>
+    <div class="zone-right">
+      <div class="knobs row" id="knobs-right"></div>
+      <div class="btns" id="btns"></div>
+    </div>
+    <div class="zone-keys"><div class="keybed"><div class="keys" id="keys"></div></div></div>
+  </div>
+
+  <section class="panel samples" id="samples" aria-labelledby="smp-h">
+    <h2 id="smp-h" data-t="s.h"></h2>
+    <p data-t="s.how"></p>
+    <p data-t="s.fm1"></p>
+    <ol class="slots" id="slots"></ol>
+    <div class="midi-pick" id="midi-pick" hidden>
+      <label><span data-t="s.out"></span><select id="midi-out"></select></label>
+      <label><span data-t="s.in"></span><select id="midi-in"></select></label>
+    </div>
+  </section>
+
+  <section class="panel projects" aria-labelledby="prj-h">
+    <div class="proj">
+      <div>
+        <h2 id="prj-h" data-t="p.h"></h2>
+        <p data-t="p.how"></p>
+        <p class="pmsg" id="prj-msg" role="status"></p>
+      </div>
+      <div class="acts">
+        <button type="button" class="sbtn" id="prj-export" data-t="p.exp"></button>
+        <label class="sbtn"><span data-t="p.imp"></span><input type="file" class="vh" id="prj-import" accept=".kawa,application/octet-stream"></label>
+      </div>
+    </div>
+  </section>
+
+  <div class="guide">
+    <section><h2 data-t="g1"></h2><ul data-t="g1l"></ul></section>
+    <section><h2 data-t="g2"></h2><ul data-t="g2l"></ul></section>
+    <section><h2 data-t="g3"></h2><ul data-t="g3l"></ul></section>
+  </div>
+
+  <section class="donate" aria-labelledby="don-h">
+    <div>
+      <h2 id="don-h" data-t="d.h"></h2>
+      <p data-t="d.p"></p>
+      <p class="sig" data-t="d.sig"></p>
+    </div>
+    <a class="kofi" href="https://ko-fi.com/omnipotard" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M5 8h10v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8Z"/><path d="M15 10h2.5a2.5 2.5 0 0 1 0 5H15"/><path d="M5 8a2.5 2.5 0 0 1 2.5-4.2A3 3 0 0 1 12.6 3a2.6 2.6 0 0 1 2.4 3.1V8"/><path d="M8.5 12v5.5M11.5 12v5.5"/></svg>
+      <span data-t="d.btn"></span><span class="vh" data-t="d.new"></span>
+    </a>
+  </section>
+  <p class="foot" data-t="foot"></p>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const WASM_B64 = "__KAWA_WASM__";
+  const BTN = {OCTD: 0, OCTU: 1, FX: 2, SCL: 3, ENV: 4, LFO: 5, EDIT: 6, GLO: 7, HOME: 8, SAVE: 9, ARP: 10, SEQ: 11, PLAY: 12, REC: 13};
+  const ENC = {SELECT: 0, ALGORITHM: 1, K1: 2, K2: 3, K3: 4, K4: 5, PRESETS: 6};
+  const KNOB_COL = ["#FF5C5C", "#FFCC40", "#5CE274", "#54A4FF"];   /* the firmware's KNOB_COL */
+  const THEME_ACC = ["#ff5fb4", "#a8d04a", "#ff7ab8"];               /* KAWA, GAME BOY, BONBON */
+  const PG = {TRACKS: 0, PROJECTS: 8};
+  const SLOT = 0x9000, RATE = 22050;
+  let STORE_SIZE = 4 * SLOT, CAP = 36608;                            /* (kawa_store_size, kawa_sample_size) */
+  const LS_STORE = "kawa-store-v1", LS_SMP = "kawa-samples-v1", LS_LANG = "kawa-lang";
+
+  /* ---- the engine, the same in the worklet and on the main thread. It reads the screen, the LEDs, the
+     knobs' labels, the page, the sample slots and the project store about 30 times a second and posts
+     what changed (emit) */
+  const ENGINE_SRC = `
+  class KawaEngine {
+    constructor(bytes, rate, boot) {
+      const x = this.ex = new WebAssembly.Instance(new WebAssembly.Module(bytes), {}).exports;
+      x.kawa_init();
+      this.buf = null; this.pos = 512; this.ratio = 44100 / rate; this.frac = 0;
+      this.pl = 0; this.pr = 0; this.cl = 0; this.cr = 0;
+      this.frames = 0; this.emit = function () {};
+      this.sg = -1; this.ledKey = ""; this.uiKey = ""; this.slotKey = "";
+      this.storeAt = -1e9; this.storeDue = false;
+      boot = boot || {};
+      if (boot.lang !== undefined) x.kawa_lang(boot.lang | 0);
+      if (boot.store) this.putStore(boot.store);
+      const s = boot.samples || [];
+      for (let k = 0; k < s.length; k++) if (s[k]) this.putSample(k, s[k].data, s[k].name, s[k].rate);
+      this.storeGen = x.kawa_store_gen();
+    }
+    u8(p, n) { return new Uint8Array(this.ex.memory.buffer, p, n); }
+    str(p, max) {
+      const u = new Uint8Array(this.ex.memory.buffer);
+      let s = "";
+      for (let i = 0; i < max && u[p + i]; i++) s += String.fromCharCode(u[p + i]);
+      return s;
+    }
+    putStore(b) {                                /* the saved slots back in, then the autosave */
+      const x = this.ex, n = x.kawa_store_size(), m = this.u8(x.kawa_store(), n);
+      m.fill(0);
+      m.set(b.length > n ? b.subarray(0, n) : b);
+      x.kawa_store_loaded();
+      this.storeGen = x.kawa_store_gen();
+    }
+    putSample(slot, data, name, rate) {          /* 8-bit mu-law into a user slot (MY 1..4) */
+      const x = this.ex, cap = x.kawa_sample_size(), len = Math.min(cap, data.length);
+      this.u8(x.kawa_sample_buf(), cap).set(data.subarray(0, len));
+      const nm = this.u8(x.kawa_sample_name(), 16);
+      nm.fill(0);
+      for (let i = 0; i < 11 && i < name.length; i++) nm[i] = name.charCodeAt(i) & 0x7F;
+      x.kawa_sample_commit(slot | 0, len, rate === 11025 ? 11025 : 22050);
+      this.slotKey = "";
+    }
+    sendStore(asked) {
+      const x = this.ex, b = this.u8(x.kawa_store(), x.kawa_store_size()).slice();
+      this.storeAt = this.frames; this.storeDue = false;
+      this.emit({t: "store", data: b, asked: !!asked}, [b.buffer]);
+    }
+    msg(d) {
+      const x = this.ex;
+      if (d.t === "keys") x.kawa_keys(d.mask >>> 0);
+      else if (d.t === "btn") x.kawa_button(d.id, d.down ? 1 : 0);
+      else if (d.t === "turn") x.kawa_turn(d.enc, d.steps | 0);
+      else if (d.t === "master") x.kawa_master(d.v | 0);
+      else if (d.t === "midi") x.kawa_midi(d.st, d.d1, d.d2);
+      else if (d.t === "lang") x.kawa_lang(d.v | 0);
+      else if (d.t === "sample") this.putSample(d.slot, d.data, d.name, d.rate);
+      else if (d.t === "store") this.putStore(d.data);
+      else if (d.t === "getstore") this.sendStore(true);
+    }
+    hello() { const x = this.ex; this.emit({t: "ready", cap: x.kawa_sample_size(), store: x.kawa_store_size()}); }
+    poll() {
+      const x = this.ex;
+      const g = x.kawa_screen_gen();
+      if (g !== this.sg) {
+        this.sg = g;
+        const fb = new Uint16Array(x.memory.buffer, x.kawa_screen(), 57600).slice();
+        this.emit({t: "screen", fb}, [fb.buffer]);
+      }
+      const leds = this.u8(x.kawa_leds(), 41), lk = String.fromCharCode.apply(null, leds);
+      if (lk !== this.ledKey) { this.ledKey = lk; this.emit({t: "leds", leds: leds.slice()}); }
+      const labels = [this.str(x.kawa_knob_label(0), 24), this.str(x.kawa_knob_label(1), 24), this.str(x.kawa_knob_label(2), 24), this.str(x.kawa_knob_label(3), 24)];
+      const page = x.kawa_page(), trk = x.kawa_track(), theme = x.kawa_theme(), sgen = x.kawa_store_gen();
+      const uk = page + "|" + trk + "|" + theme + "|" + sgen + "|" + labels.join("|");
+      if (uk !== this.uiKey) { this.uiKey = uk; this.emit({t: "ui", page, trk, theme, sgen, labels}); }
+      const names = [this.str(x.kawa_sample_slot_name(0), 12), this.str(x.kawa_sample_slot_name(1), 12), this.str(x.kawa_sample_slot_name(2), 12), this.str(x.kawa_sample_slot_name(3), 12)];
+      const nk = names.join("|");
+      if (nk !== this.slotKey) { this.slotKey = nk; this.emit({t: "slots", names}); }
+      if (sgen !== this.storeGen) { this.storeGen = sgen; this.storeDue = true; }
+      if (this.storeDue && this.frames - this.storeAt >= 2 * 44100) this.sendStore(false);   /* at most every 2 s */
+    }
+    frame() {
+      if (this.pos >= 512) {
+        const p = this.ex.kawa_audio();
+        this.buf = new Float32Array(this.ex.memory.buffer, p, 512);
+        this.pos = 0;
+        this.frames += 256;
+        this.ex.kawa_step();
+      }
+      this.cl = this.buf[this.pos]; this.cr = this.buf[this.pos + 1]; this.pos += 2;
+    }
+    fill(L, R) {
+      const n = L.length;
+      if (this.ratio === 1) {
+        for (let i = 0; i < n; i++) { this.frame(); L[i] = this.cl; R[i] = this.cr; }
+        return;
+      }
+      for (let i = 0; i < n; i++) {
+        this.frac += this.ratio;
+        while (this.frac >= 1) { this.pl = this.cl; this.pr = this.cr; this.frame(); this.frac -= 1; }
+        L[i] = this.pl + (this.cl - this.pl) * this.frac;
+        R[i] = this.pr + (this.cr - this.pr) * this.frac;
+      }
+    }
+  }`;
+  const WORKLET_SRC = ENGINE_SRC + `
+  class KawaProc extends AudioWorkletProcessor {
+    constructor(o) {
+      super();
+      const op = o.processorOptions;
+      this.e = new KawaEngine(op.bytes, sampleRate, op.boot);
+      this.e.emit = (m, tr) => this.port.postMessage(m, tr || []);
+      this.e.hello();
+      this.t = 0; this.last = -1e9;
+      this.port.onmessage = (ev) => this.e.msg(ev.data);
+    }
+    process(inputs, outputs) {
+      const out = outputs[0];
+      this.e.fill(out[0], out[1] || out[0]);
+      this.t += out[0].length;
+      if (this.t - this.last >= sampleRate / 30) { this.last = this.t; this.e.poll(); }
+      return true;
+    }
+  }
+  registerProcessor("kawa", KawaProc);`;
+
+  const $ = (id) => document.getElementById(id);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  /* ---- the page in three languages (the FM-1's screen follows: kawa_lang) */
+  const I18N = {
+    en: {
+      tag: "Pocket Tracker by Omnipotard · firmware for the M-VAVE FM-1",
+      langs: "Language",
+      beta: "<b>This is a beta.</b> KAWA has not been tested on a real FM-1 yet. Read the safety section of the manual before you install it. The official firmware can always be reinstalled with M-UPGRADE; that is the risky step, so never unplug the FM-1 while it runs.",
+      screen: "The FM-1's screen",
+      power: "The firmware runs here as it is, compiled to WebAssembly. Turn the sound on and power up.",
+      powerBtn: "POWER ON",
+      err: "Sound could not start in this browser. Try a recent Chrome, Edge or Firefox.",
+      pages: ["TRACKS", "GRID", "SOUND", "ENVELOPE", "MIX", "MAGIC", "SCALE", "SONG", "PROJECTS", "OPTIONS", "EFFECTS", "HELP", "BOOT", "GROOVE"],
+      track: "TRACK {n}", master: "MASTER",
+      "k.master": "VOLUME", "k.select": "ROW", "k.presets": "PATTERN / SOUND", "k.algo": "TRACK", "k.unused": "unused",
+      "b.oct": "OCTAVE", "b.fx": "EFFECTS", "b.scl": "SCALE", "b.env": "ENV / MIX", "b.lfo": "MAGIC", "b.edit": "SOUND", "b.glo": "SONG / OPT.",
+      "b.home": "TRACKS", "b.home.alt": "HOLD: HELP", "b.save": "PROJECTS", "b.save.alt": "HOLD: UNDO", "b.arp": "CLEAR", "b.seq": "GRID", "b.play": "PLAY", "b.rec": "REC",
+      colours: ["red", "yellow", "green", "blue"],
+      "tt.MASTER": "MASTER: the volume of this page (wheel, drag, or the arrow keys when it has the focus).",
+      "tt.SELECT": "SELECT moves the cursor's row; on the first SOUND page it picks the engine; REC held + SELECT sets how many rows a written note jumps; ARP held + SELECT inserts or deletes a row.",
+      "tt.PRESETS": "PRESETS picks the pattern, or the sound or the song entry on their pages.",
+      "tt.ALGORITHM": "ALGORITHM picks the track; ARP held + ALGORITHM inserts or deletes a row in the whole pattern.",
+      "tt.K": "KNOB {n} ({c}): what it does on this page is written under it and on the bottom line of the screen.",
+      "tt.0": "OCT− lowers the keyboard's octave; on PROJECTS it goes back; SAVE held + OCT− undoes.",
+      "tt.1": "OCT+ raises the keyboard's octave; on PROJECTS it is OK; SAVE held + OCT+ redoes; on EFFECTS it opens the second bank.",
+      "tt.2": "FX held: play the white keys for 32 live effects (OCT+ the second bank) on the master or a track; a tap keeps the page open.",
+      "tt.3": "SCL opens the scale: its root, its notes, and the lock that keeps the keys in it.",
+      "tt.4": "ENV opens the track's envelope; press it again for MIX (levels and the master effect; black keys mute, ARP held + a black key solo).",
+      "tt.5": "LFO opens the magic: tools on the white keys that chop the break and write a beat, a melody or a bassline in the scale.",
+      "tt.6": "EDIT opens the track's sound (SELECT picks the engine); press it again for the next page: SOUND 2, the FM operators, EFFECT, LFO, MODULATION.",
+      "tt.7": "GLO opens the song (patterns played N times); press it again for OPTIONS: theme, language, CPU.",
+      "tt.8": "HOME shows the tracks; hold it for the help of the page you are on.",
+      "tt.9": "SAVE opens the projects menu (new song, save, save as, load, rename, demo; OCT+ OK, OCT− back); SAVE held + OCT− undoes, + OCT+ redoes.",
+      "tt.10": "ARP clears the cell; ARP held + SELECT inserts or deletes a row, + ALGORITHM in the whole pattern.",
+      "tt.11": "SEQ opens the grid: the track's 16 steps on the 16 white keys.",
+      "tt.12": "PLAY starts or stops the song.",
+      "tt.13": "REC turns recording on or off: the keys write at the cursor (on the beat while it plays); REC held + SELECT sets how many rows a note jumps.",
+      "s.h": "Your samples",
+      "s.how": "Drop a sound on a slot (WAV, MP3, OGG, FLAC…) or choose a file. It becomes what the FM-1 keeps: mono, 22 kHz, 8 bits, up to 1.66 s, without the silence before it. Then, on a track's SOUND page (<b>EDIT</b>): engine <b>SAMPLE</b>, <b>SOURCE</b> = <b>MY 1…4</b> (or the preset MY SAMPLE 1…4 with <b>PRESETS</b>). Your sounds stay in this browser.",
+      "s.fm1": "<b>Send to my FM-1</b> copies a slot onto your FM-1 running KAWA 0.2 or later: a USB data cable, Chrome or Edge, and playback stopped.",
+      "s.slot": "MY {k}", "s.empty": "empty", "s.pick": "Choose a file", "s.send": "Send to my FM-1", "s.out": "MIDI output (to the FM-1)", "s.in": "MIDI input (from the FM-1)",
+      "s.pickL": "Choose a sound for MY {k}", "s.sendL": "Send MY {k} to my FM-1",
+      "s.reading": "Reading {f}…",
+      "s.ready": "{n} is in MY {k} ({s} s).",
+      "s.later": "{n} is ready in MY {k} ({s} s): it will be there at power-on.",
+      "s.cut": " Cut to fit.",
+      "s.eDecode": "This file could not be read as a sound.",
+      "s.eSilent": "This sound is silent.",
+      "s.eShort": "This sound is too short.",
+      "s.full": "The browser's storage is full: this sound will be gone after a reload.",
+      "m.nomidi": "This browser has no Web MIDI: use Chrome or Edge on a computer.",
+      "m.denied": "MIDI access was refused. KAWA needs it with SysEx: allow it in the site's settings.",
+      "m.search": "Looking for the FM-1…",
+      "m.noports": "No MIDI device is connected. Plug the FM-1 in with a USB data cable and switch it on.",
+      "m.choose": "No FM-1 found by its name: choose its MIDI ports below, then send again.",
+      "m.timeout": "No answer from the FM-1. Is it on, running KAWA 0.2 or later, plugged in with a data cable?",
+      "m.notkawa": "The FM-1 answered, but it does not run KAWA 0.2 or later.",
+      "m.toobig": "The FM-1's slot is smaller than this sound.",
+      "m.sending": "Sending to the FM-1… {p} %",
+      "m.done": "Done: {n} is in MY {k} on your FM-1. There: SOUND page, engine SAMPLE, SOURCE MY {k}.",
+      "m.rc1": "The FM-1 refused the request (bad arguments). Reload this page and try again.",
+      "m.rc2": "The FM-1 is busy: stop KAWA first (PLAY), then send again.",
+      "m.rc3": "The FM-1 could not write its memory (flash). Send again; if it goes on, switch it off and on.",
+      "m.rc4": "The sound did not arrive intact (CRC). Send it again.",
+      "m.rc5": "The transfer went out of order (it was cut). Send it again.",
+      "m.rcX": "The FM-1 answered an unknown code ({c}).",
+      "p.h": "Saved projects",
+      "p.how": "What you save on the emulator (<b>SAVE</b>, then <b>OCT+</b>, or <kbd>Ctrl/⌘ S</kbd>) stays in this browser and comes back at power-on. Export a .kawa file to keep a copy or to move it to another computer.",
+      "p.exp": "Export projects", "p.imp": "Import projects",
+      "p.saved": "Saved in this browser at {t}.",
+      "p.none": "Nothing saved yet: on the emulator, SAVE then OCT+.",
+      "p.bad": "This is not a KAWA projects file.",
+      "p.done": "Projects imported: the autosave is loaded, the others are in SAVE › LOAD.",
+      "p.later": "Projects imported: they will be there at power-on.",
+      "p.full": "The browser's storage is full: export your projects to keep them.",
+      "p.exported": "Exported: {f}",
+      g1: "The basics",
+      g1l: "<li>A tracker for every style. Time runs down: each row is a step (a sixteenth), each column a track, each cell a note, its volume and an effect.</li>" +
+           "<li><b>PLAY</b> plays the demo. Six tracks, each with its engine: PULSE, WAVE, NOISE, FM (one track, 6 operators), KIT (8 kits) or SAMPLE (the breaks or your own sounds).</li>" +
+           "<li><b>ALGORITHM</b> picks the track, <b>SELECT</b> the row, <b>PRESETS</b> the pattern. <b>KNOB 1–4</b> (<span class=\"k1\">red</span>, <span class=\"k2\">yellow</span>, <span class=\"k3\">green</span>, <span class=\"k4\">blue</span> on every page) edit the cell: their labels say what they do.</li>" +
+           "<li><b>REC</b>, then the keys: notes go in at the cursor (on the beat while it plays). REC held + SELECT: how many rows a note jumps. <b>ARP</b> clears the cell.</li>" +
+           "<li><b>HOME</b> tracks (held: the help of the page) · <b>SEQ</b> the grid · <b>EDIT</b> the sound, again for the next page (SELECT picks the engine) · <b>ENV</b> the envelope, again MIX · <b>GLO</b> the song, again the groove, then the options.</li>" +
+           "<li><b>SAVE</b>: new song, save, save as, load, rename, demo (<b>OCT+</b> OK, <b>OCT−</b> back). SAVE held + OCT−: undo, + OCT+: redo.</li>",
+      g2: "Effects and magic",
+      g2l: "<li>Hold <b>FX</b> and play the white keys: 32 live effects (<b>OCT+</b> the second bank), on the master or a track. A tap keeps the page open.</li>" +
+           "<li><b>LFO</b> opens the magic: chop the break, write a beat, a melody or a bassline in the scale (<b>SCL</b>), Euclid, rolls…</li>" +
+           "<li><b>MIX</b> (ENV twice): the levels and the master effect. The black keys mute; ARP held + a black key: solo.</li>" +
+           "<li>ARP held + SELECT: a row in or out; + ALGORITHM: in the whole pattern.</li>" +
+           "<li><b>EDIT</b> again and again: SOUND, SOUND 2, (FM: OPERATOR, OP ENVELOPE; SAMPLE: SAMPLE EDIT), EFFECT, LFO, MODULATION, TABLE.</li>" +
+           "<li>Two effects a cell: <b>ARP</b> held + KNOB 3 and 4 set the second. HOP jumps to a row, END ends the pattern.</li>",
+      g3: "On the keyboard",
+      g3l: "<li>Notes: the rows <kbd>Z X C V…</kbd> and <kbd>Q W E R…</kbd> (key positions: QWERTY and AZERTY alike).</li>" +
+           "<li><kbd>Space</kbd> PLAY · <kbd>Enter</kbd> REC · <kbd>Shift</kbd> held FX · <kbd>Backspace</kbd> ARP · <kbd>Esc</kbd> HOME · <kbd>-</kbd> <kbd>=</kbd> OCT− OCT+.</li>" +
+           "<li><kbd>↑</kbd><kbd>↓</kbd> row · <kbd>←</kbd><kbd>→</kbd> track · <kbd>PgUp</kbd><kbd>PgDn</kbd> pattern.</li>" +
+           "<li><kbd>Ctrl/⌘ Z</kbd> undo · <kbd>Ctrl/⌘ Y</kbd> or <kbd>Ctrl/⌘ Shift Z</kbd> redo · <kbd>Ctrl/⌘ S</kbd> save · <kbd>F1</kbd> or <kbd>?</kbd> held: help.</li>" +
+           "<li>The mouse wheel on a knob, or drag it up and down; the arrow keys when it has the focus.</li>",
+      "d.h": "Buy me a beer?",
+      "d.p": "If you enjoy what I do, consider supporting me! Every little bit means the world!",
+      "d.sig": "Omnipotard, who made KAWA",
+      "d.btn": "Buy me a beer on Ko-fi",
+      "d.new": " (opens a new tab)",
+      foot: "KAWA is free software (GPL-3.0), built on Dinghy, Felucca and SLOOP, the open platform of the FM-1 community. The breaks are entirely synthesised. The firmware installs on the FM-1 over USB at your own risk: keep the official V15 firmware and M-UPGRADE at hand to go back."
+    },
+    fr: {
+      tag: "Pocket Tracker by Omnipotard · firmware pour M-VAVE FM-1",
+      langs: "Langue",
+      beta: "<b>Ceci est une bêta.</b> KAWA n'a pas encore été testé sur un vrai FM-1. Lis la partie sécurité du manuel avant de l'installer. Le firmware officiel se réinstalle toujours avec M-UPGRADE ; c'est l'étape risquée : ne débranche jamais le FM-1 pendant qu'elle tourne.",
+      screen: "L'écran du FM-1",
+      power: "Le firmware tourne ici tel quel, compilé en WebAssembly. Mets le son et allume.",
+      powerBtn: "ALLUMER",
+      err: "Le son n'a pas pu démarrer dans ce navigateur. Essaie un Chrome, Edge ou Firefox récent.",
+      pages: ["PISTES", "GRILLE", "SON", "ENVELOPPE", "MIX", "MAGIE", "GAMME", "CHAÎNE", "PROJETS", "OPTIONS", "EFFETS", "AIDE", "DÉMARRAGE", "GROOVE"],
+      track: "PISTE {n}", master: "MASTER",
+      "k.master": "VOLUME", "k.select": "LIGNE", "k.presets": "MOTIF / SON", "k.algo": "PISTE", "k.unused": "inutilisé",
+      "b.oct": "OCTAVE", "b.fx": "EFFETS", "b.scl": "GAMME", "b.env": "ENV / MIX", "b.lfo": "MAGIE", "b.edit": "SON", "b.glo": "CHAÎNE / OPT.",
+      "b.home": "PISTES", "b.home.alt": "TENU : AIDE", "b.save": "PROJETS", "b.save.alt": "TENU : ANNULE", "b.arp": "EFFACE", "b.seq": "GRILLE", "b.play": "JOUE", "b.rec": "ENREG",
+      colours: ["rouge", "jaune", "vert", "bleu"],
+      "tt.MASTER": "MASTER : le volume de cette page (molette, glisser, ou les flèches quand il a le focus).",
+      "tt.SELECT": "SELECT déplace la ligne du curseur ; sur la première page SON, il choisit le moteur ; REC tenu + SELECT règle de combien de lignes saute une note écrite ; ARP tenu + SELECT insère ou supprime une ligne.",
+      "tt.PRESETS": "PRESETS choisit le motif, ou le son, ou l'entrée de la chaîne sur leurs pages.",
+      "tt.ALGORITHM": "ALGORITHM choisit la piste ; ARP tenu + ALGORITHM insère ou supprime une ligne dans tout le motif.",
+      "tt.K": "KNOB {n} ({c}) : ce qu'il fait sur cette page est écrit dessous et sur la ligne du bas de l'écran.",
+      "tt.0": "OCT− baisse l'octave du clavier ; sur PROJETS, il revient en arrière ; SAVE tenu + OCT− annule.",
+      "tt.1": "OCT+ monte l'octave du clavier ; sur PROJETS, c'est OK ; SAVE tenu + OCT+ refait ; sur EFFETS, il ouvre la deuxième banque.",
+      "tt.2": "FX tenu : joue les touches blanches pour 32 effets live (OCT+ la deuxième banque), sur le master ou une piste ; un appui court garde la page ouverte.",
+      "tt.3": "SCL ouvre la gamme : sa tonique, ses notes, et le verrou qui garde les touches dedans.",
+      "tt.4": "ENV ouvre l'enveloppe de la piste ; appuie encore pour MIX (niveaux et effet master ; touches noires : muet, ARP tenu + touche noire : solo).",
+      "tt.5": "LFO ouvre la magie : des outils sur les touches blanches qui découpent le break et écrivent un beat, une mélodie ou une basse dans la gamme.",
+      "tt.6": "EDIT ouvre le son de la piste (SELECT choisit le moteur) ; appuie encore pour la page suivante : SON 2, les opérateurs FM, EFFET, LFO, MODULATION.",
+      "tt.7": "GLO ouvre la chaîne (des motifs joués N fois) ; appuie encore pour les OPTIONS : thème, langue, CPU.",
+      "tt.8": "HOME montre les pistes ; tiens-le pour l'aide de la page où tu es.",
+      "tt.9": "SAVE ouvre le menu des projets (nouveau morceau, sauver, sauver sous, charger, renommer, démo ; OCT+ OK, OCT− retour) ; SAVE tenu + OCT− annule, + OCT+ refait.",
+      "tt.10": "ARP efface la case ; ARP tenu + SELECT insère ou supprime une ligne, + ALGORITHM dans tout le motif.",
+      "tt.11": "SEQ ouvre la grille : les 16 pas de la piste sur les 16 touches blanches.",
+      "tt.12": "PLAY lance ou arrête le morceau.",
+      "tt.13": "REC active ou coupe l'enregistrement : les touches écrivent au curseur (sur le temps pendant la lecture) ; REC tenu + SELECT règle de combien de lignes saute une note.",
+      "s.h": "Tes samples",
+      "s.how": "Dépose un son sur un emplacement (WAV, MP3, OGG, FLAC…) ou choisis un fichier. Il devient ce que garde le FM-1 : mono, 22 kHz, 8 bits, 1,66 s au plus, sans le silence du début. Puis, page SON d'une piste (<b>EDIT</b>) : moteur <b>SAMPLE</b>, <b>SOURCE</b> = <b>MON 1…4</b> (ou le preset MON SAMPLE 1…4 avec <b>PRESETS</b>). Tes sons restent dans ce navigateur.",
+      "s.fm1": "<b>Envoyer au FM-1</b> copie un emplacement sur ton FM-1 sous KAWA 0.2 ou plus récent : un câble USB de données, Chrome ou Edge, et la lecture arrêtée.",
+      "s.slot": "MON {k}", "s.empty": "vide", "s.pick": "Choisir un fichier", "s.send": "Envoyer au FM-1", "s.out": "Sortie MIDI (vers le FM-1)", "s.in": "Entrée MIDI (depuis le FM-1)",
+      "s.pickL": "Choisir un son pour MON {k}", "s.sendL": "Envoyer MON {k} au FM-1",
+      "s.reading": "Lecture de {f}…",
+      "s.ready": "{n} est dans MON {k} ({s} s).",
+      "s.later": "{n} est prêt dans MON {k} ({s} s) : il sera là à l'allumage.",
+      "s.cut": " Coupé pour tenir.",
+      "s.eDecode": "Ce fichier n'a pas pu être lu comme un son.",
+      "s.eSilent": "Ce son est muet.",
+      "s.eShort": "Ce son est trop court.",
+      "s.full": "Le stockage du navigateur est plein : ce son disparaîtra au rechargement.",
+      "m.nomidi": "Ce navigateur n'a pas Web MIDI : utilise Chrome ou Edge sur un ordinateur.",
+      "m.denied": "L'accès MIDI a été refusé. KAWA en a besoin avec SysEx : autorise-le dans les réglages du site.",
+      "m.search": "Recherche du FM-1…",
+      "m.noports": "Aucun appareil MIDI branché. Branche le FM-1 avec un câble USB de données et allume-le.",
+      "m.choose": "Aucun FM-1 trouvé par son nom : choisis ses ports MIDI ci-dessous, puis renvoie.",
+      "m.timeout": "Pas de réponse du FM-1. Est-il allumé, sous KAWA 0.2 ou plus récent, branché avec un câble de données ?",
+      "m.notkawa": "Le FM-1 a répondu, mais il ne tourne pas sous KAWA 0.2 ou plus récent.",
+      "m.toobig": "L'emplacement du FM-1 est plus petit que ce son.",
+      "m.sending": "Envoi au FM-1… {p} %",
+      "m.done": "C'est fait : {n} est dans MON {k} sur ton FM-1. Là-bas : page SON, moteur SAMPLE, SOURCE MON {k}.",
+      "m.rc1": "Le FM-1 a refusé la demande (mauvais arguments). Recharge cette page et réessaie.",
+      "m.rc2": "Le FM-1 est occupé : arrête d'abord KAWA (PLAY), puis renvoie.",
+      "m.rc3": "Le FM-1 n'a pas pu écrire sa mémoire (flash). Renvoie ; si ça continue, éteins-le et rallume-le.",
+      "m.rc4": "Le son n'est pas arrivé intact (CRC). Renvoie-le.",
+      "m.rc5": "Le transfert est arrivé dans le désordre (il a été coupé). Renvoie-le.",
+      "m.rcX": "Le FM-1 a répondu un code inconnu ({c}).",
+      "p.h": "Projets sauvés",
+      "p.how": "Ce que tu sauves sur l'émulateur (<b>SAVE</b> puis <b>OCT+</b>, ou <kbd>Ctrl/⌘ S</kbd>) reste dans ce navigateur et revient à l'allumage. Exporte un fichier .kawa pour en garder une copie ou le passer sur un autre ordinateur.",
+      "p.exp": "Exporter les projets", "p.imp": "Importer des projets",
+      "p.saved": "Sauvé dans ce navigateur à {t}.",
+      "p.none": "Rien de sauvé pour l'instant : sur l'émulateur, SAVE puis OCT+.",
+      "p.bad": "Ce n'est pas un fichier de projets KAWA.",
+      "p.done": "Projets importés : la sauvegarde auto est chargée, les autres sont dans SAVE › CHARGER.",
+      "p.later": "Projets importés : ils seront là à l'allumage.",
+      "p.full": "Le stockage du navigateur est plein : exporte tes projets pour les garder.",
+      "p.exported": "Exporté : {f}",
+      g1: "Les bases",
+      g1l: "<li>Un tracker pour tous les styles. Le temps descend : chaque ligne est un pas (une double croche), chaque colonne une piste, chaque case une note, son volume et un effet.</li>" +
+           "<li><b>PLAY</b> lance la démo. Six pistes, chacune avec son moteur : PULSE, WAVE, NOISE, FM (une piste, 6 opérateurs), KIT (8 kits) ou SAMPLE (les breaks ou tes propres sons).</li>" +
+           "<li><b>ALGORITHM</b> choisit la piste, <b>SELECT</b> la ligne, <b>PRESETS</b> le motif. <b>KNOB 1 à 4</b> (<span class=\"k1\">rouge</span>, <span class=\"k2\">jaune</span>, <span class=\"k3\">vert</span>, <span class=\"k4\">bleu</span> sur toutes les pages) changent la case : leurs étiquettes disent ce qu'ils font.</li>" +
+           "<li><b>REC</b> puis les touches : les notes s'écrivent au curseur (sur le temps pendant la lecture). REC tenu + SELECT : de combien de lignes saute une note. <b>ARP</b> efface la case.</li>" +
+           "<li><b>HOME</b> les pistes (tenu : l'aide de la page) · <b>SEQ</b> la grille · <b>EDIT</b> le son, encore pour la page suivante (SELECT choisit le moteur) · <b>ENV</b> l'enveloppe, encore MIX · <b>GLO</b> la chaîne, encore le groove, puis les options.</li>" +
+           "<li><b>SAVE</b> : nouveau morceau, sauver, sauver sous, charger, renommer, démo (<b>OCT+</b> OK, <b>OCT−</b> retour). SAVE tenu + OCT− : annuler, + OCT+ : refaire.</li>",
+      g2: "Effets et magie",
+      g2l: "<li>Garde <b>FX</b> enfoncé et joue les touches blanches : 32 effets live (<b>OCT+</b> la deuxième banque), sur le master ou une piste. Un appui court garde la page ouverte.</li>" +
+           "<li><b>LFO</b> ouvre la magie : découper le break, écrire un beat, une mélodie ou une basse dans la gamme (<b>SCL</b>), Euclide, roulements…</li>" +
+           "<li><b>MIX</b> (ENV deux fois) : les niveaux et l'effet master. Les touches noires coupent ; ARP tenu + touche noire : solo.</li>" +
+           "<li>ARP tenu + SELECT : une ligne en plus ou en moins ; + ALGORITHM : dans tout le motif.</li>" +
+           "<li><b>EDIT</b> encore et encore : SON, SON 2, (FM : OPÉRATEUR, ENV. OP ; SAMPLE : ÉDITER LE SAMPLE), EFFET, LFO, MODULATION, TABLE.</li>" +
+           "<li>Deux effets par case : <b>ARP</b> tenu + KNOB 3 et 4 règlent le second. SAU saute à une ligne, FIN termine le motif.</li>",
+      g3: "Au clavier",
+      g3l: "<li>Notes : rangées <kbd>W X C V…</kbd> et <kbd>A Z E R…</kbd> (positions des touches, AZERTY ou QWERTY).</li>" +
+           "<li><kbd>Espace</kbd> PLAY · <kbd>Entrée</kbd> REC · <kbd>Maj</kbd> tenu FX · <kbd>Retour</kbd> ARP · <kbd>Échap</kbd> HOME · <kbd>)</kbd> <kbd>=</kbd> OCT− OCT+.</li>" +
+           "<li><kbd>↑</kbd><kbd>↓</kbd> ligne · <kbd>←</kbd><kbd>→</kbd> piste · <kbd>PgUp</kbd><kbd>PgDn</kbd> motif.</li>" +
+           "<li><kbd>Ctrl/⌘ Z</kbd> annuler · <kbd>Ctrl/⌘ Y</kbd> ou <kbd>Ctrl/⌘ Maj Z</kbd> refaire · <kbd>Ctrl/⌘ S</kbd> sauver · <kbd>F1</kbd> ou <kbd>?</kbd> tenu : l'aide.</li>" +
+           "<li>Molette sur un potard, ou glisse vers le haut et le bas ; les flèches quand il a le focus.</li>",
+      "d.h": "Tu m'offres une bière ?",
+      "d.p": "Si ce que je fais te plaît, pense à me soutenir ! Chaque petit geste compte énormément !",
+      "d.sig": "Omnipotard, qui a fait KAWA",
+      "d.btn": "Offre-moi une bière sur Ko-fi",
+      "d.new": " (ouvre un nouvel onglet)",
+      foot: "KAWA est un logiciel libre (GPL-3.0), construit sur Dinghy, Felucca et SLOOP, la plateforme ouverte de la communauté FM-1. Les breaks sont entièrement synthétisés. Le firmware s'installe sur le FM-1 par USB, à tes risques : garde le firmware officiel V15 et M-UPGRADE sous la main pour revenir en arrière."
+    },
+    es: {
+      tag: "Pocket Tracker by Omnipotard · firmware para el M-VAVE FM-1",
+      langs: "Idioma",
+      beta: "<b>Esto es una beta.</b> KAWA aún no se ha probado en un FM-1 real. Lee la sección de seguridad del manual antes de instalarlo. El firmware oficial siempre se puede reinstalar con M-UPGRADE; es el paso delicado: nunca desconectes el FM-1 mientras se ejecuta.",
+      screen: "La pantalla del FM-1",
+      power: "El firmware funciona aquí tal cual, compilado a WebAssembly. Sube el sonido y enciende.",
+      powerBtn: "ENCENDER",
+      err: "El sonido no pudo arrancar en este navegador. Prueba un Chrome, Edge o Firefox reciente.",
+      pages: ["PISTAS", "REJILLA", "SONIDO", "ENVOLVENTE", "MEZCLA", "MAGIA", "ESCALA", "CANCIÓN", "PROYECTOS", "OPCIONES", "EFECTOS", "AYUDA", "ARRANQUE", "GROOVE"],
+      track: "PISTA {n}", master: "MASTER",
+      "k.master": "VOLUMEN", "k.select": "FILA", "k.presets": "PATRÓN / SONIDO", "k.algo": "PISTA", "k.unused": "sin uso",
+      "b.oct": "OCTAVA", "b.fx": "EFECTOS", "b.scl": "ESCALA", "b.env": "ENV / MEZCLA", "b.lfo": "MAGIA", "b.edit": "SONIDO", "b.glo": "CANCIÓN / OPC.",
+      "b.home": "PISTAS", "b.home.alt": "MANT.: AYUDA", "b.save": "PROYECTOS", "b.save.alt": "MANT.: DESHACER", "b.arp": "BORRAR", "b.seq": "REJILLA", "b.play": "TOCAR", "b.rec": "GRABAR",
+      colours: ["rojo", "amarillo", "verde", "azul"],
+      "tt.MASTER": "MASTER: el volumen de esta página (rueda, arrastrar, o las flechas cuando tiene el foco).",
+      "tt.SELECT": "SELECT mueve la fila del cursor; en la primera página SONIDO elige el motor; REC mantenido + SELECT ajusta cuántas filas salta una nota escrita; ARP mantenido + SELECT inserta o borra una fila.",
+      "tt.PRESETS": "PRESETS elige el patrón, o el sonido o la entrada de la canción en sus páginas.",
+      "tt.ALGORITHM": "ALGORITHM elige la pista; ARP mantenido + ALGORITHM inserta o borra una fila en todo el patrón.",
+      "tt.K": "KNOB {n} ({c}): lo que hace en esta página está escrito debajo y en la línea de abajo de la pantalla.",
+      "tt.0": "OCT− baja la octava del teclado; en PROYECTOS vuelve atrás; SAVE mantenido + OCT− deshace.",
+      "tt.1": "OCT+ sube la octava del teclado; en PROYECTOS es OK; SAVE mantenido + OCT+ rehace; en EFECTOS abre el segundo banco.",
+      "tt.2": "FX mantenido: toca las teclas blancas para 32 efectos en vivo (OCT+ el segundo banco), en el master o en una pista; un toque corto deja la página abierta.",
+      "tt.3": "SCL abre la escala: su tónica, sus notas y el bloqueo que mantiene las teclas dentro.",
+      "tt.4": "ENV abre la envolvente de la pista; púlsalo otra vez para MEZCLA (niveles y efecto master; teclas negras: silencio, ARP mantenido + tecla negra: solo).",
+      "tt.5": "LFO abre la magia: herramientas en las teclas blancas que trocean el break y escriben un ritmo, una melodía o un bajo en la escala.",
+      "tt.6": "EDIT abre el sonido de la pista (SELECT elige el motor); púlsalo otra vez para la página siguiente: SONIDO 2, los operadores FM, EFECTO, LFO, MODULACIÓN.",
+      "tt.7": "GLO abre la canción (patrones tocados N veces); púlsalo otra vez para OPCIONES: tema, idioma, CPU.",
+      "tt.8": "HOME muestra las pistas; mantenlo para la ayuda de la página en la que estás.",
+      "tt.9": "SAVE abre el menú de proyectos (canción nueva, guardar, guardar como, cargar, renombrar, demo; OCT+ OK, OCT− atrás); SAVE mantenido + OCT− deshace, + OCT+ rehace.",
+      "tt.10": "ARP borra la celda; ARP mantenido + SELECT inserta o borra una fila, + ALGORITHM en todo el patrón.",
+      "tt.11": "SEQ abre la rejilla: los 16 pasos de la pista en las 16 teclas blancas.",
+      "tt.12": "PLAY arranca o para la canción.",
+      "tt.13": "REC activa o desactiva la grabación: las teclas escriben en el cursor (a tiempo mientras suena); REC mantenido + SELECT ajusta cuántas filas salta una nota.",
+      "s.h": "Tus samples",
+      "s.how": "Suelta un sonido en una ranura (WAV, MP3, OGG, FLAC…) o elige un archivo. Se convierte en lo que guarda el FM-1: mono, 22 kHz, 8 bits, 1,66 s como mucho, sin el silencio del principio. Luego, en la página SONIDO de una pista (<b>EDIT</b>): motor <b>SAMPLE</b>, <b>FUENTE</b> = <b>MI 1…4</b> (o el preset MI SAMPLE 1…4 con <b>PRESETS</b>). Tus sonidos se quedan en este navegador.",
+      "s.fm1": "<b>Enviar a mi FM-1</b> copia una ranura a tu FM-1 con KAWA 0.2 o posterior: un cable USB de datos, Chrome o Edge, y la reproducción parada.",
+      "s.slot": "MI {k}", "s.empty": "vacía", "s.pick": "Elegir un archivo", "s.send": "Enviar a mi FM-1", "s.out": "Salida MIDI (al FM-1)", "s.in": "Entrada MIDI (del FM-1)",
+      "s.pickL": "Elegir un sonido para MI {k}", "s.sendL": "Enviar MI {k} a mi FM-1",
+      "s.reading": "Leyendo {f}…",
+      "s.ready": "{n} está en MI {k} ({s} s).",
+      "s.later": "{n} está listo en MI {k} ({s} s): estará ahí al encender.",
+      "s.cut": " Recortado para caber.",
+      "s.eDecode": "Este archivo no se pudo leer como un sonido.",
+      "s.eSilent": "Este sonido está en silencio.",
+      "s.eShort": "Este sonido es demasiado corto.",
+      "s.full": "El almacenamiento del navegador está lleno: este sonido desaparecerá al recargar.",
+      "m.nomidi": "Este navegador no tiene Web MIDI: usa Chrome o Edge en un ordenador.",
+      "m.denied": "Se rechazó el acceso MIDI. KAWA lo necesita con SysEx: permítelo en los ajustes del sitio.",
+      "m.search": "Buscando el FM-1…",
+      "m.noports": "No hay ningún aparato MIDI conectado. Conecta el FM-1 con un cable USB de datos y enciéndelo.",
+      "m.choose": "No se encontró ningún FM-1 por su nombre: elige sus puertos MIDI abajo y vuelve a enviar.",
+      "m.timeout": "El FM-1 no responde. ¿Está encendido, con KAWA 0.2 o posterior, conectado con un cable de datos?",
+      "m.notkawa": "El FM-1 respondió, pero no lleva KAWA 0.2 o posterior.",
+      "m.toobig": "La ranura del FM-1 es más pequeña que este sonido.",
+      "m.sending": "Enviando al FM-1… {p} %",
+      "m.done": "Hecho: {n} está en MI {k} en tu FM-1. Allí: página SONIDO, motor SAMPLE, FUENTE MI {k}.",
+      "m.rc1": "El FM-1 rechazó la petición (argumentos incorrectos). Recarga esta página y vuelve a intentarlo.",
+      "m.rc2": "El FM-1 está ocupado: para KAWA primero (PLAY) y vuelve a enviar.",
+      "m.rc3": "El FM-1 no pudo escribir su memoria (flash). Vuelve a enviar; si sigue, apágalo y enciéndelo.",
+      "m.rc4": "El sonido no llegó intacto (CRC). Vuelve a enviarlo.",
+      "m.rc5": "La transferencia llegó desordenada (se cortó). Vuelve a enviarla.",
+      "m.rcX": "El FM-1 respondió un código desconocido ({c}).",
+      "p.h": "Proyectos guardados",
+      "p.how": "Lo que guardas en el emulador (<b>SAVE</b> y luego <b>OCT+</b>, o <kbd>Ctrl/⌘ S</kbd>) se queda en este navegador y vuelve al encender. Exporta un archivo .kawa para guardar una copia o pasarlo a otro ordenador.",
+      "p.exp": "Exportar proyectos", "p.imp": "Importar proyectos",
+      "p.saved": "Guardado en este navegador a las {t}.",
+      "p.none": "Nada guardado todavía: en el emulador, SAVE y luego OCT+.",
+      "p.bad": "Esto no es un archivo de proyectos KAWA.",
+      "p.done": "Proyectos importados: el autoguardado está cargado, los demás están en SAVE › CARGAR.",
+      "p.later": "Proyectos importados: estarán ahí al encender.",
+      "p.full": "El almacenamiento del navegador está lleno: exporta tus proyectos para conservarlos.",
+      "p.exported": "Exportado: {f}",
+      g1: "Lo básico",
+      g1l: "<li>Un tracker para todos los estilos. El tiempo baja: cada fila es un paso (una semicorchea), cada columna una pista, cada celda una nota, su volumen y un efecto.</li>" +
+           "<li><b>PLAY</b> arranca la demo. Seis pistas, cada una con su motor: PULSE, WAVE, NOISE, FM (una pista, 6 operadores), KIT (8 kits) o SAMPLE (los breaks o tus propios sonidos).</li>" +
+           "<li><b>ALGORITHM</b> elige la pista, <b>SELECT</b> la fila, <b>PRESETS</b> el patrón. <b>KNOB 1 a 4</b> (<span class=\"k1\">rojo</span>, <span class=\"k2\">amarillo</span>, <span class=\"k3\">verde</span>, <span class=\"k4\">azul</span> en todas las páginas) cambian la celda: sus etiquetas dicen lo que hacen.</li>" +
+           "<li><b>REC</b> y luego las teclas: las notas se escriben en el cursor (a tiempo mientras suena). REC mantenido + SELECT: cuántas filas salta una nota. <b>ARP</b> borra la celda.</li>" +
+           "<li><b>HOME</b> las pistas (mantenido: la ayuda de la página) · <b>SEQ</b> la rejilla · <b>EDIT</b> el sonido, otra vez para la página siguiente (SELECT elige el motor) · <b>ENV</b> la envolvente, otra vez MEZCLA · <b>GLO</b> la canción, otra vez el groove, luego las opciones.</li>" +
+           "<li><b>SAVE</b>: canción nueva, guardar, guardar como, cargar, renombrar, demo (<b>OCT+</b> OK, <b>OCT−</b> atrás). SAVE mantenido + OCT−: deshacer, + OCT+: rehacer.</li>",
+      g2: "Efectos y magia",
+      g2l: "<li>Mantén <b>FX</b> y toca las teclas blancas: 32 efectos en vivo (<b>OCT+</b> el segundo banco), en el master o en una pista. Un toque corto deja la página abierta.</li>" +
+           "<li><b>LFO</b> abre la magia: trocear el break, escribir un ritmo, una melodía o un bajo en la escala (<b>SCL</b>), Euclides, redobles…</li>" +
+           "<li><b>MEZCLA</b> (ENV dos veces): los niveles y el efecto master. Las teclas negras silencian; ARP mantenido + tecla negra: solo.</li>" +
+           "<li>ARP mantenido + SELECT: una fila más o menos; + ALGORITHM: en todo el patrón.</li>" +
+           "<li><b>EDIT</b> una y otra vez: SONIDO, SONIDO 2, (FM: OPERADOR, ENV. OP; SAMPLE: EDITAR SAMPLE), EFECTO, LFO, MODULACIÓN, TABLA.</li>" +
+           "<li>Dos efectos por celda: <b>ARP</b> mantenido + KNOB 3 y 4 ajustan el segundo. SAL salta a una fila, FIN termina el patrón.</li>",
+      g3: "Con el teclado",
+      g3l: "<li>Notas: las filas <kbd>Z X C V…</kbd> y <kbd>Q W E R…</kbd> (posiciones de las teclas, QWERTY o AZERTY).</li>" +
+           "<li><kbd>Espacio</kbd> PLAY · <kbd>Intro</kbd> REC · <kbd>Mayús</kbd> mantenido FX · <kbd>Retroceso</kbd> ARP · <kbd>Esc</kbd> HOME · <kbd>-</kbd> <kbd>=</kbd> OCT− OCT+.</li>" +
+           "<li><kbd>↑</kbd><kbd>↓</kbd> fila · <kbd>←</kbd><kbd>→</kbd> pista · <kbd>RePág</kbd><kbd>AvPág</kbd> patrón.</li>" +
+           "<li><kbd>Ctrl/⌘ Z</kbd> deshacer · <kbd>Ctrl/⌘ Y</kbd> o <kbd>Ctrl/⌘ Mayús Z</kbd> rehacer · <kbd>Ctrl/⌘ S</kbd> guardar · <kbd>F1</kbd> o <kbd>?</kbd> mantenido: ayuda.</li>" +
+           "<li>La rueda del ratón sobre un potenciómetro, o arrástralo arriba y abajo; las flechas cuando tiene el foco.</li>",
+      "d.h": "¿Me invitas a una cerveza?",
+      "d.p": "Si te gusta lo que hago, ¡piensa en apoyarme! ¡Cada pequeño gesto significa muchísimo!",
+      "d.sig": "Omnipotard, quien hizo KAWA",
+      "d.btn": "Invítame a una cerveza en Ko-fi",
+      "d.new": " (abre una pestaña nueva)",
+      foot: "KAWA es software libre (GPL-3.0), construido sobre Dinghy, Felucca y SLOOP, la plataforma abierta de la comunidad FM-1. Los breaks están totalmente sintetizados. El firmware se instala en el FM-1 por USB bajo tu propio riesgo: ten a mano el firmware oficial V15 y M-UPGRADE para volver atrás."
+    }
+  };
+  const LANG_ID = {fr: 0, en: 1, es: 2};
+  let lang = "en";
+  const T = (k, v) => {
+    let s = (I18N[lang] && k in I18N[lang]) ? I18N[lang][k] : (k in I18N.en ? I18N.en[k] : "");
+    if (v && typeof s === "string") s = s.replace(/\{(\w+)\}/g, (m, n) => (n in v ? String(v[n]) : m));
+    return s;
+  };
+  const ls = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+  };
+
+  const canvas = $("screen"), ctx2d = canvas.getContext("2d"), img = ctx2d.createImageData(240, 240);
+  const device = $("device");
+  let send = () => {};
+  let audio = null, running = false;
+  const ui = {page: -1, trk: 0, theme: 0, sgen: 0, labels: ["", "", "", ""], names: ["", "", "", ""], leds: null};
+
+  function drawScreen(fb) {
+    const d = img.data;
+    for (let i = 0, j = 0; i < 57600; i++, j += 4) {
+      const c = fb[i];
+      d[j] = ((c >> 11) & 31) * 255 / 31; d[j + 1] = ((c >> 5) & 63) * 255 / 63; d[j + 2] = (c & 31) * 255 / 31; d[j + 3] = 255;
+    }
+    ctx2d.putImageData(img, 0, 0);
+  }
+
+  /* ---- the buttons: each one held by any number of hands (pointer, keys, shortcuts); it goes down
+     with the first and up with the last */
+  const btnEls = [], keyEls = [], knobEls = {};
+  const holders = Array.from({length: 14}, () => new Set());
+  function hold(id, src, on) {
+    const h = holders[id], was = h.size > 0;
+    if (on) h.add(src); else h.delete(src);
+    const now = h.size > 0;
+    if (now === was) return;
+    if (btnEls[id]) btnEls[id].classList.toggle("down", now);
+    send({t: "btn", id, down: now ? 1 : 0});
+  }
+  function releaseAll(prefix) {
+    holders.forEach((h, id) => { [...h].forEach((s) => { if (!prefix || s.startsWith(prefix)) hold(id, s, false); }); });
+  }
+  async function tapA(id, ms) { hold(id, "seq", true); await sleep(ms || 60); hold(id, "seq", false); }
+  function tap(id, ms) { const s = "tap" + Math.random(); hold(id, s, true); setTimeout(() => hold(id, s, false), ms || 60); }
+
+  /* ---- the panel */
+  const FN_KEY = {MASTER: "k.master", SELECT: "k.select", PRESETS: "k.presets", ALGORITHM: "k.algo"};
+  let master = 0.72;
+  function makeKnob(parent, label, enc) {
+    const ki = ["K1", "K2", "K3", "K4"].indexOf(enc);
+    const k = document.createElement("div");
+    k.className = "knob" + (ki >= 0 ? " col" : "");
+    k.tabIndex = 0;
+    k.setAttribute("role", "slider");
+    k.setAttribute("aria-label", label);
+    k.dataset.enc = enc;
+    if (ki >= 0) k.style.setProperty("--ring", KNOB_COL[ki]);
+    k.innerHTML = '<span class="lbl" aria-hidden="true">' + label + '</span><div class="ring"><div class="cap"></div></div>' +
+      (ki >= 0 ? '<span class="fn live" id="klab-' + ki + '" aria-hidden="true"></span>' : '<span class="fn" aria-hidden="true" data-t="' + FN_KEY[enc] + '"></span>');
+    parent.appendChild(k);
+    knobEls[enc] = k;
+    const cap = k.querySelector(".cap");
+    let angle = 0;
+    const setMaster = () => {
+      k.setAttribute("aria-valuemin", "0"); k.setAttribute("aria-valuemax", "100"); k.setAttribute("aria-valuenow", String(Math.round(master * 100)));
+      cap.style.setProperty("--a", (-135 + master * 270) + "deg");
+    };
+    const turn = (steps) => {
+      if (!steps) return;
+      if (enc === "MASTER") {
+        master = Math.min(1, Math.max(0, master + steps * 0.04));
+        setMaster();
+        send({t: "master", v: Math.round(master * master * 6000)});
+        return;
+      }
+      angle += steps * 18;
+      cap.style.setProperty("--a", angle + "deg");
+      send({t: "turn", enc: ENC[enc], steps});
+    };
+    if (enc === "MASTER") setMaster();
+    k.addEventListener("wheel", (e) => { e.preventDefault(); turn(e.deltaY < 0 ? 1 : -1); }, {passive: false});
+    let dragY = null, acc = 0;
+    k.addEventListener("pointerdown", (e) => { dragY = e.clientY; acc = 0; k.setPointerCapture(e.pointerId); });
+    k.addEventListener("pointermove", (e) => {
+      if (dragY === null) return;
+      acc += dragY - e.clientY; dragY = e.clientY;
+      while (acc >= 10) { turn(1); acc -= 10; }
+      while (acc <= -10) { turn(-1); acc += 10; }
+    });
+    const end = () => { dragY = null; };
+    k.addEventListener("pointerup", end); k.addEventListener("pointercancel", end);
+    k.addEventListener("keydown", (e) => {
+      const s = {ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 4, PageDown: -4}[e.key];
+      if (s) { turn(s); e.preventDefault(); e.stopPropagation(); }
+    });
+  }
+  const BTN_FN = ["b.oct", "b.oct", "b.fx", "b.scl", "b.env", "b.lfo", "b.edit", "b.glo", "b.home", "b.save", "b.arp", "b.seq", "b.play", "b.rec"];
+  function makeBtn(parent, label, id) {
+    const b = document.createElement("button");
+    const fn = BTN_FN[id], alt = (fn + ".alt") in I18N.en;
+    b.type = "button"; b.className = "btn"; b.dataset.id = id;
+    b.innerHTML = '<span class="face">' + label + '</span><span class="fn" data-t="' + fn + '"></span>' + (alt ? '<span class="alt" data-t="' + fn + '.alt"></span>' : "");
+    parent.appendChild(b);
+    btnEls[id] = b;
+    b.addEventListener("pointerdown", (e) => { e.preventDefault(); b.setPointerCapture(e.pointerId); hold(id, "ptr", true); });
+    const up = () => hold(id, "ptr", false);
+    b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); b.addEventListener("lostpointercapture", up);
+    b.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.stopPropagation(); e.preventDefault(); hold(id, "focus", true); } });
+    b.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") { e.stopPropagation(); hold(id, "focus", false); } });
+    b.addEventListener("blur", () => hold(id, "focus", false));
+  }
+
+  [["MASTER", "MASTER"], ["SELECT", "SELECT"], ["PRESETS", "PRESETS"], ["ALGORITHM", "ALGORITHM"]].forEach(([l, e]) => makeKnob($("knobs-left"), l, e));
+  [["KNOB 1", "K1"], ["KNOB 2", "K2"], ["KNOB 3", "K3"], ["KNOB 4", "K4"]].forEach(([l, e]) => makeKnob($("knobs-right"), l, e));
+  makeBtn($("oct"), "OCT-", BTN.OCTD);
+  makeBtn($("oct"), "OCT+", BTN.OCTU);
+  [["FX", BTN.FX], ["SCL", BTN.SCL], ["ENV", BTN.ENV], ["LFO", BTN.LFO], ["EDIT", BTN.EDIT], ["GLO", BTN.GLO],
+   ["HOME", BTN.HOME], ["SAVE", BTN.SAVE], ["ARP", BTN.ARP], ["SEQ", BTN.SEQ], ["PLAY", BTN.PLAY], ["REC", BTN.REC]]
+    .forEach(([l, id]) => makeBtn($("btns"), l, id));
+
+  /* keys: F3 .. G5 */
+  const NAMES = ["F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E"];
+  let keyMask = 0;
+  const setKey = (k, on) => {
+    const m = on ? (keyMask | (1 << k)) : (keyMask & ~(1 << k));
+    if (m === keyMask) return;
+    keyMask = m;
+    keyEls[k].classList.toggle("down", on);
+    send({t: "keys", mask: keyMask});
+  };
+  (function layoutKeys() {
+    const wrap = $("keys");
+    for (let k = 0; k < 27; k++) {
+      const name = NAMES[k % 12], black = name.length > 1;
+      const el = document.createElement("div");
+      el.className = "key " + (black ? "b" : "w");
+      el.setAttribute("aria-label", name + (3 + Math.floor((k + 5) / 12)));
+      if (!black && name === "C") el.innerHTML = `<span class="kn">C${3 + Math.floor((k + 5) / 12)}</span>`;
+      wrap.appendChild(el);
+      keyEls[k] = el;
+      el.addEventListener("pointerdown", (e) => { e.preventDefault(); el.setPointerCapture(e.pointerId); setKey(k, true); });
+      const up = () => setKey(k, false);
+      el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); el.addEventListener("lostpointercapture", up);
+    }
+    const W = 100 / 16;
+    let w = 0;
+    for (let k = 0; k < 27; k++) {
+      const el = keyEls[k];
+      if (el.classList.contains("w")) { el.style.left = `calc(${w * W}% + 2px)`; el.style.width = `calc(${W}% - 4px)`; w++; }
+      else { el.style.left = `calc(${w * W - W * 0.32}% + 1px)`; el.style.width = `calc(${W * 0.64}% - 2px)`; }
+    }
+  })();
+
+  /* ---- the computer keyboard (by position: AZERTY and QWERTY alike), and the shortcuts */
+  const LOW = ["KeyZ", "KeyS", "KeyX", "KeyD", "KeyC", "KeyF", "KeyV", "KeyB", "KeyH", "KeyN", "KeyJ", "KeyM", "Comma", "KeyL", "Period", "Semicolon", "Slash"];
+  const HIGH = ["KeyQ", "Digit2", "KeyW", "Digit3", "KeyE", "Digit4", "KeyR", "KeyT", "Digit6", "KeyY", "Digit7", "KeyU", "KeyI", "Digit9", "KeyO"];
+  const CODE_KEY = {};
+  LOW.forEach((c, i) => CODE_KEY[c] = i);
+  HIGH.forEach((c, i) => CODE_KEY[c] = 12 + i);
+  const CODE_BTN = {Space: BTN.PLAY, Enter: BTN.REC, NumpadEnter: BTN.REC, Backspace: BTN.ARP, Delete: BTN.ARP, Escape: BTN.HOME, Minus: BTN.OCTD, Equal: BTN.OCTU};
+  const CODE_ENC = {ArrowUp: [ENC.SELECT, -1], ArrowDown: [ENC.SELECT, 1], ArrowLeft: [ENC.ALGORITHM, -1], ArrowRight: [ENC.ALGORITHM, 1], PageUp: [ENC.PRESETS, 1], PageDown: [ENC.PRESETS, -1]};
+  const typing = (e) => e.target && e.target.closest && e.target.closest("input, textarea, select, [contenteditable]");
+  const onControl = (e) => e.target && e.target.closest && e.target.closest("a, button:not(.btn), label");
+
+  /* Shift is FX, but "?" needs Shift too: FX goes down a moment later, or with the next key */
+  let shiftTimer = 0, shiftFx = false, shiftUsed = false, helpCode = null;
+  function flushShift() { if (!shiftTimer) return; clearTimeout(shiftTimer); shiftTimer = 0; shiftFx = true; hold(BTN.FX, "shift", true); }
+  function shiftDown() { if (shiftTimer || shiftFx) return; shiftUsed = false; shiftTimer = setTimeout(flushShift, 220); }
+  function cancelShift() { if (shiftTimer) { clearTimeout(shiftTimer); shiftTimer = 0; shiftUsed = true; } }
+  function shiftUp() {
+    if (shiftTimer) { clearTimeout(shiftTimer); shiftTimer = 0; if (!shiftUsed) tap(BTN.FX, 60); }   /* a tap: the page stays */
+    else if (shiftFx) { shiftFx = false; hold(BTN.FX, "shift", false); }
+    shiftUsed = false;
+  }
+
+  let combo = false;
+  async function sequence(fn) { if (combo || !running) return; combo = true; try { await fn(); } finally { combo = false; } }
+  const undo = () => sequence(async () => { hold(BTN.SAVE, "seq", true); await sleep(50); await tapA(BTN.OCTD); await sleep(50); hold(BTN.SAVE, "seq", false); });
+  const redo = () => sequence(async () => { hold(BTN.SAVE, "seq", true); await sleep(50); await tapA(BTN.OCTU); await sleep(50); hold(BTN.SAVE, "seq", false); });
+  const quickSave = () => sequence(async () => {           /* SAVE, then OCT+ (SAVE on the menu): saved, or the slot to choose */
+    if (ui.page === PG.PROJECTS) { await tapA(BTN.SAVE); await sleep(120); }
+    const g = ui.sgen;
+    await tapA(BTN.SAVE); await sleep(150);
+    await tapA(BTN.OCTU); await sleep(300);
+    if (ui.sgen !== g && ui.page === PG.PROJECTS) await tapA(BTN.SAVE);   /* saved: back to the page */
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (typing(e)) return;
+    if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+      cancelShift();
+      if (!running) return;
+      const k = (e.key || "").toLowerCase();
+      if (k === "z" && !e.shiftKey) { e.preventDefault(); if (!e.repeat) undo(); }
+      else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); if (!e.repeat) redo(); }
+      else if (k === "s") { e.preventDefault(); if (!e.repeat) quickSave(); }
+      return;
+    }
+    if (e.altKey) return;
+    if (onControl(e) && (e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter")) return;
+    if (e.code === "F1" || (e.key === "?" && !shiftFx)) {
+      e.preventDefault();
+      if (!e.repeat && !helpCode) { cancelShift(); helpCode = e.code; hold(BTN.HOME, "help", true); }
+      return;
+    }
+    if (e.code === "ShiftLeft" || e.code === "ShiftRight") { if (!e.repeat) shiftDown(); return; }
+    if (e.code in CODE_KEY) { e.preventDefault(); flushShift(); if (!e.repeat) setKey(CODE_KEY[e.code], true); return; }
+    if (e.code in CODE_BTN) { e.preventDefault(); flushShift(); if (!e.repeat) hold(CODE_BTN[e.code], "kbd:" + e.code, true); return; }
+    if (e.code in CODE_ENC) { e.preventDefault(); flushShift(); const [enc, s] = CODE_ENC[e.code]; send({t: "turn", enc, steps: s}); }
+  });
+  window.addEventListener("keyup", (e) => {
+    if (helpCode && e.code === helpCode) { helpCode = null; hold(BTN.HOME, "help", false); return; }
+    if (e.code === "ShiftLeft" || e.code === "ShiftRight") { shiftUp(); return; }
+    if (e.code in CODE_KEY) { setKey(CODE_KEY[e.code], false); return; }
+    if (e.code in CODE_BTN) hold(CODE_BTN[e.code], "kbd:" + e.code, false);
+  });
+  window.addEventListener("blur", () => {
+    for (let k = 0; k < 27; k++) setKey(k, false);
+    if (shiftTimer) { clearTimeout(shiftTimer); shiftTimer = 0; }
+    shiftFx = false; helpCode = null;
+    releaseAll("kbd:"); releaseAll("shift"); releaseAll("help"); releaseAll("focus");
+  });
+
+  /* ---- what the engine says */
+  function showLeds(leds) {
+    ui.leds = leds;
+    for (let i = 0; i < 14; i++) {
+      const b = btnEls[i]; if (!b) continue;
+      b.classList.toggle("on", leds[i] === 2); b.classList.toggle("dim", leds[i] === 1);
+    }
+    for (let k = 0; k < 27; k++) {
+      const v = leds[14 + k];
+      keyEls[k].classList.toggle("on", v === 2); keyEls[k].classList.toggle("dim", v === 1);
+    }
+  }
+  const hotTimers = [0, 0, 0, 0];
+  function showUi(d) {
+    const pageChanged = d.page !== ui.page;
+    for (let i = 0; i < 4; i++) {
+      if (!pageChanged && d.labels[i] !== ui.labels[i] && ui.page >= 0) {
+        const el = knobEls["K" + (i + 1)];
+        el.classList.add("hot");
+        clearTimeout(hotTimers[i]);
+        hotTimers[i] = setTimeout(() => el.classList.remove("hot"), 700);
+      }
+    }
+    Object.assign(ui, {page: d.page, trk: d.trk, theme: d.theme, sgen: d.sgen, labels: d.labels});
+    device.dataset.page = String(d.page);
+    renderUi();
+  }
+  function renderUi() {
+    for (let i = 0; i < 4; i++) {
+      const lab = ui.labels[i] || "";
+      $("klab-" + i).textContent = lab;
+      knobEls["K" + (i + 1)].setAttribute("aria-valuetext", lab.replace("\n", " ") || T("k.unused"));
+    }
+    const pg = $("pg-name"), names = T("pages");
+    pg.textContent = ui.page >= 0 && ui.page < names.length ? names[ui.page] : "";
+    pg.style.setProperty("--acc", THEME_ACC[ui.theme] || THEME_ACC[0]);
+    $("trk-name").textContent = ui.page < 0 || ui.page === 12 ? "" : (ui.trk >= 6 ? T("master") : T("track", {n: ui.trk + 1}));
+  }
+  function onEngine(d) {
+    if (d.t === "screen") { drawScreen(d.fb); if (!device.dataset.drawn) device.dataset.drawn = "1"; }
+    else if (d.t === "leds") showLeds(d.leds);
+    else if (d.t === "ui") showUi(d);
+    else if (d.t === "slots") { ui.names = d.names; renderSlots(); }
+    else if (d.t === "store") onStore(d.data, d.asked);
+    else if (d.t === "ready") { CAP = d.cap || CAP; STORE_SIZE = d.store || STORE_SIZE; }
+  }
+
+  /* ---- bytes */
+  function b64enc(u8) {
+    let s = "";
+    for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  function b64dec(s) {
+    const bin = atob(s), u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return u;
+  }
+  const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+
+  /* ---- the saved projects: the four slots of the store, kept in localStorage (each slot without its
+     trailing zeros), exported and imported as the raw bytes (.kawa) */
+  const hasProject = (u8) => { for (let o = 0; o + 4 <= u8.length; o += SLOT) if (u8[o] === 0x4B && u8[o + 1] === 0x41 && u8[o + 2] === 0x57 && u8[o + 3] === 0x41) return true; return false; };
+  function saveStore(u8) {
+    const parts = [];
+    for (let o = 0; o < u8.length; o += SLOT) {
+      const s = u8.subarray(o, Math.min(u8.length, o + SLOT));
+      let n = s.length;
+      while (n && !s[n - 1]) n--;
+      parts.push(b64enc(s.subarray(0, n)));
+    }
+    return ls.set(LS_STORE, JSON.stringify({v: 1, size: u8.length, slot: SLOT, parts}));
+  }
+  function loadStore() {
+    try {
+      const j = JSON.parse(ls.get(LS_STORE) || "null");
+      if (!j || !Array.isArray(j.parts)) return null;
+      const u = new Uint8Array(j.size || STORE_SIZE), slot = j.slot || SLOT;
+      j.parts.forEach((p, k) => {
+        if (!p || k * slot >= u.length) return;
+        const b = b64dec(p);
+        u.set(b.subarray(0, Math.min(b.length, slot, u.length - k * slot)), k * slot);
+      });
+      return u;
+    } catch (e) { return null; }
+  }
+  const hhmm = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  function projMsg(text, cls) { const m = $("prj-msg"); m.textContent = text; m.className = "pmsg" + (cls ? " " + cls : ""); }
+  function onStore(u8, asked) {
+    if (asked) { if (hasProject(u8)) download(u8); else projMsg(T("p.none")); }
+    if (!hasProject(u8) && !ls.get(LS_STORE)) return;
+    if (!saveStore(u8)) projMsg(T("p.full"), "err");
+    else if (!asked) projMsg(T("p.saved", {t: hhmm()}));
+  }
+  function download(u8) {
+    const d = new Date(), p2 = (n) => String(n).padStart(2, "0");
+    const f = "kawa-projects-" + d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + ".kawa";
+    const url = URL.createObjectURL(new Blob([u8], {type: "application/octet-stream"}));
+    const a = document.createElement("a");
+    a.href = url; a.download = f; a.hidden = true;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    projMsg(T("p.exported", {f}), "ok");
+  }
+  $("prj-export").addEventListener("click", () => {
+    if (running) { send({t: "getstore"}); return; }
+    const u = loadStore();
+    if (u && hasProject(u)) download(u); else projMsg(T("p.none"));
+  });
+  async function importProjects(file) {
+    let u;
+    try { u = new Uint8Array(await file.arrayBuffer()); } catch (e) { projMsg(T("p.bad"), "err"); return; }
+    if (u.length < 8 || u.length > STORE_SIZE || !hasProject(u)) { projMsg(T("p.bad"), "err"); return; }
+    const full = new Uint8Array(STORE_SIZE);
+    full.set(u);
+    const ok = saveStore(full);
+    if (running) {
+      if (ui.leds && ui.leds[BTN.PLAY] === 2) { await tapA(BTN.PLAY); await sleep(80); }   /* stopped first */
+      send({t: "store", data: full});
+    }
+    projMsg(ok ? T(running ? "p.done" : "p.later") : T("p.full"), ok ? "ok" : "err");
+  }
+  $("prj-import").addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; if (f) importProjects(f); e.target.value = ""; });
+
+  /* ---- the user's samples: decoded, mono, 22050 Hz, the silence before it gone, normalised to 0.95,
+     cut to the slot, a 64-sample fade, 8-bit mu-law (as install/kawa_samples.py); kept in localStorage */
+  const samples = [null, null, null, null];
+  const slotEls = [];
+  function saveSamples() {
+    return ls.set(LS_SMP, JSON.stringify(samples.map((s) => (s ? {n: s.name, r: s.rate, d: b64enc(s.data)} : null))));
+  }
+  function loadSamples() {
+    try {
+      const j = JSON.parse(ls.get(LS_SMP) || "null");
+      if (!Array.isArray(j)) return;
+      j.slice(0, 4).forEach((s, k) => {
+        if (s && s.d) samples[k] = {name: String(s.n || "SAMPLE").slice(0, 11), rate: s.r === 11025 ? 11025 : RATE, data: b64dec(s.d)};
+      });
+    } catch (e) {}
+  }
+  function sampleName(file) {
+    const s = String(file || "").replace(/\.[^.]*$/, "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase()
+      .replace(/[^A-Z0-9 _\-.!+#]/g, " ").replace(/\s+/g, " ").trim().slice(0, 11).trim();
+    return s || "SAMPLE";
+  }
+  function decodeFile(ab) {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const dec = (ctx, data) => new Promise((res, rej) => {
+      try { const p = ctx.decodeAudioData(data, res, rej); if (p && p.then) p.then(res, rej); } catch (e) { rej(e); }
+    });
+    const fallback = () => {
+      const ctx = audio || (OAC ? new OAC(1, 1, 44100) : null);
+      return ctx ? dec(ctx, ab) : Promise.reject(new Error("decode"));
+    };
+    if (!OAC) return fallback();
+    let ctx;
+    try { ctx = new OAC(1, 1, RATE); } catch (e) { return fallback(); }   /* (decoded straight at 22050 Hz) */
+    return dec(ctx, ab.slice(0)).catch(fallback);
+  }
+  function encodeSample(buf) {
+    const sr = buf.sampleRate, n = buf.length, ch = buf.numberOfChannels, chans = [];
+    for (let c = 0; c < ch; c++) chans.push(buf.getChannelData(c));
+    const mono = (i) => { let s = 0; for (let c = 0; c < ch; c++) s += chans[c][i]; return s / ch; };
+    let start = 0;
+    while (start < n && Math.abs(mono(start)) <= 0.003) start++;              /* the silence before it goes */
+    if (start >= n) throw new Error("silent");
+    const step = sr / RATE, take = Math.min(n - start, Math.ceil((CAP + 2) * step) + 2);
+    let a = new Float32Array(take);
+    for (let i = 0; i < take; i++) a[i] = mono(start + i);
+    const k = Math.round(step);
+    if (k > 1) {                                                              /* a gentle low-pass when going down */
+      const b = new Float32Array(take), h = (k - 1) >> 1;
+      let acc = 0;
+      for (let i = 0; i < Math.min(take, k - h); i++) acc += a[i];
+      for (let i = 0; i < take; i++) {
+        b[i] = acc / k;
+        const add = i + k - h, sub = i - h;
+        if (add < take) acc += a[add];
+        if (sub >= 0) acc -= a[sub];
+      }
+      a = b;
+    }
+    let out;
+    if (sr === RATE) out = a.subarray(0, Math.min(CAP, take));
+    else {
+      const m = Math.min(CAP, Math.floor((take - 1) / step) + 1);
+      out = new Float32Array(m);
+      for (let i = 0; i < m; i++) {
+        const t = i * step, j = Math.floor(t), f = t - j, y0 = a[j], y1 = j + 1 < take ? a[j + 1] : y0;
+        out[i] = y0 + (y1 - y0) * f;
+      }
+    }
+    const len = out.length;
+    if (len < 64) throw new Error("short");
+    let peak = 0;
+    for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(out[i]));
+    const g = peak > 0 ? 0.95 / peak : 1, fade = Math.min(64, len >> 2), L = Math.log(256);
+    const d = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      let x = out[i] * g;
+      const j = i - (len - fade);
+      if (j >= 0) x *= fade > 1 ? 1 - j / (fade - 1) : 0;                     /* no click at the end */
+      const y = Math.sign(x) * Math.log1p(255 * Math.abs(x)) / L;
+      d[i] = Math.max(0, Math.min(255, Math.round((y + 1) * 127.5)));
+    }
+    return {data: d, cut: (n - start) / step > CAP + 1};
+  }
+  const secs = (n, r) => { const s = (n / (r || RATE)).toFixed(2); return lang === "en" ? s : s.replace(".", ","); };
+  function setSlotMsg(k, text, cls) { const m = slotEls[k].msg; m.textContent = text || ""; m.className = "smsg" + (cls ? " " + cls : ""); }
+  async function importSample(file, k) {
+    setSlotMsg(k, T("s.reading", {f: file.name}));
+    let enc;
+    try {
+      const buf = await decodeFile(await file.arrayBuffer());
+      enc = encodeSample(buf);
+    } catch (e) {
+      const m = e && e.message;
+      setSlotMsg(k, T(m === "silent" ? "s.eSilent" : m === "short" ? "s.eShort" : "s.eDecode"), "err");
+      return;
+    }
+    const name = sampleName(file.name);
+    samples[k] = {name, rate: RATE, data: enc.data};
+    const kept = saveSamples();
+    if (running) send({t: "sample", slot: k, data: enc.data.slice(), name, rate: RATE});
+    renderSlots();
+    const v = {n: name, k: k + 1, s: secs(enc.data.length)};
+    setSlotMsg(k, T(running ? "s.ready" : "s.later", v) + (enc.cut ? T("s.cut") : "") + (kept ? "" : " " + T("s.full")), kept ? "ok" : "err");
+  }
+  function buildSlots() {
+    const ol = $("slots");
+    for (let k = 0; k < 4; k++) {
+      const li = document.createElement("li");
+      li.className = "slot";
+      li.dataset.slot = String(k);
+      li.innerHTML = '<div class="shead"><span class="sid"></span><span class="smeta"></span></div><div class="sname"></div>' +
+        '<div class="sacts"><label class="sbtn"><span class="pick"></span><input type="file" class="vh" accept="audio/*,.wav,.wave,.mp3,.ogg,.oga,.opus,.flac,.aif,.aiff,.m4a,.aac,.webm"></label>' +
+        '<button type="button" class="sbtn send"></button></div><progress max="100" value="0" hidden></progress><div class="smsg" role="status" aria-live="polite"></div>';
+      ol.appendChild(li);
+      const el = {li, sid: li.querySelector(".sid"), meta: li.querySelector(".smeta"), name: li.querySelector(".sname"), pick: li.querySelector(".pick"),
+        input: li.querySelector("input"), send: li.querySelector(".send"), bar: li.querySelector("progress"), msg: li.querySelector(".smsg")};
+      el.input.addEventListener("change", () => { const f = el.input.files && el.input.files[0]; if (f) importSample(f, k); el.input.value = ""; });
+      el.send.addEventListener("click", () => sendSlot(k));
+      slotEls[k] = el;
+    }
+  }
+  let sending = -1;
+  function renderSlots() {
+    for (let k = 0; k < 4; k++) {
+      const el = slotEls[k], s = samples[k];
+      const name = (running && ui.names[k]) || (s ? s.name : "");
+      el.li.classList.toggle("empty", !name);
+      el.li.dataset.name = name;
+      el.sid.textContent = T("s.slot", {k: k + 1});
+      el.name.textContent = name || T("s.empty");
+      el.meta.textContent = s ? secs(s.data.length, s.rate) + " s" : "";
+      el.pick.textContent = T("s.pick");
+      el.input.setAttribute("aria-label", T("s.pickL", {k: k + 1}));
+      el.send.textContent = T("s.send");
+      el.send.setAttribute("aria-label", T("s.sendL", {k: k + 1}));
+      el.send.disabled = !s || sending >= 0;
+      el.send.classList.toggle("hot", !!s && sending < 0);
+    }
+  }
+
+  /* drag and drop: on a slot, or anywhere (the first empty slot); a .kawa file: the projects */
+  const hasFiles = (e) => e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0;
+  let dragDepth = 0, overEl = null;
+  const setOver = (el) => { if (overEl === el) return; if (overEl) overEl.classList.remove("over"); overEl = el; if (el) el.classList.add("over"); };
+  const endDrag = () => { dragDepth = 0; document.body.classList.remove("dragging"); setOver(null); };
+  window.addEventListener("dragenter", (e) => { if (!hasFiles(e)) return; dragDepth++; document.body.classList.add("dragging"); });
+  window.addEventListener("dragleave", (e) => { if (hasFiles(e) && --dragDepth <= 0) endDrag(); });
+  window.addEventListener("dragover", (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setOver(e.target.closest ? e.target.closest(".slot") : null);
+  });
+  window.addEventListener("drop", (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    const slotEl = e.target.closest ? e.target.closest(".slot") : null;
+    endDrag();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    if (/\.kawa$/i.test(f.name)) { importProjects(f); return; }
+    let k = slotEl ? +slotEl.dataset.slot : samples.findIndex((s, i) => !s && !(running && ui.names[i]));
+    if (k < 0) k = 0;
+    if (!slotEl) slotEls[k].li.scrollIntoView({block: "nearest", behavior: "smooth"});
+    importSample(f, k);
+  });
+
+  /* ---- "Send to my FM-1": Web MIDI with SysEx, firmware/src/kawa_sysex.c's protocol. Frames:
+     F0 7D 4B 57 cmd pack7(args) F7, one request and one reply at a time */
+  class KErr extends Error { constructor(key, vars, step) { super(key); this.key = key; this.vars = vars; this.step = step; } }
+  function pack7(b) {
+    const out = [];
+    let acc = 0, nb = 0;
+    for (let i = 0; i < b.length; i++) {
+      acc |= b[i] << nb; nb += 8;
+      while (nb >= 7) { out.push(acc & 0x7F); acc >>>= 7; nb -= 7; }
+    }
+    if (nb) out.push(acc & 0x7F);
+    return out;
+  }
+  function unpack7(b) {
+    const out = [];
+    let acc = 0, nb = 0;
+    for (let i = 0; i < b.length; i++) {
+      acc |= (b[i] & 0x7F) << nb; nb += 7;
+      if (nb >= 8) { out.push(acc & 0xFF); acc >>>= 8; nb -= 8; }
+    }
+    return new Uint8Array(out);
+  }
+  const CMD_NAME = {1: "INFO", 2: "BEGIN", 3: "WRITE", 4: "END", 5: "ERASE", 6: "LIST"};
+  const sysexFrame = (cmd, args) => new Uint8Array([0xF0, 0x7D, 0x4B, 0x57, cmd].concat(pack7(args || []), [0xF7]));
+  class Link {
+    constructor(o, i) { this.o = o; this.i = i; this.wait = null; this.retried = false; this.h = (ev) => this.got(ev.data); i.addEventListener("midimessage", this.h); }
+    async open() { await Promise.all([this.i.open ? this.i.open() : 0, this.o.open ? this.o.open() : 0]); }
+    got(d) {
+      const w = this.wait;
+      if (!w || !d || d.length < 6 || d[0] !== 0xF0 || d[1] !== 0x7D || d[2] !== 0x4B || d[3] !== 0x57 || d[d.length - 1] !== 0xF7 || d[4] !== w.cmd) return;
+      const body = unpack7(d.subarray(5, d.length - 1));
+      if (!body.length || (w.match && !w.match(body))) return;   /* (a late reply to an earlier try) */
+      this.wait = null;
+      clearTimeout(w.timer);
+      w.res(body);
+    }
+    once(cmd, frame, ms, match) {
+      return new Promise((res, rej) => {
+        this.wait = {cmd, match, res, timer: setTimeout(() => { this.wait = null; rej(new KErr("m.timeout", null, CMD_NAME[cmd])); }, ms)};
+        try { this.o.send(frame); } catch (e) { clearTimeout(this.wait.timer); this.wait = null; rej(e); }
+      });
+    }
+    async ask(cmd, args, ms, match) {                     /* one try again after a timeout */
+      const f = sysexFrame(cmd, args);
+      try { return await this.once(cmd, f, ms, match); }
+      catch (e) { if (!(e instanceof KErr)) throw e; this.retried = true; return this.once(cmd, f, ms, match); }
+    }
+    close() { this.i.removeEventListener("midimessage", this.h); if (this.wait) clearTimeout(this.wait.timer); this.wait = null; }
+  }
+  function rcCheck(body, step) {
+    if (body[0] === 0) return body;
+    throw new KErr(body[0] >= 1 && body[0] <= 5 ? "m.rc" + body[0] : "m.rcX", {c: body[0]}, step);
+  }
+  function sampleHeader(data, rate, name) {          /* usr_hdr_t: magic, len, rate, name[12], crc, rsv[2] (36 B, LE) */
+    const h = new Uint8Array(36), dv = new DataView(h.buffer);
+    dv.setUint32(0, 0x504D534B, true);
+    dv.setUint32(4, data.length, true);
+    dv.setUint32(8, rate, true);
+    for (let i = 0; i < 11 && i < name.length; i++) h[12 + i] = name.charCodeAt(i) & 0x7F;
+    dv.setUint32(24, crc32(data), true);
+    return h;
+  }
+  let midiAcc = null;
+  const PORT_RE = /FM-1|Felucca|KAWA/i;
+  function fillPicker(outs, ins, o, i) {
+    const fill = (sel, list, pick) => {
+      sel.textContent = "";
+      list.forEach((p) => { const op = document.createElement("option"); op.value = p.id; op.textContent = p.name || p.id; sel.appendChild(op); });
+      if (pick) sel.value = pick.id;
+    };
+    fill($("midi-out"), outs, o);
+    fill($("midi-in"), ins, i);
+    $("midi-pick").hidden = false;
+  }
+  function findPorts(acc) {
+    const outs = [], ins = [];
+    acc.outputs.forEach((p) => outs.push(p));
+    acc.inputs.forEach((p) => ins.push(p));
+    let o = null, i = null;
+    if (!$("midi-pick").hidden) {
+      o = outs.find((p) => p.id === $("midi-out").value) || null;
+      i = ins.find((p) => p.id === $("midi-in").value) || null;
+    }
+    o = o || outs.find((p) => PORT_RE.test(p.name || "")) || null;
+    i = i || ins.find((p) => PORT_RE.test(p.name || "")) || null;
+    return {o, i, outs, ins};
+  }
+  async function sendSlot(k) {
+    const s = samples[k];
+    if (!s || sending >= 0) return;
+    sending = k;
+    renderSlots();
+    const el = slotEls[k];
+    let link = null;
+    try {
+      if (!navigator.requestMIDIAccess) throw new KErr("m.nomidi");
+      setSlotMsg(k, T("m.search"));
+      if (!midiAcc) {
+        try { midiAcc = await navigator.requestMIDIAccess({sysex: true}); } catch (e) { throw new KErr("m.denied"); }
+      }
+      const p = findPorts(midiAcc);
+      if (!p.o || !p.i) {
+        if (!p.outs.length || !p.ins.length) throw new KErr("m.noports");
+        fillPicker(p.outs, p.ins, p.o, p.i);
+        throw new KErr("m.choose");
+      }
+      link = new Link(p.o, p.i);
+      await link.open();
+      const info = await link.ask(1, [], 1000);
+      if (info[0] !== 0 || info.length < 5 || String.fromCharCode(info[1], info[2], info[3], info[4]) !== "KAWA") throw new KErr("m.notkawa");
+      const cap = info.length >= 13 ? info[10] | info[11] << 8 | info[12] << 16 : 0;
+      if (cap && s.data.length > cap) throw new KErr("m.toobig");
+      rcCheck(await link.ask(2, [k], 3000), "BEGIN");     /* (it erases: a longer wait) */
+      el.bar.hidden = false; el.bar.value = 0;
+      const n = s.data.length;
+      for (let off = 0; off < n; off += 256) {
+        const chunk = s.data.subarray(off, Math.min(n, off + 256));
+        const args = new Uint8Array(4 + chunk.length);
+        args[0] = k; args[1] = off & 0xFF; args[2] = (off >> 8) & 0xFF; args[3] = (off >> 16) & 0xFF;
+        args.set(chunk, 4);
+        rcCheck(await link.ask(3, args, 1000, (b) => b[1] === k && b[2] === args[1] && b[3] === args[2] && b[4] === args[3]), "WRITE");
+        const pc = Math.round((off + chunk.length) * 100 / n);
+        el.bar.value = pc;
+        setSlotMsg(k, T("m.sending", {p: pc}));
+      }
+      const hdr = sampleHeader(s.data, s.rate, s.name), args = new Uint8Array(1 + hdr.length);
+      args[0] = k; args.set(hdr, 1);
+      link.retried = false;
+      const end = await link.ask(4, args, 3000);
+      if (end[0] === 5 && link.retried) {                 /* the first END may have been taken: the slot says */
+        const l = await link.ask(6, [], 1000), q = l.subarray(1 + 18 * k, 19 + 18 * k);
+        if (!(l[0] === 0 && q.length === 18 && q[0] === 1 && (q[3] | q[4] << 8 | q[5] << 16) === n)) rcCheck(end, "END");
+      } else rcCheck(end, "END");
+      el.bar.value = 100;
+      setSlotMsg(k, T("m.done", {n: s.name, k: k + 1}), "ok");
+    } catch (e) {
+      if (e instanceof KErr) setSlotMsg(k, T(e.key, e.vars) + (e.step && e.key !== "m.rc2" ? " [" + e.step + "]" : ""), "err");
+      else { setSlotMsg(k, T("m.timeout") + " (" + (e && e.message ? e.message : e) + ")", "err"); console.warn("sysex:", e); }
+      el.bar.hidden = true;
+    } finally {
+      if (link) link.close();
+      sending = -1;
+      renderSlots();
+    }
+  }
+
+  /* ---- the languages */
+  function applyLang(l) {
+    if (!I18N[l]) l = "en";
+    lang = l;
+    document.documentElement.lang = l;
+    document.querySelectorAll("[data-t]").forEach((el) => { el.innerHTML = T(el.dataset.t); });
+    document.querySelectorAll("[data-ta]").forEach((el) => el.setAttribute("aria-label", T(el.dataset.ta)));
+    document.querySelectorAll(".langs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.lang === l ? "true" : "false"));
+    ["MASTER", "SELECT", "PRESETS", "ALGORITHM"].forEach((e) => {
+      knobEls[e].title = T("tt." + e);
+      if (e !== "MASTER") knobEls[e].setAttribute("aria-valuetext", T(FN_KEY[e]));
+    });
+    for (let i = 0; i < 4; i++) knobEls["K" + (i + 1)].title = T("tt.K", {n: i + 1, c: T("colours")[i]});
+    btnEls.forEach((b, id) => { b.title = T("tt." + id); });
+    try { localStorage.setItem(LS_LANG, l); } catch (e) {}
+    send({t: "lang", v: LANG_ID[l]});
+    renderUi();
+    renderSlots();
+  }
+  function firstLang() {
+    const h = (location.hash || "").slice(1).toLowerCase();
+    if (I18N[h]) return h;
+    const s = ls.get(LS_LANG);
+    if (I18N[s]) return s;
+    return "en";                                /* English first, whatever the browser's language */
+  }
+  buildSlots();
+  loadSamples();
+  document.querySelectorAll(".langs button").forEach((b) => b.addEventListener("click", () => applyLang(b.dataset.lang)));
+  applyLang(firstLang());
+  if (loadStore() && hasProject(loadStore())) projMsg("");
+
+  /* ---- power on: the saved projects and the samples go in before the first step */
+  function wasmBytes() {
+    const bin = atob(WASM_B64), u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return u;
+  }
+  function bootData() {
+    return {
+      lang: LANG_ID[lang],
+      store: loadStore(),
+      samples: samples.map((s) => (s ? {data: s.data.slice(), name: s.name, rate: s.rate} : null))
+    };
+  }
+  function mainThreadEngine(wasm) {                  /* older browsers: the engine on the page itself */
+    const Engine = new Function(ENGINE_SRC + "; return KawaEngine;")();
+    const eng = new Engine(wasm, audio.sampleRate, bootData());
+    eng.emit = (m) => onEngine(m);
+    eng.hello();
+    const sp = audio.createScriptProcessor(1024, 0, 2);
+    sp.onaudioprocess = (ev) => eng.fill(ev.outputBuffer.getChannelData(0), ev.outputBuffer.getChannelData(1));
+    sp.connect(audio.destination);
+    send = (m) => eng.msg(m);
+    let last = 0;
+    const loop = (t) => { if (t - last >= 30) { last = t; eng.poll(); } requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  }
+  async function powerOn() {
+    const btn = $("power-btn"), err = $("power-err");
+    btn.disabled = true;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      audio = new AC({sampleRate: 44100, latencyHint: "interactive"});
+      const wasm = wasmBytes();
+      let ok = false;
+      if (audio.audioWorklet && window.AudioWorkletNode) {
+        try {
+          const url = URL.createObjectURL(new Blob([WORKLET_SRC], {type: "application/javascript"}));
+          await audio.audioWorklet.addModule(url);
+          const node = new AudioWorkletNode(audio, "kawa", {numberOfInputs: 0, outputChannelCount: [2], processorOptions: {bytes: wasm, boot: bootData()}});
+          node.port.onmessage = (ev) => onEngine(ev.data);
+          node.onprocessorerror = (ev) => { console.error("KAWA engine stopped", ev); err.hidden = false; err.textContent = T("err"); $("power").hidden = false; };
+          node.connect(audio.destination);
+          send = (m) => node.port.postMessage(m);
+          ok = true;
+        } catch (e) { console.warn("worklet:", e); }
+      }
+      if (!ok) mainThreadEngine(wasm);
+      running = true;
+      device.dataset.running = "1";
+      send({t: "master", v: Math.round(master * master * 6000)});
+      send({t: "lang", v: LANG_ID[lang]});
+      $("power").hidden = true;
+      audio.resume().catch(() => {});
+      renderSlots();
+      if (navigator.requestMIDIAccess) {          /* a MIDI keyboard plays the track under the cursor */
+        navigator.requestMIDIAccess().then((m) => {
+          const hook = (i) => { i.onmidimessage = (ev) => { const [st, d1, d2] = ev.data; if (st >= 0x80 && st < 0xA0) send({t: "midi", st, d1, d2: d2 || 0}); }; };
+          m.inputs.forEach(hook);
+          m.onstatechange = (ev) => { if (ev.port.type === "input" && ev.port.state === "connected") hook(ev.port); };
+        }).catch(() => {});
+      }
+    } catch (e) {
+      btn.disabled = false;
+      err.hidden = false;
+      err.textContent = T("err");
+      console.error(e);
+    }
+  }
+  $("power-btn").addEventListener("click", powerOn);
+
+  /* a still of the boot screen before power-on */
+  ctx2d.fillStyle = "#120c24";
+  ctx2d.fillRect(0, 0, 240, 240);
+})();
+</script>

@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual de KAWA</title>
+<meta name="description" content="El manual de KAWA 0.4 beta, el Pocket Tracker de Omnipotard para el M-VAVE FM-1: instalarlo, hacer una canción, el sonido, los efectos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: the FM-1's own night: a contents rail on the left, one reading column, screens at their real
+   size beside each step; it restacks on a phone, the screens above their text. One dark look, by choice. */
+:root {
+  --night: #120c24;          /* the KAWA theme's screen background */
+  --panel: #1b1335;
+  --panel-2: #251a47;
+  --rule: #3b2e69;
+  --ink: #eeeaff;
+  --muted: #aca3d8;
+  --gold: #ffde6e;           /* values, the cursor */
+  --pink: #ff5fb4;           /* the first track, KAWA's accent */
+  --cyan: #3ed8ff;
+  --k1: #ff5c5c; --k2: #ffcc40; --k3: #5ce274; --k4: #54a4ff;   /* the four knobs, as on the screen */
+  --rec: #ff4060;
+  --display: "Silkscreen", "Courier New", monospace;
+  --text: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 66ch;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: 16px; }
+body { background: var(--night); color: var(--ink); font: 400 17px/1.6 var(--text); padding-inline: 16px; padding-block: 0 64px; }
+a { color: var(--cyan); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
+
+.shell { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; max-height: 100vh; overflow-y: auto; padding-block: 28px 28px; }
+nav.toc .brand { font-family: var(--display); font-weight: 700; font-size: 34px; letter-spacing: 0.06em; line-height: 1; color: var(--ink); text-decoration: none; display: block; }
+nav.toc .brand span { color: var(--pink); }
+nav.toc .sub { color: var(--muted); font-size: 13px; margin: 6px 0 18px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: s; }
+nav.toc li a { display: block; padding: 4px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 14.5px; }
+nav.toc li a:hover { background: var(--panel); color: var(--ink); }
+.langs { display: flex; gap: 4px; background: var(--panel); border-radius: 10px; padding: 3px; width: max-content; margin-bottom: 18px; }
+.langs a { font-family: var(--mono); font-weight: 600; font-size: 13px; letter-spacing: 0.08em; padding: 4px 10px; border-radius: 7px; color: var(--muted); text-decoration: none; }
+.langs a[aria-current="page"] { background: var(--pink); color: var(--night); }
+
+main { min-width: 0; padding-block: 28px 0; display: grid; gap: 64px; }
+header.hero { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 32px; align-items: center; }
+header.hero h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 44px); line-height: 1.1; letter-spacing: 0.02em; margin: 0 0 12px; text-wrap: balance; }
+header.hero p { max-width: var(--measure); margin: 0 0 12px; color: #dcd6f5; }
+.beta { display: inline-block; font-family: var(--display); font-size: 13px; letter-spacing: 0.1em; background: var(--rec); color: #fff; padding: 2px 8px; border-radius: 4px; vertical-align: middle; }
+
+section { display: grid; gap: 18px; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 25px; letter-spacing: 0.03em; margin: 0; text-wrap: balance; color: var(--ink); }
+h2 .n { color: var(--pink); margin-right: 10px; }
+h3 { font-size: 19px; margin: 10px 0 0; color: var(--gold); text-wrap: balance; }
+p, ul, ol { margin: 0; max-width: var(--measure); }
+ul, ol { padding-left: 22px; display: grid; gap: 6px; }
+strong { color: #fff; }
+
+kbd { font-family: var(--mono); font-weight: 600; font-size: 0.82em; background: var(--panel-2); color: var(--ink); border: 1px solid var(--rule); border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; white-space: nowrap; }
+.k { font-family: var(--mono); font-weight: 600; font-size: 0.82em; border-radius: 6px; padding: 0 6px; white-space: nowrap; color: var(--night); }
+.k1 { background: var(--k1); } .k2 { background: var(--k2); } .k3 { background: var(--k3); } .k4 { background: var(--k4); }
+
+.note { border: 1px solid var(--rule); border-left: 4px solid var(--gold); background: var(--panel); border-radius: 10px; padding: 14px 18px; max-width: var(--measure); display: grid; gap: 8px; }
+.note.warn { border-left-color: var(--rec); }
+.note h3 { margin: 0; }
+
+.anatomy { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 26px; align-items: start; }
+.anatomy > div { min-width: 0; display: grid; gap: 8px; }
+figure.screen { margin: 0; width: 240px; max-width: 100%; }
+figure.screen img { width: 240px; max-width: 100%; height: auto; aspect-ratio: 1; display: block; image-rendering: pixelated; border-radius: 6px; box-shadow: 0 0 0 6px #08060f, 0 0 0 7px var(--rule); background: var(--night); }
+figure.screen figcaption { font-size: 13px; color: var(--muted); margin-top: 12px; }
+.steps { list-style: none; padding: 0; display: grid; gap: 28px; max-width: none; counter-reset: step; }
+.steps > li { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 26px; align-items: start; counter-increment: step; }
+.steps > li > div { min-width: 0; display: grid; gap: 8px; }
+.steps > li > div > b:first-child::before { content: counter(step) ". "; color: var(--pink); }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 22px; }
+.gallery figure.screen, .gallery figure.screen img { width: 100%; }
+
+.table { overflow-x: auto; max-width: 100%; }
+table { border-collapse: collapse; min-width: 520px; width: 100%; font-size: 15.5px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { color: var(--muted); font-weight: 700; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+td:first-child { white-space: nowrap; }
+
+/* the panel, as a map: left knobs, the screen, the four coloured knobs, the buttons coloured as their pages */
+.panel { background: linear-gradient(170deg, #45414e, #34313b 40%, #2b2831); border-radius: 22px; padding: 18px; display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; max-width: 760px; }
+.panel .col { display: grid; gap: 10px; justify-items: center; }
+.panel .knob { width: 38px; height: 38px; border-radius: 50%; background: #23212a; box-shadow: inset 0 0 0 3px #3c3944; }
+.panel .knob.c1 { box-shadow: inset 0 0 0 3px var(--k1); } .panel .knob.c2 { box-shadow: inset 0 0 0 3px var(--k2); }
+.panel .knob.c3 { box-shadow: inset 0 0 0 3px var(--k3); } .panel .knob.c4 { box-shadow: inset 0 0 0 3px var(--k4); }
+.panel .lbl { font-family: var(--mono); font-size: 10.5px; color: #c9c2da; letter-spacing: 0.06em; }
+.panel .scr { background: #09080c; border-radius: 12px; padding: 8px; }
+.panel .scr img { width: 100%; max-width: 220px; display: block; image-rendering: pixelated; border-radius: 4px; margin: 0 auto; }
+.panel .right { display: grid; gap: 12px; }
+.panel .kn4 { display: grid; grid-template-columns: repeat(4, auto); gap: 10px; justify-items: center; }
+.panel .btns { display: grid; grid-template-columns: repeat(6, auto); gap: 6px; }
+.panel .btn { font-family: var(--mono); font-weight: 600; font-size: 11px; color: var(--night); border-radius: 7px; padding: 6px 7px; text-align: center; }
+
+.support { background: var(--panel); border: 1px solid var(--rule); border-radius: 16px; padding: 22px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; }
+.support p { max-width: 56ch; }
+.kofi { font-family: var(--display); font-size: 16px; letter-spacing: 0.05em; background: var(--gold); color: var(--night); text-decoration: none; padding: 12px 18px; border-radius: 12px; box-shadow: 0 4px 0 #b8902a; white-space: nowrap; }
+.kofi:active { transform: translateY(2px); box-shadow: 0 2px 0 #b8902a; }
+footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
+
+@media (max-width: 980px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { position: static; max-height: none; padding-block: 24px 0; }
+  nav.toc ol { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  main { gap: 52px; }
+}
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  header.hero { grid-template-columns: minmax(0, 1fr); }
+  .steps > li { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .anatomy { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .panel { grid-template-columns: minmax(0, 1fr); }
+  .panel .btns { grid-template-columns: repeat(4, auto); }
+  .support { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <nav class="toc" aria-label="Índice">
+    <a class="brand" href="#top">KA<span>WA</span></a>
+    <div class="sub">Pocket Tracker by Omnipotard</div>
+    <div class="langs" aria-label="Idioma">
+      <a href="index.html" lang="en">EN</a><a href="fr.html" lang="fr">FR</a><a href="es.html" aria-current="page" lang="es">ES</a>
+    </div>
+    <ol>
+      <li><a href="#beta">Versión beta</a></li>
+      <li><a href="#tracker">Componer con un tracker</a></li>
+      <li><a href="#installer">Instalar KAWA</a></li>
+      <li><a href="#revenir">Volver al firmware oficial</a></li>
+      <li><a href="#panneau">Recorrido por el FM-1</a></li>
+      <li><a href="#premiers-pas">Primeros pasos</a></li>
+      <li><a href="#tuto-morceau">Tuto 1 · Una canción nueva</a></li>
+      <li><a href="#tuto-motif">Tuto 2 · Escribir un patrón</a></li>
+      <li><a href="#tuto-motifs">Tuto 3 · Más patrones</a></li>
+      <li><a href="#tuto-chaine">Tuto 4 · Encadenar los patrones</a></li>
+      <li><a href="#tuto-sauver">Tuto 5 · Guardar</a></li>
+      <li><a href="#son">El sonido</a></li>
+      <li><a href="#live">Los efectos en directo</a></li>
+      <li><a href="#magie">La magia</a></li>
+      <li><a href="#cases">Los efectos de celda</a></li>
+      <li><a href="#tables">Las tablas</a></li>
+      <li><a href="#groove">El groove</a></li>
+      <li><a href="#samples">Tus propios samples</a></li>
+      <li><a href="#raccourcis">Atajos</a></li>
+      <li><a href="#options">Opciones</a></li>
+      <li><a href="#aide">Ayuda y solución de problemas</a></li>
+      <li><a href="#soutenir">Apoyar KAWA</a></li>
+    </ol>
+  </nav>
+
+  <main id="top">
+    <header class="hero">
+      <div>
+        <h1>El manual de KAWA <span class="beta">BETA</span></h1>
+        <p>KAWA convierte el <strong>M-VAVE FM-1</strong> en un tracker de bolsillo, para componer en cualquier estilo. Tienes seis pistas, cada una con su motor: pulso, onda, ruido, FM, kit de batería o sample. A eso se suman patrones que encadenas en una canción, 32 efectos para tocar en directo y herramientas que escriben ritmos por ti.</p>
+        <p>Este manual va al grano: instalar KAWA, luego cinco tutoriales para hacer una canción de verdad, y después el detalle del sonido y de los efectos. Versión <strong>0.4 beta</strong>.</p>
+      </div>
+      <figure class="screen"><img src="img/es/01-boot.png" alt="La pantalla de arranque: el perro de KAWA, con unos cascos en las orejas" width="480" height="480"><figcaption>Al arrancar, el perro de KAWA y la demo, lista para sonar.</figcaption></figure>
+    </header>
+
+    <section id="beta">
+      <div class="note warn">
+        <h3>Versión beta: léelo antes que nada</h3>
+        <p>KAWA 0.4 compila para el FM-1 y pasa todas las comprobaciones de su plataforma: tamaño, memoria, acceso al hardware. Funciona en el simulador y en el emulador web. En cambio, <strong>todavía no se ha probado en un FM-1 real</strong>.</p>
+        <p>Instalar un firmware no oficial es bajo tu responsabilidad. El camino de instalación es el de Dinghy y Felucca, que ya se usan en FM-1 reales, y tiene varias redes de seguridad (más abajo). Conecta el FM-1 a una alimentación estable y no lo desconectes nunca durante una instalación.</p>
+        <p>Los proyectos todavía no se pueden pasar al ordenador. Si algo te parece raro, dilo: para eso sirve una beta.</p>
+      </div>
+    </section>
+
+    <section id="tracker">
+      <h2>Componer con un tracker</h2>
+      <p>KAWA no está hecho para un solo estilo. Pop, techno, hip hop, ambient, jazz, rock, música de videojuegos, chiptune, breakcore: todo se escribe en un tracker. Lo que cambia es la forma de componer, muy distinta de un programa de música habitual (un DAW).</p>
+      <div class="anatomy">
+        <figure class="screen"><img src="img/es/02-tracks.png" alt="La página PISTAS: el tiempo baja, una columna por pista" width="480" height="480"></figure>
+        <div>
+          <b>La música se escribe de arriba abajo</b>
+          <p>El tiempo baja: cada fila es un paso, una semicorchea (cuatro filas por tiempo). Cada columna es una pista. Cada celda dice qué tocar en ese paso exacto: una nota, su volumen y un efecto.</p>
+          <p>Lees la canción como una partitura que se desplaza, y la escribes con el teclado, nota a nota, en el sitio exacto. Sin ratón, sin zoom: la rejilla es siempre la misma.</p>
+        </div>
+      </div>
+      <div class="table"><table>
+        <thead><tr><th></th><th>En un DAW</th><th>En KAWA</th></tr></thead>
+        <tbody>
+          <tr><td>El tiempo</td><td>Avanza de izquierda a derecha, en una línea de tiempo</td><td>Baja fila a fila; una fila es un paso</td></tr>
+          <tr><td>Escribir una nota</td><td>Dibujarla en un piano roll</td><td>Tocarla en el teclado en la fila que quieras (REC)</td></tr>
+          <tr><td>Matices y efectos</td><td>Curvas de automatización</td><td>Escritos en la celda, al paso: arpegio, glissando, redoble, volumen…</td></tr>
+          <tr><td>La canción</td><td>Clips colocados en una línea de tiempo</td><td>Patrones cortos encadenados en la CANCION, cada uno tocado N veces</td></tr>
+          <tr><td>Los sonidos</td><td>Pistas de audio y plugins</td><td>Seis pistas, cada una con su motor (FM, kit, sample…), todo dentro de la máquina</td></tr>
+        </tbody>
+      </table></div>
+      <p>Lo que ganas: toda la canción se lee de un vistazo, al paso; las manos se quedan en las teclas y los potenciómetros; escribes un patrón rápido, lo varías (CLONAR, MAGIA) y lo encadenas. Los tutoriales de abajo recorren todo el camino, de una canción vacía a una terminada.</p>
+    </section>
+
+    <section id="installer">
+      <h2><span class="n">01</span>Instalar KAWA</h2>
+      <p>Necesitas un cable USB <strong>de datos</strong>, un ordenador y Python 3 (<a href="https://www.python.org/downloads/">python.org</a>). El firmware es el archivo <code>kawa-0.4.fwsc</code> de la carpeta <code>install/</code>.</p>
+      <ol>
+        <li>Cierra los demás programas MIDI y luego conecta el FM-1 encendido.</li>
+        <li>Lo más fácil: doble clic en <code>INSTALL-Windows.bat</code> o <code>INSTALL-Mac.command</code> (Linux: <code>./INSTALL-Linux.sh</code>). La primera vez descarga lo que necesita (rtmidi2); comprueba el paquete, pide confirmación, envía el loader y después la aplicación.</li>
+        <li>A mano: <code>pip3 install rtmidi2</code>, luego <code>python3 install/fm1_install.py --info</code> para ver qué ejecuta el FM-1, y después <code>python3 install/fm1_install.py install/kawa-0.4.fwsc</code>.</li>
+        <li>El FM-1 se reinicia en KAWA: aparece el perro y luego la demo.</li>
+      </ol>
+      <h3>Lo que la instalación nunca escribe</h3>
+      <ul>
+        <li>El principio de la memoria, con el bootloader del chip y su configuración.</li>
+        <li>La zona de los proyectos y los samples, de 0x97000 a 0xE0000, y los ajustes, en 0xFC000.</li>
+        <li>Una actualización conserva tus proyectos y tus samples. Los proyectos de la 0.2 se abren en la 0.4 tal como eran (se convierten al cargarlos y se guardan en el formato nuevo). Los proyectos hechos con la 0.1 no se leen (su formato cambió); arranca la demo en su lugar, y se reemplazan en cuanto guardas.</li>
+      </ul>
+      <h3>Las redes de seguridad</h3>
+      <ul>
+        <li><strong>Nada se da por bueno antes del final.</strong> Si el envío falla, la zona de tránsito se borra y el firmware anterior sigue funcionando.</li>
+        <li><strong>El paquete se comprueba entero antes de borrar nada.</strong> Un paquete dañado o incompleto se rechaza. Un sector que llega distinto durante la escritura se vuelve a leer, nunca se escribe.</li>
+        <li><strong>Un corte de corriente durante la instalación:</strong> el loader sigue donde estaba al volver a encender. Vuelve a lanzar el instalador.</li>
+        <li><strong>El rescate USB:</strong> mantén <kbd>OCT−</kbd> al encender. KAWA arranca entonces sin sonido, solo con la actualización. Si KAWA se cuelga dos veces seguidas en los 30 segundos siguientes al encendido, el FM-1 entra en este modo por sí solo.</li>
+        <li><strong>Como último recurso:</strong> la ROM de arranque del chip todavía responde por USB (<code>WL80UBOOT</code>). FM-1 Transporter puede entonces reescribir el firmware oficial, pero hace falta hardware adicional, y según la ingeniería inversa del FM-1 este camino todavía no está probado en los FM-1 de serie.</li>
+      </ul>
+    </section>
+
+    <section id="revenir">
+      <h2><span class="n">02</span>Volver al firmware oficial</h2>
+      <p>Si KAWA no te convence, el firmware oficial se reinstala con la herramienta de M-VAVE. Es el paso más delicado, porque también reescribe el bootloader: tómate tu tiempo.</p>
+      <ol>
+        <li>Los proyectos de KAWA se perderán. El firmware oficial no sabe leerlos.</li>
+        <li>Conecta el FM-1 a una alimentación estable, con un cable USB de datos, y cierra los demás programas MIDI.</li>
+        <li>Si KAWA se comporta mal, mantén <kbd>OCT−</kbd> al encender: la pantalla muestra «KAWA USB RESCUE».</li>
+        <li>Abre <strong>M-UPGRADE</strong> de M-VAVE con el firmware oficial <strong>V15</strong> (identidad <code>FM-1_015</code>, SHA-256 <code>db1642b2…7edb8a</code>).</li>
+        <li>Antes de que la herramienta oficial escriba nada, KAWA comprueba dos cosas: que es de verdad el programa de actualización de M-VAVE, y que la zona de arranque del paquete oficial es exactamente la que ya está en tu FM-1 (la herramienta oficial la reescribe, así que solo puede volver a poner los mismos bytes). Si una de las dos no cuadra, no se escribe nada y KAWA sigue funcionando.</li>
+        <li>No desconectes nada durante la transferencia. Si se detiene a mitad, vuelve a conectar y lánzala de nuevo.</li>
+        <li>Comprueba el resultado: <code>python3 install/fm1_install.py --info</code> debe responder <code>FM-1_015</code>.</li>
+      </ol>
+    </section>
+
+    <section id="panneau">
+      <h2><span class="n">03</span>Recorrido por el FM-1</h2>
+      <div class="panel" aria-label="El panel del FM-1 visto por KAWA">
+        <div class="col">
+          <div class="knob"></div><div class="lbl">MASTER</div>
+          <div class="knob"></div><div class="lbl">SELECT</div>
+          <div class="knob"></div><div class="lbl">PRESETS</div>
+          <div class="knob"></div><div class="lbl">ALGORITHM</div>
+        </div>
+        <div class="scr"><img src="img/es/02-tracks.png" alt="La página PISTAS" width="480" height="480"></div>
+        <div class="right">
+          <div class="kn4">
+            <div class="knob c1"></div><div class="knob c2"></div><div class="knob c3"></div><div class="knob c4"></div>
+            <div class="lbl">KNOB 1</div><div class="lbl">KNOB 2</div><div class="lbl">KNOB 3</div><div class="lbl">KNOB 4</div>
+          </div>
+          <div class="btns">
+            <div class="btn" style="background:#ff78c8">FX</div><div class="btn" style="background:#c8f05a">SCL</div><div class="btn" style="background:#62f29a">ENV</div>
+            <div class="btn" style="background:#ffd25a">LFO</div><div class="btn" style="background:#3ed8ff">EDIT</div><div class="btn" style="background:#ffa03c">GLO</div>
+            <div class="btn" style="background:#a98bff">HOME</div><div class="btn" style="background:#6496ff">SAVE</div><div class="btn" style="background:#8d86a0">ARP</div>
+            <div class="btn" style="background:#ff6092">SEQ</div><div class="btn" style="background:#60ff96">PLAY</div><div class="btn" style="background:#ff4060">REC</div>
+          </div>
+        </div>
+      </div>
+      <h3>Un potenciómetro, un color</h3>
+      <p><span class="k k1">KNOB 1</span> es rojo, <span class="k k2">KNOB 2</span> amarillo, <span class="k k3">KNOB 3</span> verde y <span class="k k4">KNOB 4</span> azul, en todas las páginas. La <strong>línea de abajo</strong> de la pantalla tiene cuatro casillas con los mismos colores y dice qué hace cada potenciómetro. En las páginas de sonido, las tarjetas también llevan esos colores. La pequeña casilla roja marcada β recuerda que es una beta.</p>
+      <h3>Los botones y sus páginas</h3>
+      <div class="table"><table>
+        <thead><tr><th>Botón</th><th>Página</th><th>Pulsa otra vez</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>HOME</kbd></td><td>PISTAS: el tracker</td><td>Mantenido: la ayuda de la página en la que estás</td></tr>
+          <tr><td><kbd>SEQ</kbd></td><td>REJILLA: los 16 pasos en las teclas blancas</td><td>Vuelta a las pistas</td></tr>
+          <tr><td><kbd>EDIT</kbd></td><td>SONIDO: el motor y el sonido de la pista</td><td>Página de sonido siguiente</td></tr>
+          <tr><td><kbd>ENV</kbd></td><td>ENVOLVENTE: la ADSR de la pista</td><td>MEZCLA: volúmenes, paneos, envíos, efecto del máster</td></tr>
+          <tr><td><kbd>LFO</kbd></td><td>MAGIA: 16 herramientas en las teclas blancas</td><td>Vuelta a las pistas</td></tr>
+          <tr><td><kbd>SCL</kbd></td><td>ESCALA: tónica, escala, fijar</td><td>Vuelta a las pistas</td></tr>
+          <tr><td><kbd>GLO</kbd></td><td>CANCION: tempo, swing, la lista de patrones</td><td>GROOVE: los ticks de cada fila; luego OPCIONES: tema, idioma, reloj MIDI</td></tr>
+          <tr><td><kbd>SAVE</kbd></td><td>PROYECTOS: el menú de las canciones</td><td>Mantenido: deshacer / rehacer</td></tr>
+          <tr><td><kbd>FX</kbd></td><td>EFECTOS: mantenido, los efectos en directo</td><td>Una pulsación corta deja la página abierta</td></tr>
+          <tr><td><kbd>ARP</kbd></td><td>Borra la celda</td><td>Mantenido + SELECT: inserta o quita una fila</td></tr>
+          <tr><td><kbd>PLAY</kbd> <kbd>REC</kbd></td><td>Reproducción, grabación</td><td>REC mantenido + SELECT: el salto de filas</td></tr>
+        </tbody>
+      </table></div>
+      <p>En casi todas las páginas, <strong>SELECT</strong> elige la fila, <strong>ALGORITHM</strong> la pista y <strong>PRESETS</strong> el patrón (en las páginas de sonido, el sonido). <strong>MASTER</strong> ajusta el volumen, y <kbd>OCT−</kbd> y <kbd>OCT+</kbd> la octava del teclado.</p>
+    </section>
+
+    <section id="premiers-pas">
+      <h2><span class="n">04</span>Primeros pasos</h2>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/02-tracks.png" alt="La página PISTAS: seis columnas de notas" width="480" height="480"></figure><div><b>Las pistas</b><p>Al arrancar, se carga la demo «KAWA QUEST». Cada columna es una pista, con su color. La pista del cursor se muestra ancha: la nota, su volumen en una barrita y el efecto de la celda. Los números de la izquierda son las filas; cada fila dura una semicorchea.</p></div></li>
+        <li><figure class="screen"><img src="img/es/03-play.png" alt="La demo sonando" width="480" height="480"></figure><div><b>Reproducir</b><p>Pulsa <kbd>PLAY</kbd>. La fila que suena se ilumina y las celdas parpadean cuando sale una nota. Arriba a la derecha ves la posición en la cadena, el tempo y el pulso actual. <kbd>PLAY</kbd> otra vez lo para.</p></div></li>
+        <li><figure class="screen"><img src="img/es/04-help.png" alt="La ayuda de la página PISTAS" width="480" height="480"></figure><div><b>La ayuda, en todas partes</b><p>Mantén <kbd>HOME</kbd> en cualquier página. KAWA te muestra entonces qué hacen los cuatro potenciómetros de esa página, los tres encoders y las combinaciones útiles. Suelta <kbd>HOME</kbd> para volver a donde estabas.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="tuto-morceau">
+      <h2><span class="n">05</span>Tuto 1 · Una canción nueva</h2>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/10-projects-menu.png" alt="El menú PROYECTOS" width="480" height="480"></figure><div><b>Abre el menú de proyectos</b><p>Pulsa una vez <kbd>SAVE</kbd>. Arriba ves el nombre de la canción, su ranura entre corchetes y una estrella si ha cambiado desde el último guardado. <strong>SELECT</strong> se mueve por el menú, <kbd>OCT+</kbd> confirma, <kbd>OCT−</kbd> vuelve atrás.</p></div></li>
+        <li><figure class="screen"><img src="img/es/11-new-song-select.png" alt="NUEVA CANCION seleccionada" width="480" height="480"></figure><div><b>Canción nueva</b><p>Sube hasta <strong>NUEVA CANCION</strong> y pulsa <kbd>OCT+</kbd>. Si la canción actual no está guardada, KAWA te lo pregunta antes.</p></div></li>
+        <li><figure class="screen"><img src="img/es/12-new-song.png" alt="Una canción vacía, con un nombre al azar" width="480" height="480"></figure><div><b>Una canción a estrenar</b><p>La canción recibe un nombre al azar, que cambiarás al guardarla. Sus seis pistas ya tienen un sonido cada una: un lead de pulso, la FM, un bajo de onda, unos charles de ruido, un kit y un break.</p></div></li>
+        <li><figure class="screen"><img src="img/es/13-sound-page.png" alt="La página SONIDO de la pista 1" width="480" height="480"></figure><div><b>Elige el sonido de una pista</b><p><strong>ALGORITHM</strong> elige la pista y luego <kbd>EDIT</kbd> abre su página SONIDO. La franja de arriba muestra los seis motores. <strong>PRESETS</strong> recorre los sonidos de fábrica, y los cuatro potenciómetros ajustan el sonido.</p></div></li>
+        <li><figure class="screen"><img src="img/es/14-engine-picker.png" alt="El motor ONDA elegido" width="480" height="480"></figure><div><b>Cambia de motor</b><p>En esta primera página, <strong>SELECT</strong> cambia el motor de la pista: PULSO, ONDA, RUIDO, FM, KIT o SAMPLE. La FM aparece en gris si otra pista ya la tiene: una sola pista FM a la vez, para que el FM-1 nunca se quede sin aliento.</p></div></li>
+        <li><figure class="screen"><img src="img/es/15-preset.png" alt="El sonido BIP 12" width="480" height="480"></figure><div><b>Un sonido de fábrica</b><p>Gira <strong>PRESETS</strong> para probar los sonidos de fábrica. Una estrella después del nombre quiere decir que lo has modificado. Toca las teclas para escucharlo.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="tuto-motif">
+      <h2><span class="n">06</span>Tuto 2 · Escribir un patrón</h2>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/20-rec.png" alt="Notas escritas con REC" width="480" height="480"></figure><div><b>Graba notas</b><p>Vuelve a las pistas con <kbd>HOME</kbd>, pulsa <kbd>REC</kbd> (el cursor se pone rojo) y toca notas. Cada nota se escribe en la fila del cursor, y el cursor baja. Cuando la escala está fijada (página ESCALA), las teclas se quedan dentro de la escala.</p></div></li>
+        <li><figure class="screen"><img src="img/es/21-step-jump.png" alt="SALTO 2" width="480" height="480"></figure><div><b>El salto de filas</b><p>Mantén <kbd>REC</kbd> y gira <strong>SELECT</strong>: ajustas cuántas filas salta el cursor después de cada nota (de 0 a 16). Con 2 escribes corcheas; con 4, negras. El valor aparece arriba a la izquierda del tracker.</p></div></li>
+        <li><figure class="screen"><img src="img/es/22-cell-knobs.png" alt="Una celda con un arpegio" width="480" height="480"></figure><div><b>Retoca una celda</b><p>Coloca el cursor con <strong>SELECT</strong>. <span class="k k1">K1</span> cambia la nota, <span class="k k2">K2</span> su volumen, <span class="k k3">K3</span> el efecto de la celda y <span class="k k4">K4</span> el valor del efecto (aquí un arpegio menor). <kbd>ARP</kbd> borra la celda. Mantén <kbd>ARP</kbd> y gira <strong>SELECT</strong> para insertar o quitar una fila.</p></div></li>
+        <li><figure class="screen"><img src="img/es/23-grid-kit.png" alt="La rejilla del kit" width="480" height="480"></figure><div><b>La batería en la rejilla</b><p>Elige la pista del kit con <strong>ALGORITHM</strong> y pulsa <kbd>SEQ</kbd>. Las 16 teclas blancas son los 16 pasos, como en un Pocket Operator: una pulsación pone el sonido, otra lo quita. <span class="k k1">K1</span> elige la percusión que vas a poner. Mantén un paso para retocarlo con los potenciómetros. Las teclas negras cambian de pista.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="tuto-motifs">
+      <h2><span class="n">07</span>Tuto 3 · Más patrones</h2>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/24-magic.png" alt="La página MAGIA" width="480" height="480"></figure><div><b>La magia</b><p><kbd>LFO</kbd> abre las 16 herramientas mágicas, una por tecla blanca. <span class="k k1">K1</span> ajusta su fuerza, <span class="k k2">K2</span> el dado, <span class="k k3">K3</span> el alcance: la pista sola o el patrón entero.</p></div></li>
+        <li><figure class="screen"><img src="img/es/25-magic-beat.png" alt="RITMO aplicado" width="480" height="480"></figure><div><b>Un ritmo con una tecla</b><p>Tecla 2: <strong>RITMO</strong> escribe un ritmo en la pista. Vuelve a pulsarla para otro. Cada herramienta se puede deshacer: <kbd>SAVE</kbd> mantenido + <kbd>OCT−</kbd>.</p></div></li>
+        <li><figure class="screen"><img src="img/es/26-clone.png" alt="CLONAR" width="480" height="480"></figure><div><b>Clona el patrón</b><p>Tecla 12: <strong>CLONAR</strong> copia el patrón en el siguiente patrón vacío, lo añade a la cadena justo después y te lleva a él. Es la forma más rápida de hacer una variación.</p></div></li>
+        <li><figure class="screen"><img src="img/es/27-tracks-p02.png" alt="El patrón P02" width="480" height="480"></figure><div><b>Cambia de patrón</b><p>Ahora estás en <strong>P02</strong>, que puedes modificar sin tocar P01. <strong>PRESETS</strong> pasa de un patrón a otro (32 patrones de 1 a 32 filas). Durante la reproducción, si cambias de patrón, la pantalla se queda en el que editas e indica «&gt;P01» para el que suena.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="tuto-chaine">
+      <h2><span class="n">08</span>Tuto 4 · Encadenar los patrones para hacer una canción</h2>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/30-song.png" alt="La página CANCION" width="480" height="480"></figure><div><b>La cadena</b><p><kbd>GLO</kbd> abre la página CANCION: la cadena, es decir, la lista de patrones en el orden de la canción. Cada casilla muestra un patrón y cuántas veces suena. <strong>SELECT</strong> elige una casilla, <strong>PRESETS</strong> cambia su patrón.</p></div></li>
+        <li><figure class="screen"><img src="img/es/31-song-repeat.png" alt="Un patrón tocado dos veces" width="480" height="480"></figure><div><b>Repite un patrón</b><p><span class="k k3">K3</span> ajusta cuántas veces la casilla toca su patrón: de ×1 a ×16. ¿Una estrofa de cuatro compases hecha con dos patrones? Pon cada uno a ×2.</p></div></li>
+        <li><figure class="screen"><img src="img/es/32-song-add.png" alt="Una casilla añadida" width="480" height="480"></figure><div><b>Añade casillas</b><p>Ve al «+» del final y pulsa una tecla blanca: la tecla 1 añade el patrón 1, la tecla 2 el patrón 2… <kbd>OCT+</kbd> copia la casilla del cursor justo detrás de ella, <kbd>OCT−</kbd> la quita.</p></div></li>
+        <li><figure class="screen"><img src="img/es/33-song-mode.png" alt="El modo CANCION" width="480" height="480"></figure><div><b>Bucle o canción</b><p><kbd>ARP</kbd> pasa de BUCLE (el patrón en pantalla suena en bucle, práctico para componer) a CANCION (la canción entera, casilla tras casilla). <span class="k k1">K1</span> ajusta el tempo, <span class="k k2">K2</span> el swing y <span class="k k4">K4</span> la longitud del patrón.</p></div></li>
+        <li><figure class="screen"><img src="img/es/34-song-play.png" alt="La cadena sonando" width="480" height="480"></figure><div><b>Escucha la canción</b><p>En la casilla de partida, pulsa <kbd>PLAY</kbd>. La casilla que suena se ilumina, y unos puntos cuentan sus repeticiones. Al final de la cadena, la canción vuelve a empezar.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="tuto-sauver">
+      <h2><span class="n">09</span>Tuto 5 · Guardar</h2>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/41-save-slot.png" alt="Elegir una ranura" width="480" height="480"></figure><div><b>Guardar como</b><p><kbd>SAVE</kbd>, luego <strong>GUARDAR</strong> o <strong>GUARDAR COMO…</strong> y <kbd>OCT+</kbd>. Elige una de las tres ranuras con <strong>SELECT</strong> (o con una tecla blanca, de la 2 a la 4). Si la ranura ya está ocupada, KAWA pregunta antes de sobrescribirla.</p></div></li>
+        <li><figure class="screen"><img src="img/es/42-save-name.png" alt="El nombre de la canción" width="480" height="480"></figure><div><b>Ponle un nombre</b><p><strong>SELECT</strong> elige la letra que quieres cambiar, <span class="k k1">K1</span> la cambia, <span class="k k2">K2</span> saca un nombre al azar, <span class="k k3">K3</span> lo borra todo. <kbd>OCT+</kbd> guarda.</p></div></li>
+        <li><figure class="screen"><img src="img/es/43-saved.png" alt="GUARDADO !" width="480" height="480"></figure><div><b>Después, con dos pulsaciones</b><p>La canción conserva su ranura: <kbd>SAVE</kbd> y luego <kbd>OCT+</kbd> la vuelve a guardar en el mismo sitio. <strong>CARGAR…</strong> abre una canción, <strong>RENOMBRAR…</strong> cambia su nombre. Además, KAWA guarda solo en la ranura AUTO cuando no estás tocando.</p></div></li>
+      </ol>
+      <div class="note"><h3>Deshacer y rehacer</h3><p>Mantén <kbd>SAVE</kbd>: <kbd>OCT−</kbd> deshace el último cambio de un patrón, <kbd>OCT+</kbd> lo rehace. Si sueltas <kbd>SAVE</kbd> después de mantenerlo, sin pulsar nada más, se deshace una vez. KAWA recuerda los seis últimos pasos.</p></div>
+    </section>
+
+    <section id="son">
+      <h2><span class="n">10</span>El sonido</h2>
+      <h3>Los seis motores</h3>
+      <div class="table"><table>
+        <thead><tr><th>Motor</th><th>El sonido</th><th>Sus ajustes</th></tr></thead>
+        <tbody>
+          <tr><td>PULSO</td><td>Pulso al estilo NES, sin aliasing: 12, 25, 50, 75 % o PWM</td><td>forma, barrido de altura, vibrato, tono, triturado, desafinación (supersaw), velocidad del arpegio, glissando</td></tr>
+          <tr><td>ONDA</td><td>Tabla de ondas de 4 bits al estilo Game Boy: triángulo, sierra, seno, suave, GB, órgano, voz, FM</td><td>los mismos que PULSO</td></tr>
+          <tr><td>RUIDO</td><td>Ruido LFSR al estilo NES, LARGO o METAL, afinado por la nota</td><td>los mismos que PULSO</td></tr>
+          <tr><td>FM</td><td>FM de 6 operadores y 32 algoritmos, el motor de Dexed (una sola pista a la vez)</td><td>sonido FM, algoritmo, ratio, retorno, brillo, envolvente de los moduladores, desafinación, vibrato; y cada operador</td></tr>
+          <tr><td>KIT</td><td>16 percusiones sintetizadas por kit, 8 kits: ACUSTICO, HIP HOP, TECHNO, DUB REGGAE, LO-FI, GAME BOY, SNES, PERCUSION</td><td>kit, afinación, caída, saturación, triturado, tono</td></tr>
+          <tr><td>SAMPLE</td><td>Un break en 16 cortes, o uno de tus sonidos, en cortes o tocado en las notas</td><td>fuente, modo, afinación, ajuste al tempo, duración, saturación, triturado, tono</td></tr>
+        </tbody>
+      </table></div>
+      <div class="gallery">
+        <figure class="screen"><img src="img/es/52-fm-sound.png" alt="La FM: algoritmo y operadores" width="480" height="480"><figcaption>La FM: sus operadores en barras, las portadoras con el color de la pista.</figcaption></figure>
+        <figure class="screen"><img src="img/es/53-fm-operator.png" alt="Un operador FM" width="480" height="480"><figcaption>OPERADOR: SELECT elige el operador; nivel, ratio, fino, desafinación.</figcaption></figure>
+        <figure class="screen"><img src="img/es/54-fm-openv.png" alt="La envolvente de un operador" width="480" height="480"><figcaption>ENV OPERAD: la envolvente del operador, en ADSR.</figcaption></figure>
+        <figure class="screen"><img src="img/es/58-kit.png" alt="Un kit de batería" width="480" height="480"><figcaption>KIT: <span class="k k1">K1</span> elige el kit; los pads se encienden cuando suenan.</figcaption></figure>
+        <figure class="screen"><img src="img/es/59-sample.png" alt="Un break troceado" width="480" height="480"><figcaption>SAMPLE: el break y sus 16 cortes, con los bombos y las cajas marcados.</figcaption></figure>
+      </div>
+      <h3>Las páginas de un sonido</h3>
+      <p><kbd>EDIT</kbd> pasa de una página a otra: <strong>SONIDO</strong> y <strong>SONIDO 2</strong> (los ajustes del motor), para la FM <strong>OPERADOR</strong> y <strong>ENV OPERAD</strong>, para un SAMPLE <strong>EDITAR SAMPLE</strong> (<a href="#edit-sample">más abajo</a>), y después <strong>EFECTO</strong>, <strong>LFO</strong>, <strong>MODULACION</strong> y la <strong>TABLA</strong> de la pista (<a href="#tables">su sección</a>). Los cuadraditos de arriba a la derecha muestran dónde estás.</p>
+      <div class="gallery">
+        <figure class="screen"><img src="img/es/55-effect.png" alt="El efecto de la pista" width="480" height="480"><figcaption>EFECTO: un efecto solo para esta pista (filtros, distorsión, triturar, diezmar, anillo, trémolo, wah), con su mezcla.</figcaption></figure>
+        <figure class="screen"><img src="img/es/56-lfo.png" alt="El LFO" width="480" height="480"><figcaption>LFO: hacia la altura, el volumen, el efecto, el paneo o la forma; sincronizado con el tempo o libre.</figcaption></figure>
+        <figure class="screen"><img src="img/es/57-mod.png" alt="La modulación" width="480" height="480"><figcaption>MODULACION: la envolvente y la velocidad de pulsación abren el efecto, la envolvente curva la altura, el LFO vuelve a empezar en cada nota.</figcaption></figure>
+        <figure class="screen"><img src="img/es/50-envelope.png" alt="La envolvente ADSR" width="480" height="480"><figcaption>ENVOLVENTE (<kbd>ENV</kbd>): la ADSR, cada tramo con el color de su potenciómetro; un punto sigue la nota.</figcaption></figure>
+        <figure class="screen"><img src="img/es/51-mix.png" alt="La mezcla" width="480" height="480"><figcaption>MEZCLA (<kbd>ENV</kbd> dos veces): volumen, paneo, eco, reverb. Después de la pista 6, la columna M ajusta el efecto del máster.</figcaption></figure>
+      </div>
+      <p><strong>¿Un efecto en el sinte o en el máster?</strong> En la página EFECTO de un sonido, el efecto solo afecta a esa pista. Para toda la canción, ve a MEZCLA (<kbd>ENV</kbd> dos veces) y gira <strong>ALGORITHM</strong> más allá de la pista 6: la columna M es el máster, y sus cuatro potenciómetros ajustan su efecto.</p>
+    </section>
+
+    <section id="live">
+      <h2><span class="n">11</span>Los efectos en directo</h2>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/60-fx.png" alt="Los efectos en directo" width="480" height="480"></figure><div><b>Mantén FX, toca las teclas</b><p>Mantén <kbd>FX</kbd> y pulsa teclas blancas: bucles, tartamudeos, scratch, reverso… Suéltalas, y el sonido vuelve. Una pulsación corta en <kbd>FX</kbd> deja la página abierta. La onda de arriba muestra el sonido, y la casilla de un efecto activo tiene una barra que sigue su ciclo. En las demás páginas, una franja arriba dice qué efecto suena.</p></div></li>
+        <li><figure class="screen"><img src="img/es/61-fx-bank2.png" alt="El segundo banco" width="480" height="480"></figure><div><b>Dos bancos, un destino</b><p><kbd>OCT+</kbd> pasa al banco ROTO: filtros, congelado, distorsión, vinilo… <span class="k k4">K4</span> elige el <strong>destino</strong>: el MASTER, o una sola pista (por ejemplo, poner en bucle solo el break). Las teclas negras silencian pistas. Con <kbd>REC</kbd> y la reproducción en marcha, los efectos que tocas se graban en la fina franja LIVE a la derecha del tracker.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="magie">
+      <h2><span class="n">12</span>La magia</h2>
+      <div class="table"><table>
+        <thead><tr><th>Tecla</th><th>Herramienta</th><th>Qué hace</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>PICADOR</td><td>Vuelve a trocear un break, con un bombo en los tiempos fuertes y una caja en el 2 y el 4</td></tr>
+          <tr><td>2</td><td>RITMO</td><td>Un ritmo: simple, roto o gabber según la fuerza</td></tr>
+          <tr><td>3, 4</td><td>MELODIA, BAJO</td><td>Una melodía o un bajo en la escala</td></tr>
+          <tr><td>5</td><td>ARPEGIO</td><td>Pone en las notas arpegios que siguen la escala</td></tr>
+          <tr><td>6</td><td>EUCLIDE</td><td>N golpes repartidos lo mejor posible por el patrón</td></tr>
+          <tr><td>7, 8</td><td>VARIAR, REDOBLE</td><td>Cambia un poco el patrón; añade redobles al final de los tiempos</td></tr>
+          <tr><td>9, 10, 11</td><td>MATICES, DUPLICA, MOVER</td><td>Acentos; duplica la longitud; desplaza una fila</td></tr>
+          <tr><td>12</td><td>CLONAR</td><td>Copia el patrón en un patrón libre y lo añade a la cadena</td></tr>
+          <tr><td>13 a 16</td><td>TRANSP, COPIAR, PEGAR, BORRAR</td><td>Sube una nota; copiar y pegar una pista o un patrón; borrar</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="cases">
+      <h2><span class="n">13</span>Los efectos de celda</h2>
+      <p>Cada celda tiene <strong>dos efectos</strong>, y los dos suenan. El primero se elige con <span class="k k3">K3</span> y se ajusta con <span class="k k4">K4</span>; un icono dorado lo muestra en el tracker. Mantén <kbd>ARP</kbd> y los mismos dos potenciómetros ajustan el segundo: mientras <kbd>ARP</kbd> está pulsado, el tracker muestra la segunda columna en verde, con el icono de la primera al lado. Una nota retrasada conserva su altura, un vibrato tiene su propio paneo, un redoble puede triturarse.</p>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/67-fx2.png" alt="El segundo efecto de una celda" width="480" height="480"></figure><div><b>La segunda columna</b><p>Aquí, con <kbd>ARP</kbd> pulsado: el segundo efecto de la celda bajo el cursor es un SAL (salto) a la fila 9, en verde; el icono dorado de después es su primer efecto. Suelta <kbd>ARP</kbd> y el tracker vuelve a mostrar la primera columna. Una pulsación breve de <kbd>ARP</kbd> solo sigue borrando la celda.</p></div></li>
+      </ol>
+      <div class="table"><table>
+        <thead><tr><th>Efecto</th><th>Qué hace</th></tr></thead>
+        <tbody>
+          <tr><td>ARP</td><td>Arpegio de un acorde (14 acordes), a velocidad chiptune</td></tr>
+          <tr><td>GLI</td><td>Se desliza desde la nota anterior</td></tr>
+          <tr><td>VIB</td><td>Vibrato</td></tr>
+          <tr><td>RED</td><td>Redoble: la nota se repite de 2 a 32 veces en la fila (una celda vacía repite la última nota)</td></tr>
+          <tr><td>BND</td><td>Curva la altura durante la nota</td></tr>
+          <tr><td>AZR</td><td>Azar: la nota suena una vez de cada N</td></tr>
+          <tr><td>RET</td><td>Retrasa la nota dentro de la fila</td></tr>
+          <tr><td>CRT</td><td>Corta la nota dentro de la fila</td></tr>
+          <tr><td>REV</td><td>Toca al revés el corte de un break</td></tr>
+          <tr><td>ALT</td><td>Altura: ±12 semitonos para esta nota</td></tr>
+          <tr><td>FOR</td><td>Cambia la forma de onda para esta nota</td></tr>
+          <tr><td>TRI</td><td>Tritura los bits de esta nota</td></tr>
+          <tr><td>VOL</td><td>Deslizamiento de volumen en la fila; en una celda vacía, la nota que suena</td></tr>
+          <tr><td>PAN</td><td>Paneo para esta nota</td></tr>
+          <tr><td>INI</td><td>Empieza más adelante en el sample o en el corte (en dieciseisavos)</td></tr>
+          <tr><td>SAL</td><td>Salto: después de esta fila, el patrón sigue en la fila N (un bucle dentro del patrón, un patrón más corto, un salto a un break; en cualquier pista)</td></tr>
+          <tr><td>FIN</td><td>El patrón termina después de esta fila: la canción pasa al siguiente</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="tables">
+      <h2><span class="n">14</span>Las tablas</h2>
+      <p>Una tabla es una pequeña secuencia que suena dentro de cada nota de una pista, como en el M8. Sus 16 pasos llegan uno tras otro, cada VELOCIDAD ticks (6 ticks hacen una fila). Cada paso puede mover la altura sobre la nota, ajustar el volumen y tocar un efecto. Escribes una sola nota en el tracker, y la tabla toca un arpegio chiptune, un redoble de batería que crece, un bombo cuya altura cae, un corte que tartamudea.</p>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/65-table.png" alt="La página TABLA" width="480" height="480"></figure><div><b>EDIT hasta TABLA</b><p>La tabla es la última página de un sonido. La fila 0 lleva sus ajustes: <span class="k k1">K1</span> la velocidad (en ticks, 6 = una fila), <span class="k k2">K2</span> el largo, <span class="k k3">K3</span> el paso al que vuelve después del último (o ninguno: el último paso se queda), <span class="k k4">K4</span> encendida o apagada. SELECT baja por los pasos. En un paso: <span class="k k1">K1</span> la altura sobre la nota (±24 semitonos; en un KIT, la afinación del tambor), <span class="k k2">K2</span> el volumen (<code>--</code> lo deja como está), <span class="k k3">K3</span> el efecto, <span class="k k4">K4</span> su valor. <kbd>ARP</kbd> borra el paso. El paso que suena se ilumina con el color de la pista, y las barras de abajo dibujan la altura de cada paso.</p></div></li>
+      </ol>
+      <div class="table"><table>
+        <thead><tr><th>Efecto</th><th>Lo que hace cuando llega su paso</th></tr></thead>
+        <tbody>
+          <tr><td>GOL</td><td>Golpe: vuelve a tocar la nota (el tambor, el corte, el sintetizador), a la altura de su paso</td></tr>
+          <tr><td>CRT</td><td>Para la nota</td></tr>
+          <tr><td>VIB, BND</td><td>Vibrato, curva de altura desde aquí (0: nada más)</td></tr>
+          <tr><td>FOR, TRI</td><td>La forma de onda; los bits triturados</td></tr>
+          <tr><td>VOL, PAN</td><td>El volumen se desliza desde aquí (0: se para); el paneo de la nota</td></tr>
+          <tr><td>SAL</td><td>Salta al paso N después de este</td></tr>
+        </tbody>
+      </table></div>
+      <p>La tabla vuelve a empezar con cada nota y sigue mientras la nota suena; se para con la canción. Un golpe solo suena mientras la nota está pulsada: un OFF en el tracker lo termina. Tres tablas para probar:</p>
+      <ul>
+        <li><strong>Un arpegio chiptune:</strong> velocidad 2, largo 3, bucle al paso 1; pasos 0, +4, +7 (o +3 en menor).</li>
+        <li><strong>Un redoble que crece:</strong> en un KIT, velocidad 3, largo 4: cuatro golpes, volúmenes 6, 9, 12, 15, bucle al paso 4.</li>
+        <li><strong>Un bombo que cae:</strong> en una ONDA o un PULSO, velocidad 1, pasos 0, −2, −4, −6, −8… y sin bucle.</li>
+      </ul>
+    </section>
+
+    <section id="groove">
+      <h2><span class="n">15</span>El groove</h2>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/64-groove.png" alt="La página GROOVE" width="480" height="480"></figure><div><b>GLO dos veces</b><p>El groove ajusta cuánto dura cada fila, en ticks: 6 ticks son una semicorchea recta. Sus pasos suenan por turnos, uno por fila: 7 y luego 5 es un swing ligero, 8 y luego 4 un swing marcado, 4 4 4 un ternario. Cuando está activo, sustituye el swing de la página CANCION. <span class="k k1">K1</span> ajusta los ticks del paso elegido (SELECT o una tecla blanca lo elige), <span class="k k2">K2</span> el largo, <span class="k k3">K3</span> un modelo (activa el groove), <span class="k k4">K4</span> encendido o apagado.</p><p>La franja bajo las barras muestra una vuelta tal como suena. Cuando los ticks suman 6 por fila (7 + 5), el compás conserva su duración; si no, la cuenta se pone en rojo, y el patrón se acorta o se alarga. El reloj MIDI de salida envía los ticks tal como suenan: una caja de ritmos sigue el groove.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="samples">
+      <h2><span class="n">16</span>Tus propios samples</h2>
+      <p>KAWA tiene cuatro ranuras para tus sonidos: <strong>MI 1</strong> a <strong>MI 4</strong>, de unos 1,7 s cada una a 22 kHz. Aparecen como FUENTE del motor SAMPLE, junto a los breaks.</p>
+      <ul>
+        <li><strong>En el emulador:</strong> suelta un archivo de sonido sobre la página, o elígelo en el panel «Tus samples». Se convierte solo: mono, 22 kHz, normalizado.</li>
+        <li><strong>En el FM-1:</strong> <code>python3 install/kawa_samples.py put 1 mi-sonido.wav</code>, o el botón «Enviar a mi FM-1» del emulador. KAWA tiene que estar parado durante el envío: el sonido se corta un instante mientras se escribe. Si el envío se interrumpe, la ranura se queda vacía, nunca dañada.</li>
+        <li>Después, en la página SONIDO de una pista SAMPLE, pon FUENTE en MI 1 a 4 y elige el MODO: en cortes en las teclas blancas, o tocado en las notas (C4 = la altura original).</li>
+      </ul>
+      <h3 id="edit-sample">Editar un sample</h3>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/66-sample-edit.png" alt="La página EDITAR SAMPLE" width="480" height="480"></figure><div><b>EDIT hasta EDITAR SAMPLE</b><p>En una pista SAMPLE, un break o uno de tus sonidos. No se reescribe nada en el sonido: la edición solo dice cómo suena, y se guarda con el proyecto, pista por pista. SELECT elige la marca: INICIO, FIN, y luego los cortes 2 a 16 (en modo CORTES). <span class="k k1">K1</span> la mueve, <span class="k k2">K2</span> con precisión (su sitio se muestra en milisegundos), y oyes el corte. Mueve un corte y los demás se quedan donde estaban; <kbd>ARP</kbd> los vuelve a repartir por igual. <span class="k k3">K3</span> NORM lleva el punto más fuerte de la parte editada al máximo (hasta ×16), <span class="k k4">K4</span> la toca al revés.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="raccourcis">
+      <h2><span class="n">17</span>Atajos</h2>
+      <div class="table"><table>
+        <thead><tr><th>Gesto</th><th>Efecto</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>HOME</kbd> mantenido</td><td>La ayuda de la página</td></tr>
+          <tr><td><kbd>SAVE</kbd> mantenido + <kbd>OCT−</kbd> / <kbd>OCT+</kbd></td><td>Deshacer / rehacer</td></tr>
+          <tr><td><kbd>SAVE</kbd> y luego <kbd>OCT+</kbd></td><td>Volver a guardar la canción en su sitio</td></tr>
+          <tr><td><kbd>REC</kbd> mantenido + SELECT</td><td>El salto de filas después de una nota</td></tr>
+          <tr><td><kbd>ARP</kbd> mantenido + <span class="k k3">K3</span> <span class="k k4">K4</span> (PISTAS)</td><td>El segundo efecto de la celda</td></tr>
+          <tr><td><kbd>ARP</kbd> mantenido + SELECT</td><td>Insertar / quitar una fila de la pista</td></tr>
+          <tr><td><kbd>ARP</kbd> mantenido + ALGORITHM</td><td>Insertar / quitar una fila de todo el patrón</td></tr>
+          <tr><td><kbd>ARP</kbd> mantenido + tecla negra (MEZCLA)</td><td>Solo de la pista</td></tr>
+          <tr><td><kbd>FX</kbd> mantenido + teclas blancas</td><td>Efectos en directo</td></tr>
+          <tr><td><kbd>GLO</kbd> dos veces, tres veces</td><td>El GROOVE, luego las OPCIONES</td></tr>
+          <tr><td><kbd>ENV</kbd> dos veces</td><td>MEZCLA y el efecto del máster</td></tr>
+        </tbody>
+      </table></div>
+      <p>En el emulador: Ctrl+Z deshacer, Ctrl+Y rehacer, Ctrl+S guardar, Espacio PLAY, Intro REC, Mayús mantenido FX, las flechas para la fila y la pista.</p>
+    </section>
+
+    <section id="options">
+      <h2><span class="n">18</span>Opciones</h2>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/es/62-options.png" alt="La página OPCIONES" width="480" height="480"></figure><div><b>Tema, idioma, reloj, fuente</b><p><kbd>GLO</kbd> tres veces. <span class="k k1">K1</span> elige el tema (KAWA, GAME BOY, BONBON), <span class="k k2">K2</span> el idioma de la pantalla (inglés, francés, español), <span class="k k4">K4</span> la fuente de la pantalla: SUAVE (la de serie), BASE (la de los inicios), CLARA (hecha para leer) u 8-BIT (arcade); cada una se muestra escrita con ella misma. <span class="k k3">K3</span> ajusta el reloj MIDI por USB:</p><ul><li><strong>SALIDA:</strong> KAWA envía start, stop y el tempo (también los ticks del groove), para sincronizar una caja de ritmos o un programa.</li><li><strong>ENTRADA:</strong> KAWA sigue a otra máquina. Su START arranca la canción donde lo haría PLAY, su STOP la para, su tempo manda (se muestra en verde, medido sobre cuatro pulsos); cada fila espera sus ticks o los alcanza, y empieza unos milisegundos después de su tick. En ENTRADA sin reloj, PLAY lo espera, y lo dice.</li></ul><p>Los ajustes se conservan al apagar.</p><p>La línea CPU dice cuánto tiempo de cálculo usa el sonido. Por encima del 70 %, KAWA aligera el sonido por sí solo, empezando por la reverb, en lugar de producir chasquidos.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="aide">
+      <h2><span class="n">19</span>Ayuda y solución de problemas</h2>
+      <ul>
+        <li><strong>Ya no sé qué hace un potenciómetro:</strong> mira la línea de abajo, o mantén <kbd>HOME</kbd>.</li>
+        <li><strong>No hay sonido:</strong> sube MASTER; en MEZCLA, comprueba que ninguna pista esté silenciada (una M roja); comprueba el volumen de la nota con <span class="k k2">K2</span>.</li>
+        <li><strong>«FM: UNA SOLA PISTA»:</strong> otra pista ya tiene la FM; cambia primero su motor.</li>
+        <li><strong>Un cambio que ha salido mal:</strong> <kbd>SAVE</kbd> mantenido + <kbd>OCT−</kbd>.</li>
+        <li><strong>KAWA ya no arranca:</strong> mantén <kbd>OCT−</kbd> al encender (el rescate USB) y luego reinstala KAWA o el firmware oficial.</li>
+      </ul>
+    </section>
+
+    <section id="soutenir">
+      <h2><span class="n">20</span>Apoyar KAWA</h2>
+      <div class="support">
+        <p>KAWA es gratuito y libre. Si te gusta lo que hago, ¡piensa en apoyarme! ¡Cada pequeño gesto significa muchísimo! Invítame a una cerveza y seguiré haciendo sonar el FM-1.</p>
+        <a class="kofi" href="https://ko-fi.com/omnipotard" target="_blank" rel="noopener">Invítame a una cerveza</a>
+      </div>
+    </section>
+
+    <footer>
+      <p>KAWA 0.4 beta, Pocket Tracker by Omnipotard. Software libre (GPL-3.0), construido sobre Dinghy, Felucca (Hügelton Instruments) y SLOOP, la plataforma abierta de la comunidad FM-1. El motor FM viene de msfa (Dexed, Apache-2.0). Los breaks y los kits están totalmente sintetizados. M-VAVE y FM-1 son marcas de sus propietarios; KAWA no es un producto de M-VAVE.</p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>
