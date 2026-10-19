@@ -1,4 +1,5 @@
 # the whole demo song, from the start (the screen follows)
+2500 btn 8
 2600 btn 12
 6000 shot d01
 12000 shot d02

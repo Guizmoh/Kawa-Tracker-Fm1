@@ -15,6 +15,7 @@ static uint32_t s_phase, s_inc_even = 1117000u, s_inc_odd = 1117000u, s_len_even
 static uint32_t s_len_k[13], s_inc_k[13];       /* a row of k ticks: its frames, its phase step */
 static uint32_t s_inc = 1117000u, s_len = 3845u;   /* the row playing */
 static uint8_t s_pat, s_row, s_pos, s_rep, s_again_row;
+static uint8_t s_head = 0xFF;                   /* the first half of a 64-step pattern, while its second half plays */
 static uint16_t s_bpm;
 static uint8_t s_swing, s_trip, s_again, s_tick6;
 static uint8_t s_kt = 6;                        /* the ticks of the row playing (6: a straight 16th) */
@@ -32,6 +33,11 @@ static struct {
     uint16_t delay16;
     tricks_t k;
 } st[NTRK];
+/* the metronome (OPTIONS): a click on every beat while it plays: 0 off, 1 always, 2 only while REC is on; its volume 0..2 */
+static volatile uint8_t met_mode, met_vol, met_rec, met_play;   /* main: the setting, the volume, REC on */
+static volatile uint8_t met_trig;               /* ISR: a beat came (2: the first of the bar); main: a click to hear (volume) */
+static uint32_t met_ph, met_inc;
+static int32_t met_env, met_dec;
 static uint8_t last_note[NTRK];                 /* the note each track played last (ROLL on an empty cell) */
 static volatile uint8_t sq_suppress[NTRK];      /* main: the note of the next row is already sounding (live take) */
 static volatile uint32_t sq_tick0;              /* main: the clock in's ticks before a start (kept from PLAY) */
@@ -106,6 +112,8 @@ static void seq_row_start(void)
 {
     const pat_t *pt = &prj.pat[s_pat];
     uint32_t t;
+    if ((s_row & 3u) == 0u && (met_mode == 1u || (met_mode == 2u && met_rec)))
+        met_trig = (s_row & 15u) == 0u ? 2u : 1u;   /* (a beat is four rows) */
     for (t = 0; t < NTRK; t++) {
         const cell_t *c = &pt->c[s_row][t];
         uint32_t sup = sq_suppress[t];          /* (taken at every row: it is about this row only) */
@@ -167,6 +175,8 @@ static void seq_start(void)
         s_pat = prj.song[s_pos].pat < NPAT ? prj.song[s_pos].pat : 0u;
     }
     s_row = 0;
+    s_head = 0xFF;
+    sq_head = 0xFF;
     s_step = 0;
     s_gi = 0;
     sq_gstep = 0;
@@ -219,26 +229,35 @@ static void seq_next_row(void)
         s_lane_skip = 0;
     if (s_row >= len) {                         /* the end of the pattern */
         s_row = 0;
-        if (prj.mode && prj.song_len) {
-            if (sq_goto < NSONG) {              /* the entry playing was deleted: the one after it */
-                s_pos = sq_goto < prj.song_len ? sq_goto : 0u;
-                s_rep = 0;
-                sq_goto = 0xFF;
-            } else if (s_pos >= prj.song_len)
-                s_pos = 0, s_rep = 0;
-            else if (++s_rep >= song_rep(s_pos)) {   /* played its times: the next entry */
-                s_rep = 0;
-                if (++s_pos >= prj.song_len)
-                    s_pos = 0;
-            }
-            s_pat = prj.song[s_pos].pat < NPAT ? prj.song[s_pos].pat : 0u;
-        } else if (sq_next < NPAT) {
-            s_pat = sq_next;
-            sq_next = 0xFF;
+        if (pat_linked(s_pat)) {                /* 64 steps: on into the next pattern (then back to this one) */
+            s_head = s_pat;
+            s_pat++;
+        } else {
+            uint32_t head = s_head;             /* (the first half of the pair that just ended, if it did) */
+            s_head = 0xFF;
+            if (prj.mode && prj.song_len) {
+                if (sq_goto < NSONG) {          /* the entry playing was deleted: the one after it */
+                    s_pos = sq_goto < prj.song_len ? sq_goto : 0u;
+                    s_rep = 0;
+                    sq_goto = 0xFF;
+                } else if (s_pos >= prj.song_len)
+                    s_pos = 0, s_rep = 0;
+                else if (++s_rep >= song_rep(s_pos)) {   /* played its times: the next entry */
+                    s_rep = 0;
+                    if (++s_pos >= prj.song_len)
+                        s_pos = 0;
+                }
+                s_pat = prj.song[s_pos].pat < NPAT ? prj.song[s_pos].pat : 0u;
+            } else if (sq_next < NPAT) {
+                s_pat = sq_next;
+                sq_next = 0xFF;
+            } else if (head < NPAT)
+                s_pat = (uint8_t)head;          /* (looping a 64-step pattern: its first half again) */
         }
         sq_songpos = s_pos;
         sq_rep = s_rep;
     }
+    sq_head = s_head;
     sq_pat = s_pat;
     sq_row = s_row;
     if (rec_live && lfx_keys) {                 /* recording the live effects into the LIVE lane */
@@ -426,6 +445,8 @@ static void app_audio(int32_t *out, uint32_t n)
             for (i = 0; i < CHUNK; i++)
                 mono[i] = 0;
             track_chunk(t, mono);
+            if (prj.snd[t].sat)
+                sat_chunk(mono, prj.snd[t].sat & 15u);
             for (i = 0; i < CHUNK; i++) {
                 int32_t m = mono[i], a = m < 0 ? -m : m;
                 if ((uint32_t)a > pk)
@@ -443,6 +464,23 @@ static void app_audio(int32_t *out, uint32_t n)
             R[i] += BR[i];
         }
         fx_master(L, R, E, V);
+        if (met_trig) {                         /* the metronome: a 20 ms sine, higher on the first beat of a bar */
+            static const int32_t MET_AMP[3] = {2400, 6000, 13000}, MET_DEC[3] = {3, 7, 15};   /* (a click that fades out in 880 frames) */
+            uint32_t mv = met_vol < 3u ? met_vol : 1u;
+            met_inc = met_trig == 2u ? 175305600u : 116870400u;   /* 1800 / 1200 Hz at 44100 Hz */
+            met_ph = 0;
+            met_env = MET_AMP[mv];
+            met_dec = MET_DEC[mv];
+            met_trig = 0;
+        }
+        if (met_env > 0)
+            for (i = 0; i < CHUNK; i++) {
+                int32_t v = (int32_t)(((int64_t)sine(met_ph) * met_env) >> 15);
+                met_ph += met_inc;
+                met_env = met_env > met_dec ? met_env - met_dec : 0;
+                L[i] = clampi(L[i] + v, -32767, 32767);   /* (after the limiter: kept in Q15) */
+                R[i] = clampi(R[i] + v, -32767, 32767);
+            }
         for (i = 0; i < CHUNK; i++) {
             int32_t a = L[i] < 0 ? -L[i] : L[i];
             if ((uint32_t)a > mpk)

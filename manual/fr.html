@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Manuel de KAWA</title>
-<meta name="description" content="Le manuel de KAWA 0.4 bêta, le Pocket Tracker d'Omnipotard pour le M-VAVE FM-1 : installer, faire un morceau, le son, les effets.">
+<meta name="description" content="Le manuel de KAWA 0.5 bêta, le Pocket Tracker d'Omnipotard pour le M-VAVE FM-1, fait avant tout pour la chiptune et l'IDM : installer, faire un morceau, le son, les effets.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap">
@@ -136,6 +136,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     </div>
     <ol>
       <li><a href="#beta">Version bêta</a></li>
+      <li><a href="#nouveautes">Nouveautés de la 0.5</a></li>
       <li><a href="#tracker">Composer avec un tracker</a></li>
       <li><a href="#installer">Installer KAWA</a></li>
       <li><a href="#revenir">Revenir au firmware officiel</a></li>
@@ -147,7 +148,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       <li><a href="#tuto-chaine">Tuto 4 · Enchaîner les motifs</a></li>
       <li><a href="#tuto-sauver">Tuto 5 · Sauvegarder</a></li>
       <li><a href="#son">Le son</a></li>
-      <li><a href="#live">Les effets live</a></li>
+      <li><a href="#live">Envois et effets live</a></li>
       <li><a href="#magie">La magie</a></li>
       <li><a href="#cases">Les effets de case</a></li>
       <li><a href="#tables">Les tables</a></li>
@@ -164,24 +165,45 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     <header class="hero">
       <div>
         <h1>Le manuel de KAWA <span class="beta">BETA</span></h1>
-        <p>KAWA transforme le <strong>M-VAVE FM-1</strong> en tracker de poche, pour composer dans tous les styles. Tu as six pistes, chacune avec son moteur : carré, onde, bruit, FM, kit de batterie ou sample. S'y ajoutent des motifs que tu enchaînes en morceau, 32 effets à jouer en direct et des outils qui écrivent des beats à ta place.</p>
-        <p>Ce manuel va droit au but : installer KAWA, puis cinq tutoriels pour faire un vrai morceau, puis le détail du son et des effets. Version <strong>0.4 bêta</strong>.</p>
+        <p>KAWA transforme le <strong>M-VAVE FM-1</strong> en tracker de poche, fait avant tout pour la <strong>chiptune et l'IDM</strong>. Tu as six pistes, chacune avec son moteur : ondes 4 bits, carré et bruit comme sur les vieilles consoles, FM, kit de batterie ou break découpé en tranches. S'y ajoutent des roulés et des ratchets (l'effet de case ROL), des tables, le groove, la saturation de chaque piste, 32 effets à jouer en direct (BEGAIE, SCRATCH, RELANCE, ROULEAU…) et des outils qui écrivent des beats à ta place (EUCLIDE, HASARD…). Il sait faire d'autres styles, mais c'est pour ça qu'il est construit.</p>
+        <p>Ce manuel va droit au but : installer KAWA, puis cinq tutoriels pour faire un vrai morceau, puis le détail du son et des effets. Version <strong>0.5 bêta</strong>.</p>
       </div>
-      <figure class="screen"><img src="img/fr/01-boot.png" alt="L'écran de démarrage : le chien de KAWA, un casque sur les oreilles" width="480" height="480"><figcaption>Au démarrage, le chien de KAWA et la démo, prête à jouer.</figcaption></figure>
+      <figure class="screen"><img src="img/fr/01-boot.png" alt="L'écran de démarrage : le chien de KAWA, un casque sur les oreilles, et « APPUIE SUR UNE TOUCHE » qui clignote" width="480" height="480"><figcaption>Au démarrage, le chien de KAWA attend : « APPUIE SUR UNE TOUCHE » clignote. Touche n'importe quoi, et voilà ton morceau.</figcaption></figure>
     </header>
 
     <section id="beta">
       <div class="note warn">
         <h3>Version bêta : à lire avant tout</h3>
-        <p>KAWA 0.4 compile pour le FM-1 et passe toutes les vérifications de sa plateforme : taille, mémoire, accès au matériel. Il tourne dans le simulateur et dans l'émulateur web. En revanche, <strong>il n'a pas encore été essayé sur un vrai FM-1</strong>.</p>
+        <p>KAWA 0.5 compile pour le FM-1 et passe toutes les vérifications de sa plateforme : taille, mémoire, accès au matériel. Il tourne dans le simulateur et dans l'émulateur web. En revanche, <strong>il n'a pas encore été essayé sur un vrai FM-1</strong>.</p>
         <p>Installer un firmware non officiel se fait à tes risques. Le chemin d'installation est celui de Dinghy et Felucca, déjà utilisés sur de vrais FM-1, et il prévoit plusieurs filets de sécurité (plus bas). Branche le FM-1 sur une alimentation stable et ne le débranche jamais pendant une installation.</p>
         <p>Les projets ne sont pas encore transférables vers l'ordinateur. Si un comportement te semble bizarre, dis-le : c'est le but d'une bêta.</p>
       </div>
     </section>
 
+    <section id="nouveautes">
+      <h2>Nouveautés de la 0.5</h2>
+      <ul>
+        <li><strong>Un morceau vide au démarrage.</strong> Quand rien n'a été sauvé, KAWA démarre sur un morceau vide, à 100 BPM (avant : la démo, à 160). La démo reste là : <kbd>SAVE</kbd>, PROJETS, DEMO. La sauvegarde automatique te rend toujours ton dernier travail après une extinction.</li>
+        <li><strong>L'écran de démarrage attend</strong> : « APPUIE SUR UNE TOUCHE » clignote, et ce premier appui ne fait que le fermer. Sur un morceau vide, la page PISTES montre un encadré « KAWA - MORCEAU VIDE » avec les trois gestes pour commencer ; il part à la première note.</li>
+        <li><strong>Les encodeurs ne se marchent plus dessus.</strong> <strong>SELECT</strong> tourne les pages d'un bouton (EDIT, LFO, ENV, FX, GLO) ; <strong>ALGORITHM</strong> choisit la piste, mais aussi la case de la chaîne, le pas du groove et le mode du métronome ; <strong>PRESETS</strong> choisit le son d'usine, l'opérateur, la ligne de table, la tranche ou le motif. Tout le détail est dans <a href="#panneau">Le tour du FM-1</a>.</li>
+        <li><strong>Le moteur d'une piste</strong> se change avec <kbd>ARP</kbd> tenu + <strong>PRESETS</strong>. Un son que tu as retouché est protégé : PRESETS montre seulement le son d'usine suivant, en doré, et <kbd>OCT+</kbd> le charge (<a href="#preset-protege">voir le tuto 1</a>).</li>
+        <li><strong>ANNULER marche aussi sur le son</strong> : chaque potard tourné sur une page de son, chaque envoi, chaque son d'usine chargé. Motifs et sons partagent un historique de 10 étapes (avant : 6).</li>
+        <li><strong>Le bouton LFO</strong> ouvre LFO, puis MODULATION (elles ne sont plus sur EDIT). <strong>La MAGIE</strong> passe sur <kbd>SCL</kbd> : un appui pour la GAMME, deux pour la MAGIE.</li>
+        <li><strong>FX ouvre ENVOIS</strong> : SATURE (nouveau), ECHO et REVERB de chaque piste. Un deuxième appui ouvre les effets LIVE, un troisième te ramène d'où tu viens. Tenu depuis une autre page, <kbd>FX</kbd> montre LIVE tant que tu le tiens, comme avant.</li>
+        <li><strong>SAVE tenu : les outils.</strong> OPTIONS, ANNULER, REFAIRE, EFFACER, COPIER, COLLER, HASARD. Tenir <kbd>SAVE</kbd> n'annule plus rien tout seul ; <kbd>SAVE</kbd> tenu + <kbd>OCT−</kbd> / <kbd>OCT+</kbd> annule / refait toujours aussitôt.</li>
+        <li><strong>Une barre jaune</strong> se remplit en bas de l'écran quand tu tiens <kbd>HOME</kbd> (AIDE), <kbd>FX</kbd> (LIVE) ou <kbd>SAVE</kbd> (OUTILS), avec ce nom au-dessus : la page s'ouvre quand elle est pleine. Un appui court n'affiche rien.</li>
+        <li><strong><kbd>SAVE</kbd> clignote</strong> tant que le morceau a des modifications qui ne sont pas sauvées dans un de tes emplacements.</li>
+        <li><strong><kbd>HOME</kbd> + <kbd>PLAY</kbd> : panique.</strong> Le morceau s'arrête, toutes les voix et les effets live se coupent (« PANIC »).</li>
+        <li><strong>16, 32 ou 64 pas</strong> sur la GRILLE, avec <kbd>OCT−</kbd> / <kbd>OCT+</kbd>. Les 64 pas sont un motif lié au suivant.</li>
+        <li><strong>Un métronome</strong> et son volume, dans OPTIONS.</li>
+        <li><strong>Le bouton ARP</strong> est expliqué noir sur blanc : ce n'est pas un arpégiateur, c'est la touche « efface / majuscule » (voir <a href="#arp">À quoi sert ARP ?</a>).</li>
+        <li><strong>Tes projets</strong> : ceux de la 0.4 et de la 0.2 s'ouvrent dans la 0.5. Ceux de la 0.5 s'ouvrent encore dans la 0.4 et la 0.3, où l'envoi SATURE et la liaison des 64 pas sont simplement ignorés.</li>
+      </ul>
+    </section>
+
     <section id="tracker">
       <h2>Composer avec un tracker</h2>
-      <p>KAWA n'est pas fait pour un seul style. Pop, techno, hip hop, ambient, jazz, rock, musique de jeu vidéo, chiptune, breakcore : tout s'écrit dans un tracker. Ce qui change, c'est la façon de composer, très différente d'un logiciel de musique habituel (un DAW).</p>
+      <p>Le tracker est né avec la musique des vieilles consoles et des ordinateurs 8 bits, et l'IDM en a fait un instrument : c'est pour ces deux musiques que KAWA est construit, des notes au pas près, des roulés, des breaks hachés. Tout le reste s'y écrit aussi (techno, hip hop, ambient…). Ce qui change, c'est la façon de composer, très différente d'un logiciel de musique habituel (un DAW).</p>
       <div class="anatomy">
         <figure class="screen"><img src="img/fr/02-tracks.png" alt="La page PISTES : le temps descend, une colonne par piste" width="480" height="480"></figure>
         <div>
@@ -205,18 +227,18 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
 
     <section id="installer">
       <h2><span class="n">01</span>Installer KAWA</h2>
-      <p>Il te faut un câble USB <strong>de données</strong>, un ordinateur et Python 3 (<a href="https://www.python.org/downloads/">python.org</a>). Le firmware est le fichier <code>kawa-0.4.fwsc</code> du dossier <code>install/</code>.</p>
+      <p>Il te faut un câble USB <strong>de données</strong>, un ordinateur et Python 3 (<a href="https://www.python.org/downloads/">python.org</a>). Le firmware est le fichier <code>kawa-0.5.fwsc</code> du dossier <code>install/</code>.</p>
       <ol>
         <li>Ferme les autres logiciels MIDI, puis branche le FM-1 allumé.</li>
         <li>Le plus simple : double-clic sur <code>INSTALL-Windows.bat</code> ou <code>INSTALL-Mac.command</code> (Linux : <code>./INSTALL-Linux.sh</code>). La première fois, il récupère ce qu'il lui faut (rtmidi2) ; il vérifie le paquet, demande confirmation, envoie le loader, puis l'application.</li>
-        <li>À la main : <code>pip3 install rtmidi2</code>, puis <code>python3 install/fm1_install.py --info</code> pour voir ce que tourne le FM-1, puis <code>python3 install/fm1_install.py install/kawa-0.4.fwsc</code>.</li>
-        <li>Le FM-1 redémarre sur KAWA : le chien apparaît, puis la démo.</li>
+        <li>À la main : <code>pip3 install rtmidi2</code>, puis <code>python3 install/fm1_install.py --info</code> pour voir ce que tourne le FM-1, puis <code>python3 install/fm1_install.py install/kawa-0.5.fwsc</code>.</li>
+        <li>Le FM-1 redémarre sur KAWA : le chien apparaît et attend (« APPUIE SUR UNE TOUCHE ») ; touche n'importe quoi, et tu arrives sur ton dernier travail (la sauvegarde automatique) ou, s'il n'y en a pas, un morceau vide. La démo est dans <kbd>SAVE</kbd>, PROJETS, DEMO. Pour vérifier, <code>python3 install/fm1_install.py --info</code> répond maintenant <code>FM-1_955</code>.</li>
       </ol>
       <h3>Ce que l'installation n'écrit jamais</h3>
       <ul>
         <li>Le début de la mémoire, avec le bootloader de la puce et sa configuration.</li>
         <li>La zone des projets et des samples, de 0x97000 à 0xE0000, ni les réglages en 0xFC000.</li>
-        <li>Une mise à jour garde tes projets et tes samples. Les projets de la 0.2 s'ouvrent dans la 0.4 tels qu'ils étaient (ils sont convertis au chargement, puis sauvés dans le nouveau format). Les projets faits avec la 0.1 ne sont pas lus (leur format a changé) ; la démo démarre à leur place, et ils sont remplacés dès que tu sauves.</li>
+        <li>Une mise à jour garde tes projets et tes samples. Les projets de la 0.2 s'ouvrent dans la 0.5 tels qu'ils étaient (ils sont convertis au chargement, puis sauvés dans le nouveau format). Les projets faits avec la 0.1 ne sont pas lus (leur format a changé) ; un morceau vide démarre à leur place, et ils sont remplacés dès que tu sauves.</li>
       </ul>
       <h3>Les filets de sécurité</h3>
       <ul>
@@ -271,40 +293,71 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       <div class="table"><table>
         <thead><tr><th>Bouton</th><th>Page</th><th>Appuie encore</th></tr></thead>
         <tbody>
-          <tr><td><kbd>HOME</kbd></td><td>PISTES : le tracker</td><td>Tenu : l'aide de la page où tu es</td></tr>
-          <tr><td><kbd>SEQ</kbd></td><td>GRILLE : les 16 pas sur les touches blanches</td><td>Retour aux pistes</td></tr>
-          <tr><td><kbd>EDIT</kbd></td><td>SON : le moteur et le son de la piste</td><td>Page de son suivante</td></tr>
+          <tr><td><kbd>HOME</kbd></td><td>PISTES : le tracker</td><td>Tenu : l'aide de la page où tu es (une barre jaune AIDE se remplit d'abord). <kbd>HOME</kbd> + <kbd>PLAY</kbd> : panique</td></tr>
+          <tr><td><kbd>SEQ</kbd></td><td>GRILLE : les pas de la piste sur les 16 touches blanches, par pages de 16 (<kbd>OCT−</kbd> / <kbd>OCT+</kbd> : 16, 32 ou 64 pas)</td><td>Retour aux pistes</td></tr>
+          <tr><td><kbd>EDIT</kbd></td><td>SON : le moteur et le son de la piste</td><td>Page suivante, en faisant le tour : SON 2, puis OPERATEUR et ENV OPERAT (FM) ou SAMPLE (sample), EFFET, TABLE</td></tr>
+          <tr><td><kbd>LFO</kbd></td><td>LFO : le LFO de la piste</td><td>MODULATION, puis de nouveau LFO</td></tr>
           <tr><td><kbd>ENV</kbd></td><td>ENVELOPPE : l'ADSR de la piste</td><td>MIX : volumes, panos, envois, effet master</td></tr>
-          <tr><td><kbd>LFO</kbd></td><td>MAGIE : 16 outils sur les touches blanches</td><td>Retour aux pistes</td></tr>
-          <tr><td><kbd>SCL</kbd></td><td>GAMME : tonique, gamme, verrou</td><td>Retour aux pistes</td></tr>
-          <tr><td><kbd>GLO</kbd></td><td>CHAINE : tempo, swing, la liste des motifs</td><td>GROOVE : les ticks de chaque ligne ; puis OPTIONS : thème, langue, horloge MIDI</td></tr>
-          <tr><td><kbd>SAVE</kbd></td><td>PROJETS : le menu des morceaux</td><td>Tenu : annuler / refaire</td></tr>
-          <tr><td><kbd>FX</kbd></td><td>EFFETS : tenu, les effets live</td><td>Un appui court garde la page ouverte</td></tr>
-          <tr><td><kbd>ARP</kbd></td><td>Efface la case</td><td>Tenu + SELECT : insère ou ôte une ligne</td></tr>
+          <tr><td><kbd>SCL</kbd></td><td>GAMME : tonique, gamme, verrou</td><td>MAGIE : 16 outils sur les touches blanches ; un troisième appui : retour aux pistes</td></tr>
+          <tr><td><kbd>GLO</kbd></td><td>CHAINE : tempo, swing, la liste des motifs</td><td>GROOVE : les ticks de chaque ligne ; puis OPTIONS : thème, langue, horloge MIDI, police, métronome ; puis retour à la CHAINE</td></tr>
+          <tr><td><kbd>SAVE</kbd></td><td>PROJETS : le menu des morceaux (il clignote tant que des modifications ne sont pas sauvées)</td><td>Tenu : les outils (OPTIONS, ANNULER, REFAIRE, EFFACER, COPIER, COLLER, HASARD)</td></tr>
+          <tr><td><kbd>FX</kbd></td><td>ENVOIS : SATURE, ECHO et REVERB de chaque piste</td><td>LIVE : les 32 effets à jouer ; un troisième appui : retour d'où tu viens. Tenu depuis une autre page : LIVE tant que tu tiens</td></tr>
+          <tr><td><kbd>ARP</kbd></td><td>Efface ce qui est sous le curseur</td><td>Tenu : touche « majuscule » d'un autre geste (<a href="#arp">voir plus bas</a>)</td></tr>
           <tr><td><kbd>PLAY</kbd> <kbd>REC</kbd></td><td>Lecture, enregistrement</td><td>REC tenu + SELECT : le saut de lignes</td></tr>
         </tbody>
       </table></div>
-      <p>Sur presque toutes les pages, <strong>SELECT</strong> choisit la ligne, <strong>ALGORITHM</strong> la piste et <strong>PRESETS</strong> le motif (sur les pages de son, le son). <strong>MASTER</strong> règle le volume, <kbd>OCT−</kbd> et <kbd>OCT+</kbd> l'octave du clavier.</p>
+      <p><kbd>OCT−</kbd> et <kbd>OCT+</kbd> changent l'octave du clavier. Selon la page, ils font autre chose : sur la GRILLE, le nombre de pas ; sur la CHAINE, ils ôtent ou ajoutent une case ; sur PROJETS, ils font retour / OK ; sur LIVE, ils changent de banque ; sur SON, quand un son d'usine est montré en doré, <kbd>OCT+</kbd> le charge et <kbd>OCT−</kbd> garde ton son ; et avec <kbd>SAVE</kbd> tenu, ils annulent / refont aussitôt.</p>
+      <h3>Les encodeurs</h3>
+      <div class="table"><table>
+        <thead><tr><th>Encodeur</th><th>Ce qu'il fait</th></tr></thead>
+        <tbody>
+          <tr><td>SELECT</td><td>Sur EDIT, LFO, ENV / MIX, FX et GLO : il change de page dans le groupe du bouton (il s'arrête aux bouts, alors que le bouton fait le tour). Ailleurs, c'est le curseur : la ligne (PISTES), la page de 16 pas (GRILLE : 1-16, 17-32… jusqu'à 64), le menu (PROJETS). <kbd>REC</kbd> tenu + SELECT : de combien de lignes saute une note. <kbd>ARP</kbd> tenu + SELECT : insère ou ôte une ligne.</td></tr>
+          <tr><td>ALGORITHM</td><td>La piste (sur MIX, jusqu'au master). Sur la CHAINE : la case de la chaîne. Sur GROOVE : le pas. Sur OPTIONS : le mode du métronome. Sur PISTES, <kbd>ARP</kbd> tenu + ALGORITHM : insère ou ôte une ligne dans tout le motif.</td></tr>
+          <tr><td>PRESETS</td><td>Sur la première page SON : le son d'usine (la liste est classée par moteur, elle passe donc d'un moteur à l'autre) ; <kbd>ARP</kbd> tenu + PRESETS : le moteur suivant / précédent. Sur un son retouché, il montre seulement le son d'usine, en doré, et <kbd>OCT+</kbd> le charge. Sur les autres pages d'EDIT, le curseur de la page : l'opérateur (OPERATEUR, ENV OPERAT), la ligne de la TABLE, la tranche (SAMPLE) ; SON 2, EFFET, LFO et MODULATION : rien. Sur la CHAINE : le motif de la case. Sur OPTIONS : le volume du métronome. Sur PISTES, GRILLE, MAGIE, GAMME, ENVOIS et LIVE : le motif. Sur ENV, MIX, GROOVE et PROJETS : rien.</td></tr>
+          <tr><td>MASTER</td><td>Le volume général.</td></tr>
+          <tr><td>KNOB 1 à 4</td><td>Les quatre potards de couleur : leur rôle change avec la page, la ligne du bas le dit.</td></tr>
+        </tbody>
+      </table></div>
+      <h3 id="arp">À quoi sert ARP ?</h3>
+      <p>Malgré son nom, <kbd>ARP</kbd> n'est pas un arpégiateur. C'est la touche « efface / majuscule » de KAWA : un appui efface ce qui est sous le curseur, et tenu avec un autre geste, elle change ce que fait ce geste. (L'effet de case ARP, l'arpège d'un accord, est une autre chose : voir <a href="#cases">Les effets de case</a>.)</p>
+      <div class="table"><table>
+        <thead><tr><th>Page</th><th>Un appui sur ARP</th><th>ARP tenu, avec…</th></tr></thead>
+        <tbody>
+          <tr><td>PISTES</td><td>Efface la case (et le curseur avance du saut de lignes si <kbd>REC</kbd> est allumé)</td><td>SELECT : insère ou ôte une ligne dans la piste ; ALGORITHM : dans tout le motif ; <span class="k k3">K3</span> <span class="k k4">K4</span> : le second effet de la case</td></tr>
+          <tr><td>GRILLE</td><td>Tiens un pas (une touche blanche) et appuie sur ARP : le pas est effacé</td><td>—</td></tr>
+          <tr><td>SON (première page)</td><td>—</td><td>PRESETS : le moteur suivant / précédent</td></tr>
+          <tr><td>SON (TABLE)</td><td>Efface le pas de table sous le curseur</td><td>—</td></tr>
+          <tr><td>SON (SAMPLE)</td><td>Répartit à nouveau les 16 tranches à égalité</td><td>—</td></tr>
+          <tr><td>CHAINE</td><td>Passe de BOUCLE à CHAINE</td><td>—</td></tr>
+          <tr><td>LIVE</td><td>Efface la bande LIVE du motif</td><td>—</td></tr>
+          <tr><td>MIX</td><td>—</td><td>Une touche noire : solo de la piste</td></tr>
+        </tbody>
+      </table></div>
     </section>
 
     <section id="premiers-pas">
       <h2><span class="n">04</span>Premiers pas</h2>
       <ol class="steps">
-        <li><figure class="screen"><img src="img/fr/02-tracks.png" alt="La page PISTES : six colonnes de notes" width="480" height="480"></figure><div><b>Les pistes</b><p>Au démarrage, la démo « KAWA QUEST » est chargée. Chaque colonne est une piste, avec sa couleur. La piste du curseur s'affiche en large : la note, son volume en petite barre, et l'effet de la case. Les numéros à gauche sont les lignes ; chaque ligne dure une double croche.</p></div></li>
-        <li><figure class="screen"><img src="img/fr/03-play.png" alt="La démo qui joue" width="480" height="480"></figure><div><b>Jouer</b><p>Appuie sur <kbd>PLAY</kbd>. La ligne qui joue s'éclaire et les cases clignotent quand une note part. En haut à droite, tu vois la position dans la chaîne, le tempo et le temps en cours. <kbd>PLAY</kbd> à nouveau arrête.</p></div></li>
-        <li><figure class="screen"><img src="img/fr/04-help.png" alt="L'aide de la page PISTES" width="480" height="480"></figure><div><b>L'aide, partout</b><p>Tiens <kbd>HOME</kbd> sur n'importe quelle page. KAWA montre alors ce que font les quatre potards de cette page, les trois encodeurs et les combinaisons utiles. Lâche <kbd>HOME</kbd> pour revenir où tu étais.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/08-first-start.png" alt="La page PISTES vide, avec l'encadré KAWA - MORCEAU VIDE : 1. REC 2. JOUE LES TOUCHES, 3. PLAY POUR ECOUTER, HOME TENU: AIDE" width="480" height="480"></figure><div><b>Un morceau vide</b><p>Le chien attend : appuie sur n'importe quel bouton, touche ou potard (ce premier appui ne fait que fermer l'écran de démarrage). Au premier démarrage, KAWA te donne un morceau vide, à 100 BPM, et un encadré te dit quoi faire : « KAWA - MORCEAU VIDE », « 1. REC 2. JOUE LES TOUCHES », « 3. PLAY POUR ECOUTER », « HOME TENU: AIDE ». Il disparaît à la première note (et tant que REC ou PLAY est allumé).</p></div></li>
+        <li><figure class="screen"><img src="img/fr/02-tracks.png" alt="La page PISTES : la démo, six colonnes de notes" width="480" height="480"></figure><div><b>Les pistes</b><p>Pour voir un morceau complet, charge la démo « KAWA QUEST » : appuie sur <kbd>SAVE</kbd>, descends sur <strong>DEMO</strong> avec <strong>SELECT</strong> et appuie sur <kbd>OCT+</kbd>. C'est elle qu'on voit ici. Chaque colonne est une piste, avec sa couleur. La piste du curseur s'affiche en large : la note, son volume en petite barre, et l'effet de la case. Les numéros à gauche sont les lignes ; chaque ligne dure une double croche. Ensuite, KAWA te rend ton dernier travail à chaque allumage (la sauvegarde automatique).</p></div></li>
+        <li><figure class="screen"><img src="img/fr/03-play.png" alt="La démo qui joue" width="480" height="480"></figure><div><b>Jouer</b><p>La démo chargée, appuie sur <kbd>PLAY</kbd>. La ligne qui joue s'éclaire et les cases clignotent quand une note part. En haut à droite, tu vois la position dans la chaîne, le tempo et le temps en cours. <kbd>PLAY</kbd> à nouveau arrête.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/04-help.png" alt="L'aide de la page PISTES" width="480" height="480"></figure><div><b>L'aide, partout</b><p>Tiens <kbd>HOME</kbd> sur n'importe quelle page : une petite barre jaune marquée AIDE se remplit en bas de l'écran, et l'aide s'ouvre quand elle est pleine. KAWA montre alors ce que font les quatre potards de cette page, les trois encodeurs et les combinaisons utiles. Lâche <kbd>HOME</kbd> pour revenir où tu étais. (Un appui court sur <kbd>HOME</kbd> ramène aux pistes ; <kbd>HOME</kbd> appuyé avec un autre bouton n'y ramène pas.)</p><p>Si tout s'emballe : <kbd>HOME</kbd> + <kbd>PLAY</kbd>, la <strong>panique</strong>. Le morceau s'arrête, toutes les voix et les effets live se coupent, et l'écran dit « PANIC ».</p></div></li>
       </ol>
     </section>
 
     <section id="tuto-morceau">
       <h2><span class="n">05</span>Tuto 1 · Un nouveau morceau</h2>
+      <p>Au premier démarrage, KAWA est déjà sur un morceau vide : tu peux sauter les trois premières étapes. Elles servent quand tu veux repartir de zéro plus tard, après la démo ou un autre morceau.</p>
       <ol class="steps">
         <li><figure class="screen"><img src="img/fr/10-projects-menu.png" alt="Le menu PROJETS" width="480" height="480"></figure><div><b>Ouvre le menu des projets</b><p>Appuie une fois sur <kbd>SAVE</kbd>. En haut, le nom du morceau, son emplacement entre crochets, et une étoile s'il a changé depuis la dernière sauvegarde. <strong>SELECT</strong> se déplace dans le menu, <kbd>OCT+</kbd> valide, <kbd>OCT−</kbd> revient en arrière.</p></div></li>
         <li><figure class="screen"><img src="img/fr/11-new-song-select.png" alt="NOUVEAU MORCEAU sélectionné" width="480" height="480"></figure><div><b>Nouveau morceau</b><p>Monte sur <strong>NOUVEAU MORCEAU</strong> et appuie sur <kbd>OCT+</kbd>. Si le morceau en cours n'est pas sauvé, KAWA te le demande d'abord.</p></div></li>
-        <li><figure class="screen"><img src="img/fr/12-new-song.png" alt="Un morceau vide, avec un nom au hasard" width="480" height="480"></figure><div><b>Un morceau tout neuf</b><p>Le morceau reçoit un nom au hasard, que tu changeras en le sauvant. Ses six pistes ont déjà un son chacune : un lead carré, la FM, une basse onde, des charleys en bruit, un kit et un break.</p></div></li>
-        <li><figure class="screen"><img src="img/fr/13-sound-page.png" alt="La page SON de la piste 1" width="480" height="480"></figure><div><b>Choisis le son d'une piste</b><p><strong>ALGORITHM</strong> choisit la piste, puis <kbd>EDIT</kbd> ouvre sa page SON. La bande du haut montre les six moteurs. <strong>PRESETS</strong> parcourt les sons d'usine, et les quatre potards règlent le son.</p></div></li>
-        <li><figure class="screen"><img src="img/fr/14-engine-picker.png" alt="Le moteur ONDE choisi" width="480" height="480"></figure><div><b>Change de moteur</b><p>Sur cette première page, <strong>SELECT</strong> change le moteur de la piste : CARRE, ONDE, BRUIT, FM, KIT ou SAMPLE. La FM est grisée si une autre piste l'a déjà : une seule piste FM à la fois, pour que le FM-1 ne s'essouffle jamais.</p></div></li>
-        <li><figure class="screen"><img src="img/fr/15-preset.png" alt="Le son BIP 12" width="480" height="480"></figure><div><b>Un son d'usine</b><p>Tourne <strong>PRESETS</strong> pour essayer les sons d'usine. Une étoile après le nom veut dire que tu l'as modifié. Joue les touches pour l'écouter.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/12-new-song.png" alt="Un morceau vide, avec un nom au hasard" width="480" height="480"></figure><div><b>Un morceau tout neuf</b><p>Le morceau reçoit un nom au hasard, que tu changeras en le sauvant, et démarre à 100 BPM. Ses six pistes ont déjà un son chacune : un lead carré, la FM, une basse onde, des charleys en bruit, un kit et un break.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/13-sound-page.png" alt="La page SON de la piste 1" width="480" height="480"></figure><div><b>Choisis le son d'une piste</b><p><strong>ALGORITHM</strong> choisit la piste, puis <kbd>EDIT</kbd> ouvre sa page SON. La bande du haut montre les six moteurs. <strong>PRESETS</strong> parcourt les sons d'usine, et les quatre potards règlent le son. <strong>SELECT</strong>, lui, passe aux pages suivantes (SON 2, EFFET…).</p></div></li>
+        <li><figure class="screen"><img src="img/fr/14-engine-picker.png" alt="Le moteur ONDE choisi sur la piste 1" width="480" height="480"></figure><div><b>Change de moteur</b><p>Tiens <kbd>ARP</kbd> et tourne <strong>PRESETS</strong> : la piste passe au moteur suivant ou précédent (CARRE, ONDE, BRUIT, FM, KIT ou SAMPLE), avec son premier son d'usine (sur un son retouché, la même protection : voir plus bas). Ici, la piste 1 est passée de CARRE à ONDE. Tu peux aussi tourner <strong>PRESETS</strong> seul : la liste d'usine est classée par moteur, elle franchit donc les moteurs toute seule. La FM est grisée si une autre piste l'a déjà : une seule piste FM à la fois, pour que le FM-1 ne s'essouffle jamais.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/15-preset.png" alt="Le son BIP 12" width="480" height="480"></figure><div><b>Un son d'usine</b><p>Tourne <strong>PRESETS</strong> pour essayer les sons d'usine : sur un son que tu n'as pas touché, il change tout de suite. Joue les touches pour l'écouter. Ici, BIP 12.</p></div></li>
+        <li id="preset-protege"><figure class="screen"><img src="img/fr/75-preset-browse.png" alt="Le son retouché reste ; CARRE 50? en doré et OCT+ à côté, le message OCT+: CHARGER" width="480" height="480"></figure><div><b>Un son retouché est protégé</b><p>Dès que tu tournes un potard, une étoile apparaît après le nom (« BIP 12* ») : ce son est à toi, et <strong>PRESETS</strong> ne le remplace plus. Il montre seulement le son d'usine suivant, en doré, avec un « ? » et « OCT+ » à côté, et l'écran dit « OCT+: CHARGER ». Continue de tourner pour parcourir la liste : tu entends toujours ton son.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/76-preset-loaded.png" alt="CARRE 50 chargé, le message CHARGE" width="480" height="480"></figure><div><b>OCT+ le charge</b><p><kbd>OCT+</kbd> charge le son montré : « CHARGE ». <kbd>OCT−</kbd> garde ton son : « GARDE ». Tourner un potard, changer de piste ou de page, ou rester 8 secondes sans rien toucher gardent aussi ton son. <kbd>ARP</kbd> tenu + <strong>PRESETS</strong> (le moteur) suit la même règle.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/77-undo-sound.png" alt="BIP 12* revenu, le message ANNULE: SON 1" width="480" height="480"></figure><div><b>Chargé par erreur ? Annule</b><p>Tiens <kbd>SAVE</kbd> et appuie sur <kbd>OCT−</kbd> : ton son revient, étoile comprise, et l'écran dit « ANNULE: SON 1 » (KAWA passe sur la piste concernée). <kbd>OCT+</kbd> refait (« REFAIT: SON 1 »). Tous les changements de son s'annulent ainsi, potards compris (<a href="#annuler">voir plus bas</a>).</p></div></li>
       </ol>
     </section>
 
@@ -315,14 +368,15 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
         <li><figure class="screen"><img src="img/fr/21-step-jump.png" alt="SAUT 2" width="480" height="480"></figure><div><b>Le saut de lignes</b><p>Tiens <kbd>REC</kbd> et tourne <strong>SELECT</strong> : tu règles de combien de lignes le curseur saute après chaque note (0 à 16). Avec 2, tu écris des croches ; avec 4, des noires. La valeur s'affiche en haut à gauche du tracker.</p></div></li>
         <li><figure class="screen"><img src="img/fr/22-cell-knobs.png" alt="Une case avec un arpège" width="480" height="480"></figure><div><b>Retouche une case</b><p>Place le curseur avec <strong>SELECT</strong>. <span class="k k1">K1</span> change la note, <span class="k k2">K2</span> son volume, <span class="k k3">K3</span> l'effet de la case et <span class="k k4">K4</span> la valeur de l'effet (ici un arpège mineur). <kbd>ARP</kbd> efface la case. Tiens <kbd>ARP</kbd> et tourne <strong>SELECT</strong> pour insérer ou ôter une ligne.</p></div></li>
         <li><figure class="screen"><img src="img/fr/23-grid-kit.png" alt="La grille du kit" width="480" height="480"></figure><div><b>La batterie à la grille</b><p>Choisis la piste du kit avec <strong>ALGORITHM</strong> et appuie sur <kbd>SEQ</kbd>. Les 16 touches blanches sont les 16 pas, comme sur un Pocket Operator : une touche pose le son, une autre fois l'enlève. <span class="k k1">K1</span> choisit la percussion qui sera posée. Tiens un pas pour le retoucher avec les potards. Les touches noires changent de piste.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/74-grid-64.png" alt="La grille en 64 pas, page 49-64, avec le message PAS 64" width="480" height="480"></figure><div><b>16, 32 ou 64 pas</b><p>Sur la grille, <kbd>OCT−</kbd> et <kbd>OCT+</kbd> règlent la taille du motif : 16 pas (le classique), 32 ou 64, et un message le dit (« PAS 64 »). La grille montre toujours 16 pas à la fois : <strong>SELECT</strong> passe d'une page à l'autre (1-16, 17-32, 33-48, 49-64), et l'en-tête jaune dit où tu es (« 49-64/64 »).</p><p>64 pas, c'est ce motif (32 pas) <strong>lié au motif suivant</strong> (32 pas) : les deux jouent d'une seule traite, en boucle comme dans la chaîne, et la barre du haut montre « P01+ » sur la première moitié et « +P02 » sur la seconde. Les pages 33 à 64 de la grille éditent donc le motif suivant. <kbd>OCT−</kbd> repasse à 32 et sépare les deux : la seconde moitié reste un motif à part, rien n'est perdu. KAWA refuse la liaison sur le dernier motif, P32 (« DERNIER MOTIF »), ou si le motif suivant est déjà lié, ou si ce motif est lui-même la seconde moitié d'un autre (« MOTIF DEJA LIE »). Un seul ANNULER défait une liaison. En REC pendant la lecture, les notes s'écrivent dans la moitié qui joue ; si tu passes sur une paire de 64 pas pendant que la boucle joue, elle part de sa première moitié. CLONER refuse une moitié de paire (« MOTIF LIE »). La longueur du motif sur la CHAINE (<span class="k k4">K4</span>) règle toujours n'importe quelle longueur de 1 à 32.</p></div></li>
       </ol>
     </section>
 
     <section id="tuto-motifs">
       <h2><span class="n">07</span>Tuto 3 · D'autres motifs</h2>
       <ol class="steps">
-        <li><figure class="screen"><img src="img/fr/24-magic.png" alt="La page MAGIE" width="480" height="480"></figure><div><b>La magie</b><p><kbd>LFO</kbd> ouvre les 16 outils magiques, un par touche blanche. <span class="k k1">K1</span> règle leur force, <span class="k k2">K2</span> le dé, <span class="k k3">K3</span> la portée : la piste seule ou le motif entier.</p></div></li>
-        <li><figure class="screen"><img src="img/fr/25-magic-beat.png" alt="BEAT appliqué" width="480" height="480"></figure><div><b>Un beat en une touche</b><p>Touche 2 : <strong>BEAT</strong> écrit un rythme sur la piste. Rejoue-le pour un autre. Chaque outil s'annule : <kbd>SAVE</kbd> tenu + <kbd>OCT−</kbd>.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/24-magic.png" alt="La page MAGIE" width="480" height="480"></figure><div><b>La magie</b><p>Appuie deux fois sur <kbd>SCL</kbd> (une fois, c'est la GAMME) : tu es sur les 16 outils magiques, un par touche blanche. <span class="k k1">K1</span> règle leur force, <span class="k k2">K2</span> le dé, <span class="k k3">K3</span> la portée : la piste seule ou le motif entier.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/25-magic-beat.png" alt="BEAT appliqué" width="480" height="480"></figure><div><b>Un beat en une touche</b><p>Touche 2 : <strong>BEAT</strong> écrit un rythme sur la piste. Rejoue-le pour un autre. Chaque outil s'annule : tiens <kbd>SAVE</kbd> et appuie sur <kbd>OCT−</kbd>.</p></div></li>
         <li><figure class="screen"><img src="img/fr/26-clone.png" alt="CLONER" width="480" height="480"></figure><div><b>Clone le motif</b><p>Touche 12 : <strong>CLONER</strong> copie le motif dans le prochain motif vide, l'ajoute à la chaîne juste après, et t'y emmène. C'est le moyen le plus rapide de faire une variation.</p></div></li>
         <li><figure class="screen"><img src="img/fr/27-tracks-p02.png" alt="Le motif P02" width="480" height="480"></figure><div><b>Change de motif</b><p>Tu es maintenant sur <strong>P02</strong>, que tu peux modifier sans toucher P01. <strong>PRESETS</strong> passe d'un motif à l'autre (32 motifs de 1 à 32 lignes). Pendant la lecture, si tu changes de motif, l'écran reste sur celui que tu édites et indique « &gt;P01 » pour celui qui joue.</p></div></li>
       </ol>
@@ -331,9 +385,9 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     <section id="tuto-chaine">
       <h2><span class="n">08</span>Tuto 4 · Enchaîner les motifs pour faire un morceau</h2>
       <ol class="steps">
-        <li><figure class="screen"><img src="img/fr/30-song.png" alt="La page CHAINE" width="480" height="480"></figure><div><b>La chaîne</b><p><kbd>GLO</kbd> ouvre la CHAINE : la liste des motifs dans l'ordre du morceau. Chaque case montre un motif et le nombre de fois qu'il joue. <strong>SELECT</strong> choisit une case, <strong>PRESETS</strong> change son motif.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/30-song.png" alt="La page CHAINE" width="480" height="480"></figure><div><b>La chaîne</b><p><kbd>GLO</kbd> ouvre la CHAINE : la liste des motifs dans l'ordre du morceau. Chaque case montre un motif et le nombre de fois qu'il joue. <strong>ALGORITHM</strong> choisit une case, <strong>PRESETS</strong> change son motif.</p></div></li>
         <li><figure class="screen"><img src="img/fr/31-song-repeat.png" alt="Un motif joué deux fois" width="480" height="480"></figure><div><b>Répète un motif</b><p><span class="k k3">K3</span> règle combien de fois la case joue son motif : de ×1 à ×16. Un couplet de quatre mesures fait de deux motifs ? Mets chacun à ×2.</p></div></li>
-        <li><figure class="screen"><img src="img/fr/32-song-add.png" alt="Une case ajoutée" width="480" height="480"></figure><div><b>Ajoute des cases</b><p>Va sur le « + » au bout et appuie sur une touche blanche : la touche 1 ajoute le motif 1, la touche 2 le motif 2… <kbd>OCT+</kbd> copie la case du curseur juste après elle, <kbd>OCT−</kbd> l'enlève.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/32-song-add.png" alt="Une case ajoutée" width="480" height="480"></figure><div><b>Ajoute des cases</b><p>Avec <strong>ALGORITHM</strong>, va sur le « + » au bout et appuie sur une touche blanche : la touche 1 ajoute le motif 1, la touche 2 le motif 2… <kbd>OCT+</kbd> copie la case du curseur juste après elle, <kbd>OCT−</kbd> l'enlève.</p></div></li>
         <li><figure class="screen"><img src="img/fr/33-song-mode.png" alt="Le mode CHAINE" width="480" height="480"></figure><div><b>Boucle ou chaîne</b><p><kbd>ARP</kbd> passe de BOUCLE (le motif à l'écran tourne en boucle, pratique pour composer) à CHAINE (le morceau entier, case après case). <span class="k k1">K1</span> règle le tempo, <span class="k k2">K2</span> le swing et <span class="k k4">K4</span> la longueur du motif.</p></div></li>
         <li><figure class="screen"><img src="img/fr/34-song-play.png" alt="La chaîne qui joue" width="480" height="480"></figure><div><b>Écoute le morceau</b><p>Sur la case de départ, appuie sur <kbd>PLAY</kbd>. La case qui joue s'éclaire, et des points comptent ses répétitions. À la fin de la chaîne, le morceau repart au début.</p></div></li>
       </ol>
@@ -346,7 +400,13 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
         <li><figure class="screen"><img src="img/fr/42-save-name.png" alt="Le nom du morceau" width="480" height="480"></figure><div><b>Donne-lui un nom</b><p><strong>SELECT</strong> choisit la lettre à changer, <span class="k k1">K1</span> la change, <span class="k k2">K2</span> tire un nom au hasard, <span class="k k3">K3</span> efface tout. <kbd>OCT+</kbd> sauve.</p></div></li>
         <li><figure class="screen"><img src="img/fr/43-saved.png" alt="SAUVE !" width="480" height="480"></figure><div><b>Ensuite, en deux appuis</b><p>Le morceau garde son emplacement : <kbd>SAVE</kbd> puis <kbd>OCT+</kbd> le resauve au même endroit. <strong>CHARGER…</strong> ouvre un morceau, <strong>RENOMMER…</strong> change son nom. En plus, KAWA sauve tout seul dans l'emplacement AUTO quand tu ne joues pas.</p></div></li>
       </ol>
-      <div class="note"><h3>Annuler et refaire</h3><p>Tiens <kbd>SAVE</kbd> : <kbd>OCT−</kbd> annule la dernière modification d'un motif, <kbd>OCT+</kbd> la refait. Relâcher <kbd>SAVE</kbd> après l'avoir tenu, sans rien d'autre, annule une fois. KAWA garde les six dernières étapes.</p></div>
+      <h3 id="outils">Les outils : SAVE tenu</h3>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/fr/71-hold-bar.png" alt="SAVE tenu : une barre jaune se remplit en bas de la page PISTES" width="480" height="480"></figure><div><b>Tiens SAVE</b><p>Un appui court sur <kbd>SAVE</kbd> ouvre PROJETS. Si tu tiens, une petite barre jaune marquée OUTILS se remplit en bas de l'écran ; quand elle est pleine (environ une demi-seconde), le panneau des outils s'ouvre. La même barre se remplit quand tu tiens <kbd>HOME</kbd> (AIDE) ou <kbd>FX</kbd> (LIVE).</p></div></li>
+        <li><figure class="screen"><img src="img/fr/72-tools.png" alt="Le panneau des outils : OPTIONS, ANNULER, REFAIRE, EFFACER, COPIER, COLLER, HASARD" width="480" height="480"></figure><div><b>Choisis un outil</b><p>Il y en a sept : OPTIONS, ANNULER, REFAIRE, EFFACER, COPIER, COLLER et HASARD. <strong>SELECT</strong> en choisit un (OPTIONS l'est à l'ouverture, ici c'est EFFACER) et il se lance <strong>quand tu lâches <kbd>SAVE</kbd></strong>. EFFACER, COPIER et COLLER sont les mêmes outils que dans la MAGIE. HASARD écrit au hasard ce qui convient à la piste : une mélodie, une basse, un beat ou un break haché. Tant que le panneau est ouvert, <span class="k k3">K3</span> choisit sur quoi ils agissent : la piste du curseur ou le motif entier. La dernière ligne du panneau le dit (« SUR 2 FM », ou « SUR MOTIF »). Tant qu'il est ouvert, les touches et <kbd>ARP</kbd> ne font rien.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/73-tools-options.png" alt="La page OPTIONS, avec le métronome et son volume" width="480" height="480"></figure><div><b>Un raccourci vers OPTIONS</b><p>Lâche <kbd>SAVE</kbd> sur OPTIONS : tu arrives sur la page OPTIONS (thème, langue, police, métronome…) sans passer par <kbd>GLO</kbd>. <kbd>HOME</kbd> te ramène aux pistes.</p></div></li>
+      </ol>
+      <div class="note" id="annuler"><h3>Annuler et refaire, tout de suite</h3><p>Tiens <kbd>SAVE</kbd> : <kbd>OCT−</kbd> annule la dernière modification, <kbd>OCT+</kbd> la refait, aussitôt, et rien d'autre ne se lance quand tu lâches <kbd>SAVE</kbd>. Tenir <kbd>SAVE</kbd> sans rien faire d'autre n'annule plus : cela ouvre les outils (ANNULER et REFAIRE y sont aussi).</p><p>Les motifs <strong>et les sons</strong> s'annulent : un potard tourné sur SON, SON 2, OPERATEUR, ENV OPERAT, EFFET, LFO, MODULATION, TABLE, SAMPLE, ENVELOPPE ou MIX, les ENVOIS (SATURE, ECHO, REVERB), et chaque son d'usine chargé. Plusieurs crans d'affilée (sans pause de 1,5 seconde) font une seule étape ; parcourir les sons d'usine d'un son intact aussi (ANNULER te rend le son d'avant). Sur un son, l'écran dit « ANNULE: SON 3 » et passe sur cette piste. Motifs et sons partagent un historique de <strong>10 étapes</strong>. Un son FM ne peut pas revenir sur une piste tant qu'une autre joue de la FM : « FM: UNE SEULE PISTE ».</p></div>
     </section>
 
     <section id="son">
@@ -365,33 +425,36 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       </table></div>
       <div class="gallery">
         <figure class="screen"><img src="img/fr/52-fm-sound.png" alt="La FM : algorithme et opérateurs" width="480" height="480"><figcaption>La FM : ses opérateurs en barres, les porteuses dans la couleur de la piste.</figcaption></figure>
-        <figure class="screen"><img src="img/fr/53-fm-operator.png" alt="Un opérateur FM" width="480" height="480"><figcaption>OPERATEUR : SELECT choisit l'opérateur ; niveau, ratio, fin, désaccord.</figcaption></figure>
-        <figure class="screen"><img src="img/fr/54-fm-openv.png" alt="L'enveloppe d'un opérateur" width="480" height="480"><figcaption>ENV OPERAT : l'enveloppe de l'opérateur, en ADSR.</figcaption></figure>
+        <figure class="screen"><img src="img/fr/53-fm-operator.png" alt="Un opérateur FM" width="480" height="480"><figcaption>OPERATEUR : PRESETS choisit l'opérateur (1 à 6) ; niveau, ratio, fin, désaccord.</figcaption></figure>
+        <figure class="screen"><img src="img/fr/54-fm-openv.png" alt="L'enveloppe d'un opérateur" width="480" height="480"><figcaption>ENV OPERAT : l'enveloppe de l'opérateur, en ADSR ; PRESETS choisit l'opérateur.</figcaption></figure>
         <figure class="screen"><img src="img/fr/58-kit.png" alt="Un kit de batterie" width="480" height="480"><figcaption>KIT : <span class="k k1">K1</span> choisit le kit ; les pads s'allument quand ils jouent.</figcaption></figure>
         <figure class="screen"><img src="img/fr/59-sample.png" alt="Un break découpé" width="480" height="480"><figcaption>SAMPLE : le break et ses 16 tranches, kicks et caisses marqués.</figcaption></figure>
       </div>
       <h3>Les pages d'un son</h3>
-      <p><kbd>EDIT</kbd> passe d'une page à l'autre : <strong>SON</strong> et <strong>SON 2</strong> (les réglages du moteur), pour la FM <strong>OPERATEUR</strong> et <strong>ENV OPERAT</strong>, pour un SAMPLE la page <strong>SAMPLE</strong> (<a href="#edit-sample">plus bas</a>), puis <strong>EFFET</strong>, <strong>LFO</strong>, <strong>MODULATION</strong> et la <strong>TABLE</strong> de la piste (<a href="#tables">sa section</a>). Les petits carrés en haut à droite montrent où tu es.</p>
+      <p><kbd>EDIT</kbd> passe d'une page à l'autre, et fait le tour : <strong>SON</strong> et <strong>SON 2</strong> (les réglages du moteur), pour la FM <strong>OPERATEUR</strong> et <strong>ENV OPERAT</strong>, pour un SAMPLE la page <strong>SAMPLE</strong> (<a href="#edit-sample">plus bas</a>), puis <strong>EFFET</strong> et la <strong>TABLE</strong> de la piste (<a href="#tables">sa section</a>). <strong>SELECT</strong> fait la même chose en s'arrêtant aux bouts. Le bouton <kbd>LFO</kbd> a ses deux pages à lui : <strong>LFO</strong>, puis <strong>MODULATION</strong> (ni l'une ni l'autre n'est sur EDIT). Les petits carrés en haut à droite montrent où tu es.</p>
       <div class="gallery">
         <figure class="screen"><img src="img/fr/55-effect.png" alt="L'effet de la piste" width="480" height="480"><figcaption>EFFET : un effet rien que pour cette piste (filtres, disto, écrase, décime, anneau, trémolo, wah), avec son dosage.</figcaption></figure>
-        <figure class="screen"><img src="img/fr/56-lfo.png" alt="Le LFO" width="480" height="480"><figcaption>LFO : vers la hauteur, le volume, l'effet, le pano ou la forme ; calé sur le tempo ou libre.</figcaption></figure>
-        <figure class="screen"><img src="img/fr/57-mod.png" alt="La modulation" width="480" height="480"><figcaption>MODULATION : l'enveloppe et la vélocité ouvrent l'effet, l'enveloppe plie la hauteur, le LFO repart à chaque note.</figcaption></figure>
+        <figure class="screen"><img src="img/fr/56-lfo.png" alt="Le LFO" width="480" height="480"><figcaption>LFO (bouton <kbd>LFO</kbd>) : vers la hauteur, le volume, l'effet, le pano ou la forme ; calé sur le tempo ou libre.</figcaption></figure>
+        <figure class="screen"><img src="img/fr/57-mod.png" alt="La modulation" width="480" height="480"><figcaption>MODULATION (<kbd>LFO</kbd> encore) : l'enveloppe et la vélocité ouvrent l'effet, l'enveloppe plie la hauteur, le LFO repart à chaque note.</figcaption></figure>
         <figure class="screen"><img src="img/fr/50-envelope.png" alt="L'enveloppe ADSR" width="480" height="480"><figcaption>ENVELOPPE (<kbd>ENV</kbd>) : l'ADSR, chaque segment dans la couleur de son potard ; un point suit la note.</figcaption></figure>
-        <figure class="screen"><img src="img/fr/51-mix.png" alt="Le mix" width="480" height="480"><figcaption>MIX (<kbd>ENV</kbd> deux fois) : volume, pano, écho, réverb. Après la piste 6, la colonne M règle l'effet du master.</figcaption></figure>
+        <figure class="screen"><img src="img/fr/51-mix.png" alt="Le mix" width="480" height="480"><figcaption>MIX (<kbd>ENV</kbd> deux fois, ou SELECT depuis ENVELOPPE) : volume, pano, écho, réverb. Après la piste 6, la colonne M règle l'effet du master.</figcaption></figure>
       </div>
       <p><strong>Un effet sur le synthé ou sur le master ?</strong> Sur la page EFFET d'un son, l'effet ne touche que cette piste. Pour tout le morceau, va sur MIX (<kbd>ENV</kbd> deux fois) et tourne <strong>ALGORITHM</strong> au-delà de la piste 6 : la colonne M est le master, ses quatre potards règlent son effet.</p>
     </section>
 
     <section id="live">
-      <h2><span class="n">11</span>Les effets live</h2>
+      <h2><span class="n">11</span>Envois et effets live</h2>
+      <p>Le bouton <kbd>FX</kbd> a deux pages. Un appui ouvre <strong>ENVOIS</strong>, un deuxième appui ouvre <strong>LIVE</strong>, un troisième te ramène à la page d'où tu venais. Après un appui court, <strong>SELECT</strong> passe aussi de l'une à l'autre.</p>
       <ol class="steps">
-        <li><figure class="screen"><img src="img/fr/60-fx.png" alt="Les effets live" width="480" height="480"></figure><div><b>Tiens FX, joue les touches</b><p>Tiens <kbd>FX</kbd> et appuie sur des touches blanches : boucles, bégaiements, scratch, envers… Lâche, et le son revient. Un appui court sur <kbd>FX</kbd> garde la page ouverte. L'onde du haut montre le son, et la tuile d'un effet actif a une barre qui suit son cycle. Sur les autres pages, un bandeau en haut dit quel effet joue.</p></div></li>
-        <li><figure class="screen"><img src="img/fr/61-fx-bank2.png" alt="La deuxième banque" width="480" height="480"></figure><div><b>Deux banques, une cible</b><p><kbd>OCT+</kbd> passe à la banque CASSE : filtres, gel, distorsion, vinyle… <span class="k k4">K4</span> choisit la <strong>cible</strong> : le MASTER, ou une seule piste (par exemple boucler seulement le break). Les touches noires coupent des pistes. Avec <kbd>REC</kbd> et la lecture, les effets joués s'enregistrent dans la fine bande LIVE à droite du tracker.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/70-sends.png" alt="La page ENVOIS : pour chaque piste, SATURE, ECHO et REVERB" width="480" height="480"></figure><div><b>ENVOIS : ce qui part vers les effets</b><p>Une ligne par piste, trois colonnes aux couleurs des potards : <span class="k k1">SATURE</span>, <span class="k k2">ECHO</span> et <span class="k k3">REVERB</span>, de 0 à 15 (0 = rien, affiché « - »). <strong>ALGORITHM</strong> choisit la piste (le cadre blanc), puis <span class="k k1">K1</span> règle SATURE, <span class="k k2">K2</span> ECHO et <span class="k k3">K3</span> REVERB. Les touches jouent la piste, pour que tu entendes ce que tu règles.</p><p>SATURE est une saturation douce de la piste, avant son pano et ses envois : plus le son est fort, plus il sature (le niveau est compensé). ECHO et REVERB sont les mêmes envois que sur MIX. Ne confonds pas SATURE avec le réglage SATURE des moteurs KIT et SAMPLE, qui fait partie de leur son : l'envoi marche sur toutes les pistes.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/60-fx.png" alt="La page LIVE : les effets live" width="480" height="480"></figure><div><b>LIVE : joue les effets</b><p>Sur la page LIVE (un deuxième appui sur <kbd>FX</kbd>), appuie sur des touches blanches : boucles, bégaiements, scratch, envers… Tu peux aussi <strong>tenir <kbd>FX</kbd></strong> depuis n'importe quelle page : une barre jaune marquée LIVE se remplit en bas (un quart de seconde), puis LIVE s'affiche tant que tu tiens. Pas besoin d'attendre la barre : <kbd>FX</kbd> et une touche ensemble jouent l'effet tout de suite. Lâche, et le son revient avec la page d'où tu venais. L'onde du haut montre le son, et la tuile d'un effet actif a une barre qui suit son cycle. Sur les autres pages, un bandeau en haut dit quel effet joue. <kbd>ARP</kbd> efface la bande LIVE du motif.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/61-fx-bank2.png" alt="La deuxième banque" width="480" height="480"></figure><div><b>Deux banques, une cible</b><p><kbd>OCT+</kbd> passe à la banque CASSE : filtres, gel, distorsion, vinyle… (<kbd>OCT−</kbd> revient à POCHE). <span class="k k4">K4</span> choisit la <strong>cible</strong> : le MASTER, ou une seule piste (par exemple boucler seulement le break). Les touches noires coupent des pistes. Avec <kbd>REC</kbd> et la lecture, les effets joués s'enregistrent dans la fine bande LIVE à droite du tracker.</p></div></li>
       </ol>
     </section>
 
     <section id="magie">
       <h2><span class="n">12</span>La magie</h2>
+      <p>La MAGIE est sur <kbd>SCL</kbd> : un appui ouvre la GAMME, un deuxième la MAGIE, un troisième te ramène aux pistes. <span class="k k1">K1</span> règle la force des outils, <span class="k k2">K2</span> le dé (un autre tirage),<span class="k k3">K3</span> la portée (la piste ou le motif entier). EFFACER, COPIER et COLLER se retrouvent aussi dans les outils de <kbd>SAVE</kbd> tenu (<a href="#outils">voir plus haut</a>).</p>
       <div class="table"><table>
         <thead><tr><th>Touche</th><th>Outil</th><th>Ce qu'il fait</th></tr></thead>
         <tbody>
@@ -442,7 +505,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       <h2><span class="n">14</span>Les tables</h2>
       <p>Une table est une petite séquence jouée dans chaque note d'une piste, comme sur le M8. Ses 16 pas viennent l'un après l'autre, tous les VITESSE ticks (6 ticks font une ligne). Chaque pas peut décaler la hauteur au-dessus de la note, régler le volume et jouer un effet. Tu écris une seule note dans le tracker, et la table joue un arpège chiptune, un roulement de batterie qui monte, un kick dont la hauteur tombe, une tranche qui bégaie.</p>
       <ol class="steps">
-        <li><figure class="screen"><img src="img/fr/65-table.png" alt="La page TABLE" width="480" height="480"></figure><div><b>EDIT jusqu'à TABLE</b><p>La table est la dernière page d'un son. La ligne 0 porte ses réglages : <span class="k k1">K1</span> la vitesse (en ticks, 6 = une ligne), <span class="k k2">K2</span> la longueur, <span class="k k3">K3</span> le pas où elle reboucle après le dernier (ou aucun : le dernier pas reste), <span class="k k4">K4</span> marche ou arrêt. SELECT descend dans les pas. Sur un pas : <span class="k k1">K1</span> la hauteur au-dessus de la note (±24 demi-tons ; sur un KIT, l'accord du fût), <span class="k k2">K2</span> le volume (<code>--</code> le laisse tel quel), <span class="k k3">K3</span> l'effet, <span class="k k4">K4</span> sa valeur. <kbd>ARP</kbd> efface le pas. Le pas qui joue s'allume à la couleur de la piste, et les barres du bas dessinent la hauteur de chaque pas.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/65-table.png" alt="La page TABLE" width="480" height="480"></figure><div><b>EDIT jusqu'à TABLE</b><p>La table est la dernière page d'un son. La ligne 0 porte ses réglages : <span class="k k1">K1</span> la vitesse (en ticks, 6 = une ligne), <span class="k k2">K2</span> la longueur, <span class="k k3">K3</span> le pas où elle reboucle après le dernier (ou aucun : le dernier pas reste), <span class="k k4">K4</span> marche ou arrêt. PRESETS descend dans les pas. Sur un pas : <span class="k k1">K1</span> la hauteur au-dessus de la note (±24 demi-tons ; sur un KIT, l'accord du fût), <span class="k k2">K2</span> le volume (<code>--</code> le laisse tel quel), <span class="k k3">K3</span> l'effet, <span class="k k4">K4</span> sa valeur. <kbd>ARP</kbd> efface le pas. Le pas qui joue s'allume à la couleur de la piste, et les barres du bas dessinent la hauteur de chaque pas.</p></div></li>
       </ol>
       <div class="table"><table>
         <thead><tr><th>Effet</th><th>Ce qu'il fait quand son pas arrive</th></tr></thead>
@@ -466,7 +529,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     <section id="groove">
       <h2><span class="n">15</span>Le groove</h2>
       <ol class="steps">
-        <li><figure class="screen"><img src="img/fr/64-groove.png" alt="La page GROOVE" width="480" height="480"></figure><div><b>GLO deux fois</b><p>Le groove règle la durée de chaque ligne, en ticks : 6 ticks font une double croche droite. Ses pas jouent chacun leur tour, un par ligne : 7 puis 5 est un léger swing, 8 puis 4 un swing appuyé, 4 4 4 un ternaire. Quand il est actif, il remplace le swing de la page CHAINE. <span class="k k1">K1</span> règle les ticks du pas choisi (SELECT ou une touche blanche le choisit), <span class="k k2">K2</span> la longueur, <span class="k k3">K3</span> un modèle (il active le groove), <span class="k k4">K4</span> marche ou arrêt.</p><p>La bande sous les barres montre un tour tel qu'il joue. Quand les ticks font 6 par ligne (7 + 5), la mesure garde sa durée ; sinon le compte passe en rouge, et le motif raccourcit ou s'allonge. L'horloge MIDI de sortie envoie les ticks tels qu'ils jouent : une boîte à rythmes suit le groove.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/64-groove.png" alt="La page GROOVE" width="480" height="480"></figure><div><b>GLO deux fois</b><p>Le groove règle la durée de chaque ligne, en ticks : 6 ticks font une double croche droite. Ses pas jouent chacun leur tour, un par ligne : 7 puis 5 est un léger swing, 8 puis 4 un swing appuyé, 4 4 4 un ternaire. Quand il est actif, il remplace le swing de la page CHAINE. <span class="k k1">K1</span> règle les ticks du pas choisi (ALGORITHM ou une touche blanche le choisit), <span class="k k2">K2</span> la longueur, <span class="k k3">K3</span> un modèle (il active le groove), <span class="k k4">K4</span> marche ou arrêt.</p><p>La bande sous les barres montre un tour tel qu'il joue. Quand les ticks font 6 par ligne (7 + 5), la mesure garde sa durée ; sinon le compte passe en rouge, et le motif raccourcit ou s'allonge. L'horloge MIDI de sortie envoie les ticks tels qu'ils jouent : une boîte à rythmes suit le groove.</p></div></li>
       </ol>
     </section>
 
@@ -480,7 +543,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       </ul>
       <h3 id="edit-sample">Éditer un sample</h3>
       <ol class="steps">
-        <li><figure class="screen"><img src="img/fr/66-sample-edit.png" alt="La page SAMPLE" width="480" height="480"></figure><div><b>EDIT jusqu'à SAMPLE</b><p>Sur une piste SAMPLE, un break ou un de tes sons. Rien n'est réécrit dans le son : l'édition dit seulement comment il joue, et elle est gardée avec le projet, piste par piste. SELECT choisit le repère : DEBUT, FIN, puis les tranches 2 à 16 (en mode TRANCHE). <span class="k k1">K1</span> le déplace, <span class="k k2">K2</span> finement (sa place s'affiche en millisecondes), et tu entends la tranche. Déplace une tranche et les autres restent où elles étaient ; <kbd>ARP</kbd> les répartit à nouveau à égalité. <span class="k k3">K3</span> NORM amène le point le plus fort de la partie éditée au maximum (jusqu'à ×16), <span class="k k4">K4</span> la joue à l'envers.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/66-sample-edit.png" alt="La page SAMPLE" width="480" height="480"></figure><div><b>EDIT jusqu'à SAMPLE</b><p>Sur une piste SAMPLE, un break ou un de tes sons. Rien n'est réécrit dans le son : l'édition dit seulement comment il joue, et elle est gardée avec le projet, piste par piste. PRESETS choisit le repère : DEBUT, FIN, puis les tranches 2 à 16 (en mode TRANCHE). <span class="k k1">K1</span> le déplace, <span class="k k2">K2</span> finement (sa place s'affiche en millisecondes), et tu entends la tranche. Déplace une tranche et les autres restent où elles étaient ; <kbd>ARP</kbd> les répartit à nouveau à égalité. <span class="k k3">K3</span> NORM amène le point le plus fort de la partie éditée au maximum (jusqu'à ×16), <span class="k k4">K4</span> la joue à l'envers.</p></div></li>
       </ol>
     </section>
 
@@ -489,26 +552,36 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       <div class="table"><table>
         <thead><tr><th>Geste</th><th>Effet</th></tr></thead>
         <tbody>
-          <tr><td><kbd>HOME</kbd> tenu</td><td>L'aide de la page</td></tr>
-          <tr><td><kbd>SAVE</kbd> tenu + <kbd>OCT−</kbd> / <kbd>OCT+</kbd></td><td>Annuler / refaire</td></tr>
+          <tr><td><kbd>HOME</kbd> tenu</td><td>L'aide de la page (barre jaune AIDE)</td></tr>
+          <tr><td><kbd>HOME</kbd> + <kbd>PLAY</kbd></td><td>Panique : tout s'arrête, voix et effets live coupés (« PANIC »)</td></tr>
+          <tr><td><kbd>SAVE</kbd> tenu</td><td>Les outils : OPTIONS, ANNULER, REFAIRE, EFFACER, COPIER, COLLER, HASARD (SELECT choisit, ça se lance au relâchement ; <span class="k k3">K3</span> : la piste ou le motif)</td></tr>
+          <tr><td><kbd>SAVE</kbd> tenu + <kbd>OCT−</kbd> / <kbd>OCT+</kbd></td><td>Annuler / refaire aussitôt (motifs et sons, 10 étapes)</td></tr>
+          <tr><td>PRESETS (SON, son retouché) puis <kbd>OCT+</kbd> / <kbd>OCT−</kbd></td><td>Charger le son d'usine montré en doré / garder ton son</td></tr>
           <tr><td><kbd>SAVE</kbd> puis <kbd>OCT+</kbd></td><td>Resauver le morceau à sa place</td></tr>
+          <tr><td><kbd>FX</kbd>, puis <kbd>FX</kbd>, puis <kbd>FX</kbd></td><td>ENVOIS, puis LIVE, puis retour d'où tu viens (SELECT va aussi d'ENVOIS à LIVE)</td></tr>
+          <tr><td><kbd>FX</kbd> tenu + touches blanches</td><td>Effets live, tant que tu tiens (barre jaune LIVE ; une touche avec <kbd>FX</kbd> joue aussitôt)</td></tr>
+          <tr><td><kbd>SCL</kbd> deux fois</td><td>La MAGIE (une fois : la GAMME ; trois fois : les pistes)</td></tr>
+          <tr><td><kbd>LFO</kbd>, puis <kbd>LFO</kbd></td><td>LFO, puis MODULATION</td></tr>
+          <tr><td><kbd>GLO</kbd> deux fois, trois fois</td><td>Le GROOVE, puis les OPTIONS</td></tr>
+          <tr><td><kbd>ENV</kbd> deux fois</td><td>MIX et l'effet master</td></tr>
+          <tr><td><kbd>SEQ</kbd> puis <kbd>OCT−</kbd> / <kbd>OCT+</kbd></td><td>Le motif à 16, 32 ou 64 pas</td></tr>
           <tr><td><kbd>REC</kbd> tenu + SELECT</td><td>Le saut de lignes après une note</td></tr>
+          <tr><td><kbd>ARP</kbd> (PISTES)</td><td>Efface la case</td></tr>
           <tr><td><kbd>ARP</kbd> tenu + <span class="k k3">K3</span> <span class="k k4">K4</span> (PISTES)</td><td>Le second effet de la case</td></tr>
           <tr><td><kbd>ARP</kbd> tenu + SELECT</td><td>Insérer / ôter une ligne de la piste</td></tr>
           <tr><td><kbd>ARP</kbd> tenu + ALGORITHM</td><td>Insérer / ôter une ligne du motif entier</td></tr>
+          <tr><td><kbd>ARP</kbd> tenu + PRESETS (SON)</td><td>Le moteur suivant / précédent de la piste</td></tr>
           <tr><td><kbd>ARP</kbd> tenu + touche noire (MIX)</td><td>Solo de la piste</td></tr>
-          <tr><td><kbd>FX</kbd> tenu + touches blanches</td><td>Effets live</td></tr>
-          <tr><td><kbd>GLO</kbd> deux fois, trois fois</td><td>Le GROOVE, puis les OPTIONS</td></tr>
-          <tr><td><kbd>ENV</kbd> deux fois</td><td>MIX et l'effet master</td></tr>
+          <tr><td>Un pas tenu + <kbd>ARP</kbd> (GRILLE)</td><td>Efface le pas</td></tr>
         </tbody>
       </table></div>
-      <p>Dans l'émulateur : Ctrl+Z annuler, Ctrl+Y refaire, Ctrl+S sauver, Espace PLAY, Entrée REC, Maj tenu FX, les flèches pour la ligne et la piste.</p>
+      <p>Dans l'émulateur : Ctrl+Z annuler, Ctrl+Y refaire, Ctrl+S sauver, Espace PLAY, Entrée REC, Maj tenu FX, Retour ARP, Échap HOME, les flèches pour la ligne et la piste.</p>
     </section>
 
     <section id="options">
       <h2><span class="n">18</span>Options</h2>
       <ol class="steps">
-        <li><figure class="screen"><img src="img/fr/62-options.png" alt="La page OPTIONS" width="480" height="480"></figure><div><b>Thème, langue, horloge, police</b><p><kbd>GLO</kbd> trois fois. <span class="k k1">K1</span> choisit le thème (KAWA, GAME BOY, BONBON), <span class="k k2">K2</span> la langue de l'écran (anglais, français, espagnol), <span class="k k4">K4</span> la police de l'écran : DOUCE (celle par défaut), BASE (celle des débuts), CLAIRE (faite pour la lecture) ou 8-BIT (arcade) ; chacune est montrée écrite avec elle-même. <span class="k k3">K3</span> règle l'horloge MIDI par USB :</p><ul><li><strong>SORTIE :</strong> KAWA envoie start, stop et le tempo (les ticks du groove aussi), pour synchroniser une boîte à rythmes ou un logiciel.</li><li><strong>ENTREE :</strong> KAWA suit une autre machine. Son START lance le morceau là où PLAY le ferait, son STOP l'arrête, son tempo mène (il s'affiche en vert, mesuré sur quatre temps) ; chaque ligne attend ses ticks ou les rattrape, et part quelques millisecondes après son tick. En ENTREE sans horloge, PLAY l'attend, et le dit.</li></ul><p>Les réglages sont gardés à l'extinction.</p><p>La ligne CPU dit combien du temps de calcul le son utilise. Au-delà de 70 %, KAWA allège tout seul le son, réverb d'abord, plutôt que de craquer.</p></div></li>
+        <li><figure class="screen"><img src="img/fr/62-options.png" alt="La page OPTIONS" width="480" height="480"></figure><div><b>Thème, langue, horloge, police, métronome</b><p><kbd>GLO</kbd> trois fois (ou <kbd>SAVE</kbd> tenu, puis l'outil OPTIONS ; <strong>SELECT</strong> parcourt aussi CHAINE, GROOVE et OPTIONS). <span class="k k1">K1</span> choisit le thème (KAWA, GAME BOY, BONBON), <span class="k k2">K2</span> la langue de l'écran (anglais, français, espagnol), <span class="k k4">K4</span> la police de l'écran : DOUCE (celle par défaut), BASE (celle des débuts), CLAIRE (faite pour la lecture) ou 8-BIT (arcade) ; chacune est montrée écrite avec elle-même. <span class="k k3">K3</span> règle l'horloge MIDI par USB :</p><ul><li><strong>SORTIE :</strong> KAWA envoie start, stop et le tempo (les ticks du groove aussi), pour synchroniser une boîte à rythmes ou un logiciel.</li><li><strong>ENTREE :</strong> KAWA suit une autre machine. Son START lance le morceau là où PLAY le ferait, son STOP l'arrête, son tempo mène (il s'affiche en vert, mesuré sur quatre temps) ; chaque ligne attend ses ticks ou les rattrape, et part quelques millisecondes après son tick. En ENTREE sans horloge, PLAY l'attend, et le dit.</li></ul><p>Le <strong>METRONOME</strong> a deux réglages. <strong>ALGORITHM</strong> choisit son mode : NON, OUI, ou REC (il ne clique que lorsque <kbd>REC</kbd> est allumé et que le morceau joue). <strong>PRESETS</strong> règle son <strong>VOLUME</strong> : FAI, MOY ou FORT (tu entends un clic quand tu le changes). Le clic part à chaque temps (toutes les quatre lignes) tant que le morceau joue, plus aigu sur le premier temps de la mesure ; il passe après les effets du master, qui ne le touchent pas. Il part aussi dans l'audio USB : coupe-le quand tu enregistres le FM-1 sur un ordinateur. Par défaut : métronome NON, volume MOY.</p><p>Les réglages sont gardés à l'extinction (ceux de la 0.2 et de la 0.4 se rechargent).</p><p>La ligne CPU dit combien du temps de calcul le son utilise. Au-delà de 70 %, KAWA allège tout seul le son, réverb d'abord, plutôt que de craquer.</p></div></li>
       </ol>
     </section>
 
@@ -517,8 +590,14 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       <ul>
         <li><strong>Je ne sais plus ce que fait un potard :</strong> regarde la ligne du bas, ou tiens <kbd>HOME</kbd>.</li>
         <li><strong>Pas de son :</strong> monte MASTER ; sur MIX, vérifie qu'aucune piste n'est coupée (un M rouge) ; vérifie le volume de la note avec <span class="k k2">K2</span>.</li>
-        <li><strong>« FM : une seule piste » :</strong> une autre piste a déjà la FM ; change d'abord son moteur.</li>
-        <li><strong>Une modification ratée :</strong> <kbd>SAVE</kbd> tenu + <kbd>OCT−</kbd>.</li>
+        <li><strong>« FM: UNE SEULE PISTE » :</strong> une autre piste a déjà la FM ; change d'abord son moteur.</li>
+        <li><strong>Une modification ratée, un son perdu :</strong> tiens <kbd>SAVE</kbd> et appuie sur <kbd>OCT−</kbd> (<kbd>OCT+</kbd> refait). Ça marche aussi sur les sons, jusqu'à 10 étapes en arrière.</li>
+        <li><strong>PRESETS ne change pas le son :</strong> un son que tu as retouché (une étoile après son nom) est protégé. PRESETS montre le son d'usine en doré, avec « OCT+ » à côté : <kbd>OCT+</kbd> le charge, <kbd>OCT−</kbd> garde le tien.</li>
+        <li><strong>Un son reste bloqué, tout s'emballe :</strong> <kbd>HOME</kbd> + <kbd>PLAY</kbd>, la panique (« PANIC »).</li>
+        <li><strong>Le chien ne part pas :</strong> c'est voulu, il attend que tu touches un bouton, une touche ou un potard.</li>
+        <li><strong><kbd>SAVE</kbd> clignote :</strong> le morceau a des modifications qui ne sont pas sauvées dans un de tes emplacements (la sauvegarde AUTO ne compte pas).</li>
+        <li><strong>Un morceau vide au démarrage :</strong> c'est normal, la démo est dans <kbd>SAVE</kbd>, PROJETS, DEMO.</li>
+        <li><strong>Je ne retrouve plus un geste de la 0.4 :</strong> regarde « Nouveautés de la 0.5 » en haut de cette page (la MAGIE est sur <kbd>SCL</kbd>, LFO et MODULATION sur <kbd>LFO</kbd>, le moteur se change avec <kbd>ARP</kbd> + PRESETS).</li>
         <li><strong>KAWA ne démarre plus :</strong> tiens <kbd>OCT−</kbd> en allumant (le secours USB), puis réinstalle KAWA ou le firmware officiel.</li>
       </ul>
     </section>
@@ -532,7 +611,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     </section>
 
     <footer>
-      <p>KAWA 0.4 bêta, Pocket Tracker by Omnipotard. Logiciel libre (GPL-3.0), construit sur Dinghy, Felucca (Hügelton Instruments) et SLOOP, la plateforme ouverte de la communauté FM-1. Le moteur FM vient de msfa (Dexed, Apache-2.0). Les breaks et les kits sont entièrement synthétisés. M-VAVE et FM-1 sont des marques de leurs propriétaires ; KAWA n'est pas un produit M-VAVE.</p>
+      <p>KAWA 0.5 bêta, Pocket Tracker by Omnipotard. Logiciel libre (GPL-3.0), construit sur Dinghy, Felucca (Hügelton Instruments) et SLOOP, la plateforme ouverte de la communauté FM-1. Le moteur FM vient de msfa (Dexed, Apache-2.0). Les breaks et les kits sont entièrement synthétisés. M-VAVE et FM-1 sont des marques de leurs propriétaires ; KAWA n'est pas un produit M-VAVE.</p>
     </footer>
   </main>
 </div>

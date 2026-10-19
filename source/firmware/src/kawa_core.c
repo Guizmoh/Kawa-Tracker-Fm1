@@ -20,12 +20,12 @@ typedef char cell_is_5_bytes[sizeof(cell_t) == 5u ? 1 : -1];
 typedef struct {
     cell_t c[NROW][NTRK];
     uint8_t live[NROW];                         /* a live effect per row (LF_... + 1), 0 = none */
-    uint8_t len, pad[3];                        /* rows played, 1..32 */
+    uint8_t len, pad[3];                        /* rows played, 1..32; pad[0]: 1 = it goes on into the next pattern */
 } pat_t;
 typedef struct {
     uint8_t engine, preset;
     int8_t p[NPARAM];
-    uint8_t pad[2];
+    uint8_t sat, pad;                           /* sat: the SAT send (FX, SENDS), 0..15 (0.4's projects: 0) */
 } sound_t;
 typedef struct {
     uint8_t pat, rep;                           /* a song entry: the pattern, played rep times (1..16) */
@@ -83,6 +83,13 @@ typedef struct {
 #endif
 static project_t prj POOL;
 
+/* 64 steps: a pattern can go on into the next one (its pad[0] is 1): both play as one, 32 + 32 steps (GRID, OCT-/OCT+).
+ * The next pattern stays a pattern of its own: unlinked, it is the second half played alone */
+static int pat_linked(uint32_t p) { return p + 1u < NPAT && (prj.pat[p].pad[0] & 1u); }
+static uint32_t pat_head(uint32_t p) { return p && pat_linked(p - 1u) ? p - 1u : p; }      /* the first half of its pair (or itself) */
+static int pat_same(uint32_t a, uint32_t b) { return pat_head(a) == pat_head(b); }         /* both halves of one 64-step pattern, or one */
+static int pat_in_pair(uint32_t p) { return pat_linked(p) || (p && pat_linked(p - 1u)); }
+
 /* the drum or the slice of a cell on a KIT track / a SAMPLE track in slice mode */
 static uint32_t cell_idx(uint32_t note) { return note - 1u; }
 /* how a track reads its notes: MIDI notes, drums 1..16, slices 1..16 */
@@ -108,6 +115,7 @@ static uint32_t fm_track(void)                  /* the one track that plays FM (
 static volatile uint8_t sq_play;                /* the sequencer runs (ISR) */
 static volatile uint8_t sq_req;                 /* main -> ISR: 1 start, 2 stop */
 static volatile uint8_t sq_pat, sq_row;         /* ISR: what plays now */
+static volatile uint8_t sq_head = 0xFF;         /* ISR: the first half of the 64-step pair whose second half plays (else 0xFF) */
 static volatile uint8_t sq_next = 0xFF;         /* main: the pattern to go to at the end of this one (loop mode) */
 static volatile int32_t sq_adj;                 /* main: song entries inserted (+1) or deleted (-1) before the one
                                                  * playing, all told (the ISR moves its position as much) */

@@ -1,0 +1,20 @@
+2500 btn 8
+2600 shot u01-first
+2700 btn 6
+2800 enc 2 1
+2900 enc 6 1
+3200 shot u02-candidate
+3300 btn 1
+3500 shot u03-loaded
+3700 press 9
+3960 shot u04-bar
+4000 release 9
+4100 enc 2 1
+4200 press 9
+4300 btn 0
+4400 shot u05-undo
+4450 release 9
+4600 press 8
+4860 shot u06-home-bar
+4900 release 8
+5100 end

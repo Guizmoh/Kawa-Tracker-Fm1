@@ -12,6 +12,7 @@ tests/run_host.sh                    # tests/tour.txt: the demo, every page, liv
 tests/run_host.sh tests/edit.txt     # step entry, the chopper, undo, the grid, saving
 tests/run_host.sh tests/docs-en.txt  # the screens of the docs (docs-fr.txt, docs-es.txt)
 tests/run_host.sh tests/new03.txt    # 0.3's pages: TABLE, SAMPLE EDIT, GROOVE, the clock, the second column
+tests/run_host.sh tests/new05.txt    # 0.5's pages: the empty start, EDIT and LFO, SENDS and LIVE, the yellow bar, the SAVE tools, OPTIONS, 64 steps
 ```
 
 It compiles `firmware/src/kawa.c` with `tests/host.c` (a fake FM-1) using the system C compiler. It writes
@@ -46,7 +47,7 @@ embedded in the page, so `../emulator/index.html` stands alone.
 
 ```sh
 ./build.sh                  # -> build/kawa.fwsc, identity FM-1_950
-./build.sh --release 0.4    # -> build/kawa-0.4.fwsc, identity FM-1_954, version "0.4" on the screen
+./build.sh --release 0.5    # -> build/kawa-0.5.fwsc, identity FM-1_955, version "0.5" on the screen
 ```
 
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations. The build fails on what would brick or
@@ -74,14 +75,35 @@ The audio interrupt works in integers, and a number that wraps is a full-scale c
 track effect, every master effect and every live effect at the ends of their knobs, the kits at DECAY +8 and
 DRIVE 15, FM loud and panned, then 0.3's features at theirs: two tricks in every cell, HOP and END on every
 row, tables a tick a step with HITs, the groove at 1 and 12 ticks at 40 and 300 BPM, sample edits of no width
-and x16 on a full-scale sound, the MIDI clock in at 40 and 300 BPM with bursts and gaps (about 17 minutes of
-sound): it stops at the first integer that wraps and names the line, and checks every voice and table ends.
+and x16 on a full-scale sound, the MIDI clock in at 40 and 300 BPM with bursts and gaps, then 0.5's: the SAT
+send of every track (0, 7 and 15) on every factory sound and with a track effect, the metronome at its loudest
+over a loud song at both ends of the tempo, and a 64-step pattern in the loop and in the song (about 18 minutes
+of sound): it stops at the first integer that wraps and names the line, and checks every voice and table ends.
 `tests/run_features_test.sh` plays the new features through the audio interrupt and checks what comes out
 (HOP, END, the two columns, a table's steps and HITs, the groove's row lengths and clock ticks, the sample
 edit's positions and gain, the clock in: rows within a tick of the clock, 3 to 5 ms after it in blocks of
 256 frames with 0..3 ms of jitter, and a PLAY that waits for a clock that does not come). The products that can go past 32 bits are done in 64 (one `smul` on the pi32v2; only a 64-bit
 division is not allowed). `tests/run_kits_test.sh` measures the drums (clipping, DC, the hits ending, how far
 apart the kits are), and `tests/breaks_check.py` the breaks.
+
+`tests/run_ui_test.sh` (0.5) drives the panel as the buttons and encoders would (the firmware's own
+`ui_input`), under UBSan, and checks what the pages and the sound do: a first start (empty song, 100 BPM,
+English); EDIT going round its pages without LFO and MODULATION, and LFO having those two; the factory sound
+changing on SOUND only, an edited sound not replaced by one turn by mistake, ARP + PRESETS picking the engine;
+SELECT turning the pages of ENV / MIX, FX and GLO and stopping at their ends; FX tap, tap, tap (SENDS, LIVE,
+back) and FX held; SENDS (the drive is heard, and bounded); the tools of a SAVE hold and OCT- / OCT+ for undo and
+redo; the metronome (off, on, REC; three volumes; kept in the settings); 16, 32 and 64 steps, the 64 going on
+into the next pattern in the loop and in the song; SCL going SCALE, MAGIC, back; and a 0.4 project (zeroed pad
+bytes) and a damaged pad loading safely.
+
+`node tests/webinstall_test.js` tests the web installer (`../install/webinstall.js`, used by the Install button
+of `../index.html`) against a simulated FM-1 on a simulated Web MIDI (`tests/fm1_mock.js`): plain Node 18+, no
+hardware and no browser. It installs the newest `../install/kawa-*.fwsc` that `../install/SHA256SUMS` names,
+so build the package first. It covers a good install (with MIDI noise, SysEx cut in pieces, a device that
+re-enumerates), damaged and wrong packages (refused before any port is opened), the wrong model, an FM-1 found
+in update mode, a cable cut mid-write and the resume, and a missing, silent or busy port. With `python3` on the
+PATH it also checks the port against `../install/fm1_install.py` itself: same constants, delays, wire format,
+CRC16 and the same verdict for every damaged package.
 
 ## Safety: rescue, and back to the official firmware
 
@@ -113,8 +135,8 @@ apart the kits are), and `tests/breaks_check.py` the breaks.
 
 ## The project format
 
-A project is format 5 (KAWA 0.3): 32 patterns of 32 rows of six cells of 5 bytes (the note; the volume on 4
-bits and two tricks on 6 bits each; their two values) and the LIVE lane, the six sounds and the FM patch, the
+A project is format 5 (KAWA 0.3's, and still 0.5's): 32 patterns of 32 rows of six cells of 5 bytes (the note; the
+volume on 4 bits and two tricks on 6 bits each; their two values) and the LIVE lane, the six sounds and the FM patch, the
 song, then a table per track (16 steps of 4 bytes, its speed, length, loop), a sample edit per track (start,
 end, 16 slices in 65536ths of the sound, the gain, reverse) and the groove: 33,072 bytes with its CRC-32, in a
 36 KB slot. A format-4 project (KAWA 0.2: cells of 4 bytes, none of the rest) is converted in place when it
@@ -123,11 +145,21 @@ written over) and keeps playing as it did; `tests/run_format_test.sh` checks it 
 0.2's own code (`tests/fixtures/`), a damaged one, and a format-5 one with every field, byte for byte.
 Everything that comes from a slot goes through `prj_sanitize` before the audio interrupt sees it.
 
+KAWA 0.5 stays in format 5: it only gives a meaning to two bytes that 0.4 left as padding, so the size and the
+slot do not change. `sound_t.sat` is the SAT send of a sound (the drive of the SENDS page, 0..15; a 0.4 project
+has 0 there), and `pat_t.pad[0]` is the link of a 64-step pattern: 1 means it goes on into the next pattern (32 +
+32 steps, played as one in the loop and in the song). `prj_sanitize` sets an out-of-range `sat` back to 0 and keeps
+only bit 0 of the link. A 0.5 project loads in 0.4 and 0.3, which simply ignore both bytes (no drive, and the 64-step link is not
+followed); a 0.4 project loads in 0.5 with no drive and no link. `tests/ui_test.c` checks the 0.4 case.
+
 ## Memory and flash
 
-The 0.3 build uses an image of about 423 KB of the 568 KB available (the boot picture is 58 KB of it), 46 KB of the 96 KB of RAM and 292 KB
-of the 336 KB pool (the effects' capture, the echo, the project and the screen bands). Projects are kept in
-four 36 KB slots from `0x97000` (slot 0 is the autosave) and the user samples in four 37 KB slots from
+The 0.5 build uses an image of about 495 KB of the 568 KB available (0.4's was about 479 KB; the boot picture
+is 58 KB of it). The 0.3 build used 46 KB of the 96 KB of RAM and 292 KB of the 336 KB pool (the effects' capture,
+the echo, the project and the screen bands); `tools/build.py` prints the figures of every build and stops when
+one does not fit. Projects are kept in four 36 KB slots from `0x97000` (slot 0 is the autosave) and the user samples in four 37 KB slots from
 `0xBB000` up to `0xE0000`: the store is `0x97000..0xE0000`, the part of the flash an update never erases.
-The language, theme, octave, clock and font are kept in the settings sector `0xFC000`. Flash is only erased when nothing plays, because an
-erase stalls the sound.
+The language, theme, octave, clock, font and the metronome (its mode and its volume) are kept in the settings
+sector `0xFC000`: 7 bytes (`set` in `kawa_ui.c`, with the length and a CRC-32 in front). The settings of 0.4 (5
+bytes) and of 0.2 (4 bytes) still load, and what they lack takes its default (font DOUCE, metronome off, volume
+MED). Flash is only erased when nothing plays, because an erase stalls the sound.

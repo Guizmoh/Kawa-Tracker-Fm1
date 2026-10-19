@@ -1,0 +1,43 @@
+# KAWA 0.5's pages: an empty start, EDIT and LFO, SENDS and LIVE, the yellow bar and the tools of SAVE, OPTIONS, 64 steps
+2500 btn 8
+2600 shot t01-empty
+2700 btn 6
+2900 shot t02-edit
+3000 btn 5
+3200 shot t03-lfo
+3300 btn 5
+3500 shot t04-mod
+3600 press 2
+3660 release 2
+3900 shot t05-sends
+4000 enc 2 5
+4050 enc 3 4
+4100 enc 4 3
+4150 enc 1 1
+4200 enc 2 9
+4300 shot t06-sends-set
+4400 press 2
+4460 release 2
+4700 shot t07-live
+4800 btn 2
+5000 press 9
+5350 shot t08-save-bar
+5700 shot t09-tools
+5750 enc 0 3
+5900 shot t10-tools-sel
+6000 release 9
+6300 btn 7
+6400 btn 7
+6500 btn 7
+6600 enc 1 1
+6700 enc 6 1
+6900 shot t11-options
+7000 btn 11
+7100 btn 1
+7200 btn 1
+7300 enc 0 3
+7500 shot t12-grid64
+7600 btn 12
+7900 shot t13-grid64-play
+8200 btn 12
+8400 end

@@ -8,10 +8,10 @@ set -e
 cd "$(dirname "$0")/.."
 mkdir -p build/web ../emulator
 clang --target=wasm32 -O2 -nostdlib -ffreestanding -fno-builtin -Wall -Wno-unused-function \
-    -DKAWA_WASM -DAPP_VER="\"${APP_VER:-0.4}\"" -Ifirmware/src -Ifirmware/gen \
+    -DKAWA_WASM -DAPP_VER="\"${APP_VER:-0.5}\"" -Ifirmware/src -Ifirmware/gen \
     -Wl,--no-entry -Wl,--export-dynamic -Wl,--initial-memory=4194304 -Wl,-z,stack-size=262144 \
     -o build/web/kawa.wasm firmware/src/kawa.c
-KAWA_VER="${APP_VER:-0.4}" python3 - <<'PY'
+KAWA_VER="${APP_VER:-0.5}" python3 - <<'PY'
 import base64
 import os
 from pathlib import Path

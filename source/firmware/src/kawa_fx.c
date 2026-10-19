@@ -436,3 +436,18 @@ static void fx_master(int32_t *L, int32_t *R, const int32_t *E, const int32_t *V
         R[i] = sat(R[i]);
     }
 }
+
+/* a track's SAT send (FX, SENDS): a soft saturation before its pan and its sends. A cubic knee, x 1.5 to x 9 of gain into
+ * it, the level brought back down as the gain goes up; 32-bit products but the first (the FM goes past 100000) */
+static void sat_chunk(int32_t *m, uint32_t amt)
+{
+    int32_t g = 384 + (int32_t)amt * 128, comp = 256 - (int32_t)amt * 9, i;
+    for (i = 0; i < (int32_t)CHUNK; i++) {
+        int32_t x = (int32_t)(((int64_t)m[i] * g) >> 8), u2, u3;
+        if (x > 32767) x = 32767;
+        else if (x < -32767) x = -32767;
+        u2 = (x * x) >> 15;                     /* x squared, Q15 */
+        u3 = (u2 * x) >> 15;                    /* x cubed */
+        m[i] = (((3 * x - u3) >> 1) * comp) >> 8;
+    }
+}

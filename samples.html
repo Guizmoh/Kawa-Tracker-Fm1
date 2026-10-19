@@ -1,0 +1,779 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only -- KAWA's sample importer (Omnipotard): put your own sounds into the four sample
+     slots of an FM-1 running KAWA, from the browser, over USB-MIDI. The conversion and the protocol are
+     install/websamples.js (install/kawa_samples.py in JavaScript, tested by source/tests/websamples_test.js). One page, no
+     font, script or image from the network: it works offline and from file://. Nothing is uploaded anywhere. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KAWA Sample Importer</title>
+<meta name="description" content="Put your own sounds (WAV, MP3, OGG, FLAC) into the four sample slots of your FM-1 running KAWA, from your browser, over USB.">
+<meta name="theme-color" content="#120c24">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23120c24'/%3E%3Cpath d='M8 6h4v8l8-8h5l-9 9 9 11h-5l-7-8-1 1v7H8z' fill='%23ffde6e'/%3E%3C/svg%3E">
+<style>
+/* The FM-1's own night (the manual's palette), one dark look. System fonts only. */
+:root {
+  --night: #120c24; --panel: #1b1335; --panel-2: #251a47; --rule: #3b2e69;
+  --ink: #eeeaff; --muted: #b3abdc; --gold: #ffde6e; --pink: #ff5fb4; --cyan: #3ed8ff;
+  --ok: #5ce274; --bad: #ff7070; --warn: #ffcc40;
+  --text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--night); color: var(--ink); font: 1rem/1.55 var(--text);
+  background-image: radial-gradient(900px 420px at 50% -80px, #2a1c52 0%, transparent 70%);
+  background-repeat: no-repeat;
+}
+main { max-width: 980px; margin: 0 auto; padding: 16px 16px 56px; }
+a { color: var(--cyan); text-underline-offset: 3px; }
+a:hover { color: var(--gold); }
+h1, h2, h3 { line-height: 1.2; margin: 0; }
+h1 { font-size: clamp(1.5rem, 4.4vw, 2.2rem); margin: .9rem 0 .4rem; letter-spacing: -.01em; }
+h1 b { color: var(--gold); }
+h2 { font-size: 1.2rem; margin-bottom: .55rem; display: flex; gap: .6rem; align-items: baseline; }
+h2 .n { font: 700 .85rem/1 var(--mono); color: #1c0a30; background: var(--pink); border-radius: 6px; padding: .3rem .45rem; }
+p { margin: .5rem 0; }
+code, kbd { font-family: var(--mono); font-size: .92em; background: var(--panel-2); border: 1px solid var(--rule); border-radius: 5px; padding: 0 .3em; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
+[hidden] { display: none !important; }
+.top { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; align-items: center; justify-content: space-between; }
+.brand { font: 800 1.5rem/1 var(--mono); letter-spacing: .08em; color: var(--ink); text-decoration: none; }
+.brand span { color: var(--pink); }
+.top nav { display: flex; gap: 1rem; }
+.lead { font-size: 1.08rem; color: var(--muted); max-width: 46rem; margin: 0; }
+
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 16px; padding: 18px 20px; margin-top: 18px; }
+.warn { border-color: #7d5a14; background: linear-gradient(180deg, #2b2011, #211a24); }
+.warn h2 { font-size: 1.05rem; }
+.warn ul { margin: .3rem 0 0; padding-left: 1.2rem; }
+.warn li { margin: .25rem 0; }
+.tag { font: 700 .75rem/1 var(--mono); letter-spacing: .08em; background: var(--warn); color: #261a00; border-radius: 6px; padding: .3rem .45rem; }
+
+button, .btn {
+  font: 600 1rem/1 var(--text); color: var(--ink); background: var(--panel-2); border: 1px solid var(--rule);
+  border-radius: 10px; padding: .7rem 1rem; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center;
+  justify-content: center; text-decoration: none; gap: .4rem;
+}
+button:hover:not(:disabled), .btn:hover { border-color: var(--pink); color: var(--ink); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.big {
+  font-size: 1.3rem; font-weight: 800; padding: 1rem 2rem; min-height: 60px; border: 0; border-radius: 16px;
+  background: var(--pink); color: #1c0a30; box-shadow: 0 6px 0 #a82c78, 0 14px 34px rgba(255, 95, 180, .25);
+  transition: transform .08s, box-shadow .08s, filter .15s;
+}
+.big:hover:not(:disabled) { filter: brightness(1.08); color: #1c0a30; border: 0; }
+.big:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #a82c78, 0 8px 20px rgba(255, 95, 180, .25); }
+.big:disabled { box-shadow: none; filter: grayscale(.6); }
+.small { min-height: 36px; padding: .4rem .7rem; font-size: .9rem; border-radius: 8px; }
+.danger:hover:not(:disabled) { border-color: var(--bad); }
+select, input[type=text] {
+  font: 1rem var(--text); color: var(--ink); background: #0e0820; border: 1px solid var(--rule); border-radius: 8px;
+  padding: .5rem .6rem; min-height: 44px; width: 100%; max-width: 100%;
+}
+input[type=text] { font-family: var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+label { display: grid; gap: .25rem; font-size: .85rem; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: .7rem 1rem; align-items: center; }
+.note { color: var(--muted); font-size: .92rem; }
+
+.msg { margin: .8rem 0 0; padding: .7rem .95rem; border-radius: 10px; border: 1px solid; overflow-wrap: anywhere; }
+.msg.err { color: #ffd6d6; background: #2d1118; border-color: #8c2f44; }
+.msg.ok { color: #d6ffe0; background: #10261a; border-color: #2d7a47; }
+.msg.info { color: var(--ink); background: #170f30; border-color: var(--rule); }
+.msg.keep { color: #ffe7a6; background: #2b2011; border-color: #7d5a14; }
+.status { margin: .7rem 0 0; min-height: 1.55em; font-weight: 600; }
+.dot { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; background: #5b4f8a; margin-right: .5rem; vertical-align: baseline; }
+.dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+
+/* the four slots of the FM-1 */
+.slots { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.slot { background: #150e2a; border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px; display: grid; gap: .2rem; align-content: start; min-height: 6.6rem; }
+.slot .sid { font: 700 .8rem/1 var(--mono); color: var(--gold); letter-spacing: .08em; }
+.slot .sname { font: 700 1.05rem/1.25 var(--mono); overflow-wrap: anywhere; }
+.slot.empty .sname { color: var(--muted); font-weight: 400; }
+.slot .smeta, .slot .snext { font-size: .82rem; color: var(--muted); }
+.slot .snext { color: var(--cyan); }
+.slot .snext.rep { color: var(--warn); }
+.slot button { justify-self: start; margin-top: .3rem; }
+details.ports { margin-top: .9rem; }
+details.ports summary { cursor: pointer; color: var(--muted); }
+details.ports .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin-top: .6rem; }
+
+/* the drop zone and the sounds */
+.drop {
+  display: grid; justify-items: center; gap: .4rem; text-align: center; padding: 1.4rem 1rem; border: 2px dashed #5a3d93;
+  border-radius: 14px; background: #150e2a; cursor: pointer; transition: background .15s, border-color .15s;
+}
+.drop:hover, body.dragging .drop { background: #1d1340; border-color: var(--pink); }
+.drop strong { font-size: 1.1rem; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.drop:focus-within { outline: 3px solid var(--gold); outline-offset: 2px; }
+.items { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: 14px; }
+.item { background: #150e2a; border: 1px solid var(--rule); border-radius: 14px; padding: 12px 14px; display: grid; gap: .6rem; }
+.item.error { border-color: #8c2f44; }
+.item.sent { border-color: #2d7a47; }
+.ihead { display: flex; gap: .6rem; align-items: center; justify-content: space-between; }
+.fname { font: 600 .95rem/1.3 var(--mono); overflow-wrap: anywhere; min-width: 0; }
+.state { font: 700 .72rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: .3rem .45rem; border-radius: 6px; background: var(--panel-2); color: var(--muted); white-space: nowrap; }
+.item.ready .state { color: var(--cyan); }
+.item.sent .state { background: #10261a; color: var(--ok); }
+.item.error .state, .item.failed .state { background: #2d1118; color: var(--bad); }
+.item.sending .state { background: #2b2011; color: var(--warn); }
+.ibody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 17rem); gap: 14px; align-items: start; }
+.wave { width: 100%; height: 72px; display: block; border-radius: 8px; background: #0e0820; border: 1px solid var(--rule); }
+.info { font-size: .88rem; color: var(--muted); margin-top: .4rem; display: flex; flex-wrap: wrap; gap: .2rem 1rem; }
+.info b { color: var(--ink); font-weight: 600; }
+.kept { position: relative; height: 6px; border-radius: 3px; background: #2a2150; margin-top: .5rem; overflow: hidden; }
+.kept i { position: absolute; top: 0; bottom: 0; background: var(--cyan); border-radius: 3px; }
+.keptnote { font-size: .82rem; color: var(--muted); margin-top: .25rem; }
+.keptnote.cutnote { color: var(--warn); }
+.ctl { display: grid; gap: .6rem; }
+.ctl .count { font: .75rem var(--mono); color: var(--muted); text-align: right; }
+.ctl .btns { display: flex; gap: .5rem; flex-wrap: wrap; }
+.imsg { font-size: .9rem; min-height: 1.2em; overflow-wrap: anywhere; }
+.imsg.err { color: #ffb4b4; }
+.imsg.ok { color: #aef5bd; }
+.imsg.keep { color: #ffe7a6; }
+.bar { height: 10px; border-radius: 6px; background: #0e0820; border: 1px solid var(--rule); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--pink)); transition: width .15s; }
+.send { display: grid; gap: .8rem; justify-items: start; }
+.send .row { width: 100%; }
+#why { color: var(--muted); font-size: .92rem; }
+
+details.how summary { cursor: pointer; font-weight: 700; }
+details.how ul { margin: .6rem 0 0; padding-left: 1.2rem; }
+details.how li { margin: .3rem 0; }
+footer { margin-top: 26px; color: var(--muted); font-size: .88rem; }
+
+dialog { max-width: min(32rem, calc(100vw - 32px)); background: var(--panel); color: var(--ink); border: 1px solid var(--pink); border-radius: 16px; padding: 22px; box-shadow: 0 30px 80px rgba(0, 0, 0, .7); }
+dialog::backdrop { background: rgba(8, 4, 20, .82); }
+dialog h2 { margin-bottom: .5rem; }
+dialog ul { padding-left: 1.2rem; margin: .5rem 0; }
+dialog .strong { color: #ffe7a6; font-weight: 700; }
+dialog .btnrow { display: flex; flex-wrap: wrap; gap: .7rem; justify-content: flex-end; margin-top: 1.1rem; }
+dialog .yes { background: var(--pink); color: #1c0a30; border: 0; font-weight: 800; }
+.overlay { position: fixed; inset: 0; z-index: 5; display: none; place-items: center; background: rgba(18, 12, 36, .86); font-size: 1.4rem; font-weight: 800; pointer-events: none; border: 4px dashed var(--pink); }
+body.dragging .overlay { display: grid; }
+
+@media (max-width: 760px) {
+  .slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ibody { grid-template-columns: minmax(0, 1fr); }
+  details.ports .grid { grid-template-columns: 1fr; }
+  .big { width: 100%; font-size: 1.2rem; }
+  .card { padding: 16px; }
+}
+@media (max-width: 340px) { .slots { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .big, .bar > i, .drop { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+
+<div class="top">
+  <a class="brand" href="index.html" aria-label="KAWA, home page">KA<span>WA</span></a>
+  <nav aria-label="Pages"><a href="index.html">Home and installer</a> <a href="manual/index.html">Manual</a></nav>
+</div>
+
+<header>
+  <h1>Put your own sounds into your <b>FM-1</b></h1>
+  <p class="lead">Drop WAV, MP3, OGG or FLAC files here, choose a slot (MY 1 to MY 4), and send them to your FM-1 over USB. The page makes them what KAWA stores: mono, 22 kHz, 8 bits, up to 1.66 seconds. Nothing leaves your computer.</p>
+</header>
+
+<div id="fatal" class="msg err" role="alert" hidden>This page needs <code>install/websamples.js</code> next to it (it did not load). Open the page from the repository or the website, not on its own.</div>
+<div id="nomidi" class="msg err" role="alert" hidden></div>
+
+<section class="card warn" aria-labelledby="before-h">
+  <h2 id="before-h"><span class="tag">BEFORE YOU SEND</span></h2>
+  <ul>
+    <li><strong>KAWA 0.2 or later must be running on the FM-1</strong> (the tracker screen), plugged into this computer with a USB <em>data</em> cable, in Chrome or Edge on a computer.</li>
+    <li><strong>KAWA must be stopped: press <kbd>PLAY</kbd> so nothing is playing</strong>, and leave the FM-1 alone until the transfer ends. The FM-1 is silent while a slot is being written.</li>
+    <li>A slot that is sent to is <strong>replaced</strong>. If the cable is pulled or anything goes wrong, that slot stays <strong>empty</strong>: never half written. Send it again.</li>
+  </ul>
+</section>
+
+<section class="card" id="fm1" aria-labelledby="fm1-h">
+  <h2 id="fm1-h"><span class="n">1</span> Your FM-1</h2>
+  <div class="row">
+    <button type="button" id="connect">Connect to my FM-1</button>
+    <button type="button" id="refresh" disabled>Read the slots again</button>
+  </div>
+  <p class="status" id="devstatus" role="status" aria-live="polite"><span class="dot"></span><span id="devtext">Not connected. You can prepare your sounds first and connect when you send.</span></p>
+  <div id="devmsg" class="msg err" role="alert" hidden></div>
+  <ol class="slots" id="slots" aria-label="The four sample slots of the FM-1"></ol>
+  <details class="ports" id="ports">
+    <summary>The FM-1 is not found? Choose its MIDI ports</summary>
+    <div class="grid">
+      <label>MIDI output (to the FM-1)<select id="port-out"></select></label>
+      <label>MIDI input (from the FM-1)<select id="port-in"></select></label>
+    </div>
+    <p class="note">The page looks for a port named FM-1, Felucca or KAWA. If your system names it otherwise, pick it here, then connect again.</p>
+  </details>
+</section>
+
+<section class="card" id="add" aria-labelledby="add-h">
+  <h2 id="add-h"><span class="n">2</span> Your sounds</h2>
+  <label class="drop" id="drop">
+    <strong>Drop sound files here, or choose them</strong>
+    <span class="note">WAV, MP3, OGG, FLAC (what your browser can play). Several at once. Each goes to a slot; the first free ones are taken in order.</span>
+    <span class="btn">Choose files</span>
+    <input class="vh" id="file" type="file" multiple accept="audio/*,.wav,.wave,.mp3,.ogg,.oga,.opus,.flac,.aif,.aiff,.m4a,.aac,.webm">
+  </label>
+  <ul class="items" id="items" aria-label="Your sounds"></ul>
+</section>
+
+<section class="card" id="sendcard" aria-labelledby="send-h">
+  <h2 id="send-h"><span class="n">3</span> Send</h2>
+  <div class="send">
+    <div class="row">
+      <button type="button" class="big" id="send" disabled>Send to my FM-1</button>
+      <button type="button" id="cancel" hidden>Cancel</button>
+    </div>
+    <div id="why" aria-live="polite"></div>
+    <div class="bar" id="totalbar" hidden><i></i></div>
+    <div id="summary" class="msg info" role="status" aria-live="polite" hidden></div>
+  </div>
+</section>
+
+<section class="card">
+  <details class="how">
+    <summary>What happens to a sound, and how to use it</summary>
+    <ul>
+      <li>It is mixed to <strong>mono</strong> and brought to <strong>22 050 Hz</strong> (or 11 025 Hz if you choose <em>Longer</em>: twice as long, duller). WAV files are read by this page, exactly as <code>install/kawa_samples.py</code> does; other formats are decoded by your browser.</li>
+      <li>The <strong>silence before the sound</strong> is removed, the sound is <strong>normalised</strong> to 95 %, cut to the slot (<strong>36 608 bytes</strong>: 1.66 s at 22 kHz, 3.3 s at 11 kHz) with a very short fade at the end, and stored as <strong>8-bit mu-law</strong>, like KAWA's own breaks. The waveform and <em>Play</em> show exactly that result.</li>
+      <li>Name: up to 11 characters (A-Z, 0-9, space and <code>_ - . ! + #</code>). It is what the FM-1 shows.</li>
+      <li>On the FM-1: a track's <strong>SOUND</strong> page (<kbd>EDIT</kbd>), engine <strong>SAMPLE</strong>, <strong>SOURCE</strong> = <strong>MY 1</strong> to <strong>MY 4</strong>.</li>
+      <li>The samples live in the FM-1's flash: they stay when it is switched off, and are not part of a project file.</li>
+      <li>Without a browser: <code>python3 install/kawa_samples.py put 1 kick.wav</code> does the same.</li>
+    </ul>
+  </details>
+</section>
+
+<footer>
+  <p>KAWA is free software (GPL-3.0). This page has no server part: your files stay in this browser tab. <a href="index.html">Home</a> · <a href="manual/index.html">Manual</a></p>
+</footer>
+
+<dialog id="confirm" aria-labelledby="confirm-h">
+  <h2 id="confirm-h"></h2>
+  <div id="confirm-body"></div>
+  <div class="btnrow">
+    <button type="button" id="confirm-no">Cancel</button>
+    <button type="button" class="yes" id="confirm-yes">OK</button>
+  </div>
+</dialog>
+<div class="overlay" aria-hidden="true">Drop the sounds to add them</div>
+
+</main>
+<script src="install/websamples.js"></script>
+<script>
+"use strict";
+(function () {
+const K = window.KawaSamples;
+const $ = id => document.getElementById(id);
+if (!K) { $("fatal").hidden = false; return; }
+
+const MAX_ITEMS = 12, MAX_BYTES = 150 * 1024 * 1024;
+const NAME_OK = /[^A-Z0-9 _\-.!+#]/g;
+let items = [], nextId = 1, dev = null, access = null, sending = false, ctl = null, ctx = null, playing = null;
+
+const secs = (n, r) => (n / r).toFixed(2);
+const slotLabel = k => "MY " + (k + 1);
+const limits = () => (dev ? dev.fm1.limits : { slots: K.NSLOTS, cap: K.CAP });
+const known = k => (dev && dev.slots && dev.slots[k]) || null;
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// ---------------------------------------------------------------- no Web MIDI: say so at once
+if (typeof navigator.requestMIDIAccess !== "function") {
+    const e = new K.KawaError("nomidi", { insecure: window.isSecureContext === false });
+    $("nomidi").textContent = e.message + " You can still prepare and listen to your sounds here.";
+    $("nomidi").hidden = false;
+    $("connect").disabled = true;
+}
+
+// ---------------------------------------------------------------- small helpers
+function say(el, text, cls) { el.textContent = text || ""; el.className = el.className.replace(/\b(err|ok|keep|info)\b/g, "").trim() + (cls && text ? " " + cls : ""); el.hidden = !text; }
+function ask(title, build, yes, no) {
+    return new Promise(res => {
+        const d = $("confirm");
+        $("confirm-h").textContent = title;
+        const body = $("confirm-body");
+        body.textContent = "";
+        build(body);
+        $("confirm-yes").textContent = yes || "OK";
+        $("confirm-no").textContent = no || "Cancel";
+        if (typeof d.showModal !== "function") { res(window.confirm(title + "\n\n" + body.textContent)); return; }
+        const done = v => { d.close(); $("confirm-yes").onclick = $("confirm-no").onclick = null; d.onclose = null; res(v); };
+        $("confirm-yes").onclick = () => done(true);
+        $("confirm-no").onclick = () => done(false);
+        d.onclose = () => { res(false); };
+        d.showModal();
+        $("confirm-no").focus();
+    });
+}
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+
+// ---------------------------------------------------------------- the FM-1
+function renderSlots() {
+    const ol = $("slots");
+    ol.textContent = "";
+    const lim = limits();
+    for (let k = 0; k < K.NSLOTS; k++) {
+        const li = el("li", "slot"), st = known(k);
+        li.dataset.slot = String(k);
+        li.appendChild(el("span", "sid", slotLabel(k)));
+        if (!dev) {
+            li.classList.add("empty");
+            li.appendChild(el("span", "sname", "not read yet"));
+        } else if (k >= lim.slots) {
+            li.classList.add("empty");
+            li.appendChild(el("span", "sname", "not on this FM-1"));
+        } else if (!st) {
+            li.classList.add("empty");
+            li.appendChild(el("span", "sname", "unknown"));
+        } else if (st.used) {
+            li.appendChild(el("span", "sname", st.name || "(no name)"));
+            li.appendChild(el("span", "smeta", st.seconds.toFixed(2) + " s · " + (st.rate / 1000).toFixed(st.rate === 11025 ? 3 : 2).replace(/\.?0+$/, "") + " kHz"));
+        } else {
+            li.classList.add("empty");
+            li.appendChild(el("span", "sname", "empty"));
+        }
+        const it = items.find(i => i.slot === k && i.state !== "error" && i.state !== "loading");
+        if (it) {
+            const rep = st && st.used;
+            li.appendChild(el("span", "snext" + (rep ? " rep" : ""), (it.state === "sent" ? "sent: " : "next: ") + (K.cleanName(it.name) || "SAMPLE") + (rep && it.state !== "sent" ? " (replaces it)" : "")));
+        }
+        if (dev && st && st.used && !sending) {
+            const b = el("button", "small danger", "Erase");
+            b.type = "button";
+            b.setAttribute("aria-label", "Erase " + slotLabel(k) + " on the FM-1");
+            b.onclick = () => eraseSlot(k);
+            li.appendChild(b);
+        }
+        ol.appendChild(li);
+    }
+}
+function devStatus(text, on) {
+    $("devtext").textContent = text;
+    document.querySelector("#devstatus .dot").classList.toggle("on", !!on);
+}
+function fillPorts(ports) {
+    const fill = (sel, list, pick) => {
+        sel.textContent = "";
+        list.forEach(p => { const o = el("option", "", p.name || p.id); o.value = p.id; sel.appendChild(o); });
+        if (pick) sel.value = pick.id;
+    };
+    fill($("port-out"), ports.outs, ports.out);
+    fill($("port-in"), ports.ins, ports.inp);
+    $("ports").open = true;
+}
+async function readSlots() {
+    dev.slots = await dev.fm1.list();
+    renderSlots();
+    renderItems();
+}
+async function connect() {
+    if (sending) return false;
+    say($("devmsg"), "");
+    devStatus("Looking for the FM-1…", false);
+    $("connect").disabled = true;
+    try {
+        if (dev) { await dev.fm1.close().catch(() => {}); dev = null; }
+        const o = { nav: navigator, access };
+        if ($("ports").open && $("port-out").value) { o.outId = $("port-out").value; o.inId = $("port-in").value; }
+        const fm1 = await K.connect(o);
+        access = fm1.access;
+        dev = { fm1, slots: null };
+        access.onstatechange = e => {
+            const p = e.port;
+            if (dev && p && p.state === "disconnected" && (p.id === dev.fm1.ports.inp.id || p.id === dev.fm1.ports.out.id)) {
+                dev.fm1.close().catch(() => {});
+                dev = null;
+                devStatus("The FM-1 was unplugged.", false);
+                $("refresh").disabled = true;
+                renderSlots();
+                renderItems();
+            }
+        };
+        devStatus("Connected to " + fm1.name + ": KAWA " + (fm1.info.version || "") + ", " + fm1.limits.slots + " slots of " + fm1.limits.cap + " bytes.", true);
+        $("refresh").disabled = false;
+        try { await readSlots(); } catch (e) { say($("devmsg"), "Connected, but the slots could not be read: " + e.message, "err"); renderSlots(); }
+        if (fm1.limits.cap < K.CAP) await Promise.all(items.map(rebuild));       // a device with smaller slots: cut to what it holds
+        return true;
+    } catch (e) {
+        dev = null;
+        devStatus("Not connected.", false);
+        say($("devmsg"), e.message || String(e), "err");
+        if (e.code === "noFm1" && e.ports) fillPorts(e.ports);
+        renderSlots();
+        return false;
+    } finally {
+        $("connect").disabled = typeof navigator.requestMIDIAccess !== "function";
+        renderControls();
+    }
+}
+async function eraseSlot(k) {
+    if (sending || !dev) return;
+    const st = known(k);
+    const yes = await ask("Erase " + slotLabel(k) + "?", b => {
+        b.appendChild(el("p", "", (st && st.name ? st.name : "The sound") + " will be removed from the FM-1 for good."));
+        b.appendChild(el("p", "strong", "Press PLAY on the FM-1 first if it is playing."));
+    }, "Erase", "Keep it");
+    if (!yes) return;
+    say($("devmsg"), "");
+    try {
+        await dev.fm1.erase(k);
+        await readSlots();
+    } catch (e) { say($("devmsg"), e.message, "err"); }
+}
+$("connect").onclick = connect;
+$("refresh").onclick = async () => {
+    if (!dev || sending) return;
+    say($("devmsg"), "");
+    try { await readSlots(); } catch (e) { say($("devmsg"), e.message, "err"); }
+};
+
+// ---------------------------------------------------------------- the sounds
+function freeSlot() {
+    const taken = new Set(items.filter(i => i.slot >= 0).map(i => i.slot));
+    const all = [];
+    for (let k = 0; k < limits().slots; k++) if (!taken.has(k)) all.push(k);
+    const empty = all.filter(k => !(known(k) && known(k).used));
+    return empty.length ? empty[0] : all.length ? all[0] : -1;
+}
+function addFiles(files) {
+    if (sending) { say($("summary"), "Wait for the transfer to end before adding sounds.", "keep"); return; }
+    let skipped = 0;
+    for (const f of Array.from(files)) {
+        if (items.length >= MAX_ITEMS) { skipped++; continue; }
+        const it = { id: nextId++, file: f, fileName: f.name, name: K.nameFromFile(f.name), rate: K.RATE, slot: -1, src: null, ab: null,
+                     prep: null, error: null, state: "loading", msg: "", msgCls: "", progress: 0, drawn: undefined };
+        it.slot = freeSlot();
+        items.push(it);
+        buildItem(it);
+        load(it);
+    }
+    if (skipped) say($("summary"), skipped + " file(s) not added: this page takes " + MAX_ITEMS + " sounds at a time.", "keep");
+    renderAll();
+}
+async function load(it) {
+    try {
+        if (it.file.size > MAX_BYTES) throw new K.KawaError("decode", { why: "the file is very large" });
+        it.ab = await it.file.arrayBuffer();
+        const h = new Uint8Array(it.ab, 0, Math.min(12, it.ab.byteLength));
+        const riff = h.length === 12 && String.fromCharCode(h[0], h[1], h[2], h[3]) === "RIFF" && String.fromCharCode(h[8], h[9], h[10], h[11]) === "WAVE";
+        it.src = null;
+        if (riff) { try { it.src = K.readWav(it.ab); } catch (e) { /* ADPCM, MP3 inside a WAV...: the browser may know it */ } }
+        if (!it.src) it.src = await K.decodeWithBrowser(it.ab, it.rate);
+        if (!it.src.wav) it.decodedAt = it.rate;
+    } catch (e) {
+        it.src = null;
+        it.prep = null;
+        it.error = e instanceof K.KawaError ? e : new K.KawaError("decode", { why: e && e.message });
+        it.state = "error";
+        renderAll();
+        return;
+    }
+    rebuild(it);
+}
+async function rebuild(it) {                                    // convert again: a new rate, or a device with other limits
+    if (!it.src) return;
+    try {
+        if (!it.src.wav && it.decodedAt !== it.rate) { it.state = "loading"; updateItem(it); it.src = await K.decodeWithBrowser(it.ab, it.rate); it.decodedAt = it.rate; }
+        it.prep = K.prepare(it.src, { rate: it.rate, cap: limits().cap });
+        it.error = null;
+        if (it.prep.silent) it.error = new K.KawaError("silent");
+        it.state = it.error ? "error" : "ready";
+    } catch (e) {
+        it.prep = null;
+        it.error = e instanceof K.KawaError ? e : new K.KawaError("decode", { why: e && e.message });
+        it.state = "error";
+    }
+    it.msg = "";
+    stopPlay();
+    renderAll();
+}
+function changed(it) { if (it.state === "sent" || it.state === "failed") { it.state = "ready"; it.msg = ""; } }
+
+function buildItem(it) {
+    const li = el("li", "item");
+    li.dataset.id = String(it.id);
+    li.innerHTML = '<div class="ihead"><span class="fname"></span><span class="state"></span></div>' +
+        '<div class="ibody"><div class="left"><canvas class="wave" width="720" height="144"></canvas><div class="info"></div>' +
+        '<div class="kept"><i></i></div><div class="keptnote"></div></div>' +
+        '<div class="ctl"><label>Slot<select class="slot"></select></label>' +
+        '<label>Name<input class="name" type="text" maxlength="11" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>' +
+        '<label>Length<select class="rate"></select></label>' +
+        '<div class="btns"><button type="button" class="play small"></button><button type="button" class="rm small danger">Remove</button></div></div></div>' +
+        '<div class="bar" hidden><i></i></div><div class="imsg" role="status" aria-live="polite"></div>';
+    const q = s => li.querySelector(s);
+    it.el = { li, fname: q(".fname"), state: q(".state"), canvas: q(".wave"), info: q(".info"), kept: q(".kept i"), keptnote: q(".keptnote"),
+              slot: q("select.slot"), name: q("input.name"), rate: q("select.rate"), play: q(".play"), rm: q(".rm"), bar: q(".bar"), barfill: q(".bar i"), msg: q(".imsg") };
+    it.el.fname.textContent = it.fileName;
+    it.el.slot.onchange = () => { setSlot(it, +it.el.slot.value); };
+    it.el.name.value = it.name;
+    it.el.name.oninput = () => {
+        const v = it.el.name.value.toUpperCase().replace(NAME_OK, "").slice(0, K.NAME_MAX);
+        if (v !== it.el.name.value) it.el.name.value = v;
+        it.name = v; changed(it); updateItem(it); renderSlots(); renderControls();
+    };
+    it.el.name.onblur = () => { it.name = K.cleanName(it.el.name.value) || "SAMPLE"; it.el.name.value = it.name; renderSlots(); };
+    it.el.rate.onchange = () => { it.rate = +it.el.rate.value; changed(it); rebuild(it); };
+    it.el.play.onclick = () => togglePlay(it);
+    it.el.rm.onclick = () => removeItem(it);
+    $("items").appendChild(li);
+}
+function setSlot(it, k) {
+    if (k >= 0) { const other = items.find(o => o !== it && o.slot === k); if (other) { other.slot = it.slot; changed(other); } }
+    it.slot = k;
+    changed(it);
+    renderAll();
+}
+function removeItem(it) {
+    if (sending) return;
+    if (playing && playing.item === it) stopPlay();
+    items = items.filter(o => o !== it);
+    it.el.li.remove();
+    renderAll();
+}
+
+const STATE_TEXT = { loading: "Reading…", ready: "Ready", error: "Cannot send", sending: "Sending", sent: "Sent", failed: "Failed" };
+function updateItem(it) {
+    const e = it.el, lim = limits();
+    e.li.className = "item " + it.state;
+    e.state.textContent = STATE_TEXT[it.state] || it.state;
+    // the slot choice: every slot with what is on the FM-1, and "don't send"
+    const keep = it.slot;
+    e.slot.textContent = "";
+    const none = el("option", "", "Don't send"); none.value = "-1"; e.slot.appendChild(none);
+    for (let k = 0; k < lim.slots; k++) {
+        const st = known(k);
+        const o = el("option", "", slotLabel(k) + (st && st.used ? " (now: " + st.name + ")" : st ? " (empty)" : ""));
+        o.value = String(k);
+        e.slot.appendChild(o);
+    }
+    e.slot.value = String(keep);
+    if (document.activeElement !== e.name && e.name.value !== it.name) e.name.value = it.name;
+    // the length choice
+    const r1 = Math.min(lim.cap, K.CAP);
+    e.rate.textContent = "";
+    [[22050, "Normal: 22 kHz, up to " + (r1 / 22050).toFixed(2) + " s"], [11025, "Longer: 11 kHz, up to " + (r1 / 11025).toFixed(1) + " s, duller"]].forEach(([v, t]) => {
+        const o = el("option", "", t); o.value = String(v); e.rate.appendChild(o);
+    });
+    e.rate.value = String(it.rate);
+    const busy = sending;
+    e.slot.disabled = e.name.disabled = e.rate.disabled = e.rm.disabled = busy || it.state === "loading";
+    e.play.disabled = !it.prep || it.state === "loading";
+    e.play.textContent = playing && playing.item === it ? "Stop" : "Play";
+    e.play.setAttribute("aria-label", (playing && playing.item === it ? "Stop the preview of " : "Play the converted ") + it.fileName);
+    e.rm.setAttribute("aria-label", "Remove " + it.fileName);
+    e.name.setAttribute("aria-label", "Name of " + it.fileName + " on the FM-1, 11 characters at most");
+    e.slot.setAttribute("aria-label", "Slot for " + it.fileName);
+    e.rate.setAttribute("aria-label", "Length of " + it.fileName);
+    // what the conversion made
+    const p = it.prep;
+    e.info.textContent = "";
+    e.keptnote.textContent = "";
+    e.keptnote.className = "keptnote";
+    e.kept.style.left = "0"; e.kept.style.width = "0";
+    if (p) {
+        const add = (v, k) => { const s = el("span"); s.appendChild(el("b", "", v)); if (k) s.appendChild(document.createTextNode(" " + k)); e.info.appendChild(s); };
+        add(secs(p.data.length, p.rate) + " s");
+        add(p.data.length + " bytes");
+        add((p.rate / 1000).toFixed(p.rate === 11025 ? 3 : 2).replace(/\.?0+$/, "") + " kHz", "8-bit mu-law, mono");
+        const tot = p.total || 1;
+        e.kept.style.left = (100 * p.start / tot) + "%";
+        e.kept.style.width = Math.max(1, 100 * p.kept / tot) + "%";
+        const parts = [];
+        if (p.silent) parts.push("Nothing above the silence threshold in this file.");
+        else {
+            if (p.start / p.rate >= 0.005) parts.push("Silence before the sound removed: " + secs(p.start, p.rate) + " s.");
+            if (p.cut) { const lost = (p.total - p.start - p.kept) / p.rate; parts.push("Cut to fit the slot: the last " + lost.toFixed(2) + " s are left out."); e.keptnote.classList.add("cutnote"); }
+            if (!parts.length) parts.push("The whole sound is used.");
+        }
+        e.keptnote.textContent = parts.join(" ");
+        e.canvas.setAttribute("role", "img");
+        e.canvas.setAttribute("aria-label", "Waveform of " + it.fileName + " as it will be sent, " + secs(p.data.length, p.rate) + " seconds");
+        if (it.drawn !== p) { drawWave(e.canvas, K.mulawToFloat(p.data)); it.drawn = p; }
+    } else {
+        if (it.drawn !== null) { drawWave(e.canvas, null); it.drawn = null; }
+        e.canvas.removeAttribute("aria-label");
+    }
+    // messages
+    let text = it.msg, cls = it.msgCls;
+    if (!text && it.error) { text = it.error.message; cls = "err"; }
+    if (!text && it.state === "ready" && it.slot < 0) { text = "Choose a slot to send it."; cls = "keep"; }
+    if (!text && it.state === "ready" && it.slot >= 0 && known(it.slot) && known(it.slot).used) { text = "Replaces " + known(it.slot).name + " in " + slotLabel(it.slot) + "."; cls = "keep"; }
+    e.msg.textContent = text || "";
+    e.msg.className = "imsg" + (cls ? " " + cls : "");
+    e.bar.hidden = it.state !== "sending";
+    e.barfill.style.width = Math.round(100 * it.progress) + "%";
+}
+function drawWave(c, f) {
+    const g = c.getContext("2d"), w = c.width, h = c.height, mid = h / 2;
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = "#0e0820"; g.fillRect(0, 0, w, h);
+    g.strokeStyle = cssVar("--rule") || "#3b2e69"; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(0, mid); g.lineTo(w, mid); g.stroke();
+    if (!f || !f.length) return;
+    g.fillStyle = cssVar("--pink") || "#ff5fb4";
+    const per = f.length / w;
+    for (let x = 0; x < w; x++) {
+        let lo = 0, hi = 0;
+        const a = Math.floor(x * per), b = Math.max(a + 1, Math.floor((x + 1) * per));
+        for (let i = a; i < b && i < f.length; i++) { const v = f[i]; if (v < lo) lo = v; if (v > hi) hi = v; }
+        const y1 = mid - hi * (mid - 3), y2 = mid - lo * (mid - 3);
+        g.fillRect(x, y1, 1, Math.max(2, y2 - y1));
+    }
+}
+
+// ---------------------------------------------------------------- the preview: what the FM-1 will play
+function stopPlay() {
+    if (!playing) return;
+    const p = playing;
+    playing = null;
+    try { p.src.onended = null; p.src.stop(); } catch (e) { /* already over */ }
+    if (p.item.el) updateItem(p.item);
+}
+function togglePlay(it) {
+    if (playing && playing.item === it) { stopPlay(); return; }
+    stopPlay();
+    if (!it.prep) return;
+    try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!ctx) ctx = new AC();
+        if (ctx.state === "suspended" && ctx.resume) ctx.resume();
+        const f = K.mulawToFloat(it.prep.data), buf = ctx.createBuffer(1, f.length, it.prep.rate);
+        buf.getChannelData(0).set(f);
+        const src = ctx.createBufferSource(), gain = ctx.createGain();
+        gain.gain.value = 0.6;                                  // (normalised to 95 %: kind to the ears)
+        src.buffer = buf;
+        src.connect(gain); gain.connect(ctx.destination);
+        playing = { item: it, src };
+        src.onended = () => { if (playing && playing.src === src) { playing = null; updateItem(it); } };
+        src.start();
+        updateItem(it);
+    } catch (e) {
+        playing = null;
+        it.msg = "This browser could not play the preview.";
+        it.msgCls = "err";
+        updateItem(it);
+    }
+}
+
+// ---------------------------------------------------------------- the whole page
+function renderItems() { items.forEach(updateItem); }
+function renderAll() { renderSlots(); renderItems(); renderControls(); }
+function jobsToSend() { return items.filter(i => i.slot >= 0 && (i.state === "ready" || i.state === "failed") && i.prep && !i.prep.silent); }
+function renderControls() {
+    const jobs = jobsToSend(), bad = items.filter(i => i.state === "error" && i.slot >= 0);
+    const noMidi = typeof navigator.requestMIDIAccess !== "function";
+    $("send").disabled = sending || noMidi || !jobs.length;
+    $("connect").disabled = sending || noMidi;
+    $("refresh").disabled = sending || !dev;
+    $("file").disabled = sending;
+    let why = "";
+    if (sending) why = "";
+    else if (noMidi) why = "This browser has no Web MIDI: use Chrome or Edge on a computer.";
+    else if (!items.length) why = "Add a sound first (step 2).";
+    else if (items.some(i => i.state === "loading")) why = "Reading your files…";
+    else if (!jobs.length) why = bad.length ? "The sounds marked in red cannot be sent: remove them, or add other ones." : "Nothing to send: every sound is sent, or set to Don't send.";
+    else why = jobs.length + (jobs.length === 1 ? " sound" : " sounds") + " to send: " + jobs.slice().sort((a, b) => a.slot - b.slot).map(i => (K.cleanName(i.name) || "SAMPLE") + " into " + slotLabel(i.slot)).join(", ") + ". KAWA must be stopped.";
+    $("why").textContent = why;
+    $("cancel").hidden = !sending;
+    document.body.classList.toggle("busy", sending);
+}
+
+async function send() {
+    if (sending) return;
+    say($("summary"), "");
+    const batch = jobsToSend();
+    if (!batch.length) return;
+    if (!dev || dev.fm1.gone) { if (!(await connect())) { say($("summary"), "Not sent: the FM-1 could not be reached (see step 1).", "err"); return; } }
+    const lim = limits();
+    // the device's own limits: slots and size; a sound that no longer fits is converted again
+    for (const it of batch) {
+        if (it.slot >= lim.slots) { it.state = "error"; it.error = new K.KawaError("badslot", { slot: it.slot }); }
+        else if (it.prep.data.length > lim.cap) await rebuild(it);
+    }
+    const jobs = batch.filter(i => i.state !== "error" && i.prep && i.prep.data.length <= lim.cap).sort((a, b) => a.slot - b.slot);
+    renderAll();
+    if (!jobs.length) { say($("summary"), "Nothing could be sent.", "err"); return; }
+    const replaced = jobs.filter(i => known(i.slot) && known(i.slot).used);
+    if (replaced.length) {
+        const yes = await ask("Replace " + (replaced.length === 1 ? "a sound" : replaced.length + " sounds") + " on the FM-1?", b => {
+            const ul = el("ul");
+            replaced.forEach(i => ul.appendChild(el("li", "", slotLabel(i.slot) + ": " + (known(i.slot).name || "(no name)") + " becomes " + (K.cleanName(i.name) || "SAMPLE"))));
+            b.appendChild(ul);
+            b.appendChild(el("p", "strong", "KAWA must be stopped (press PLAY on the FM-1 so nothing plays)."));
+            b.appendChild(el("p", "", "If the transfer is cut, the slot stays empty: the old sound is not kept."));
+        }, "Replace and send", "Cancel");
+        if (!yes) return;
+    }
+    sending = true;
+    ctl = new AbortController();
+    stopPlay();
+    jobs.forEach(i => { i.state = "ready"; i.msg = "Waiting…"; i.msgCls = ""; i.progress = 0; });
+    $("totalbar").hidden = false;
+    renderAll();
+    window.addEventListener("beforeunload", guard);
+    const total = jobs.reduce((s, i) => s + i.prep.data.length, 0);
+    let before = 0;
+    const list = jobs.map(i => ({ slot: i.slot, data: i.prep.data, rate: i.prep.rate, name: K.cleanName(i.name) || "SAMPLE" }));
+    const results = await K.sendAll(dev.fm1, list, {
+        signal: ctl.signal,
+        start: n => { const i = jobs[n]; i.state = "sending"; i.msg = "Sending to " + slotLabel(i.slot) + "…"; i.msgCls = ""; updateItem(i); },
+        progress: (n, s, t) => {
+            const i = jobs[n];
+            i.progress = t ? s / t : 0;
+            i.msg = "Sending to " + slotLabel(i.slot) + "… " + Math.round(100 * i.progress) + " %";
+            updateItem(i);
+            $("totalbar").firstElementChild.style.width = Math.round(100 * (before + s) / total) + "%";
+        },
+        done: n => { const i = jobs[n]; before += i.prep.data.length; i.state = "sent"; i.progress = 1; i.msg = "Done: in " + slotLabel(i.slot) + " on your FM-1."; i.msgCls = "ok"; updateItem(i); },
+        fail: (n, e) => { const i = jobs[n]; i.state = "failed"; i.msg = e.message; i.msgCls = "err"; updateItem(i); },
+    });
+    window.removeEventListener("beforeunload", guard);
+    sending = false;
+    ctl = null;
+    $("totalbar").hidden = true;
+    $("totalbar").firstElementChild.style.width = "0";
+    const ok = results.filter(r => r.ok), failed = results.filter(r => !r.ok);
+    jobs.forEach((i, n) => { if (!results[n]) { i.state = "ready"; i.msg = "Not sent (the transfer stopped before it)."; i.msgCls = "keep"; } });
+    if (dev && !dev.fm1.gone) { try { await readSlots(); } catch (e) { /* the summary below says enough */ } }
+    renderAll();
+    if (ok.length && !failed.length && ok.length === jobs.length) {
+        say($("summary"), ok.length === 1 ? "Done. On the FM-1: a track's SOUND page, engine SAMPLE, SOURCE = " + slotLabel(ok[0].result.slot) + "."
+            : "Done: " + ok.length + " sounds sent. On the FM-1: a track's SOUND page, engine SAMPLE, SOURCE = " + ok.map(r => slotLabel(r.result.slot)).join(", ") + ".", "ok");
+    } else {
+        const first = failed[0];
+        say($("summary"), (ok.length ? ok.length + " of " + jobs.length + " sent. " : "Nothing was sent. ") + (first ? first.error.message : "") + " Press Send again to retry what is left.", "err");
+    }
+}
+function guard(e) { e.preventDefault(); e.returnValue = ""; }
+$("send").onclick = send;
+$("cancel").onclick = () => { if (ctl) { ctl.abort(); $("cancel").disabled = true; } };
+
+// ---------------------------------------------------------------- files: drop anywhere, or choose
+const hasFiles = e => e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0;
+let depth = 0;
+window.addEventListener("dragenter", e => { if (!hasFiles(e)) return; depth++; document.body.classList.add("dragging"); });
+window.addEventListener("dragleave", e => { if (hasFiles(e) && --depth <= 0) { depth = 0; document.body.classList.remove("dragging"); } });
+window.addEventListener("dragover", e => { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
+window.addEventListener("drop", e => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    depth = 0;
+    document.body.classList.remove("dragging");
+    if (e.dataTransfer.files && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+$("file").addEventListener("change", e => { if (e.target.files && e.target.files.length) addFiles(e.target.files); e.target.value = ""; });
+
+renderAll();
+window.__kawaSamples = { get items() { return items; }, get dev() { return dev; } };   // (for the tests)
+})();
+</script>
+</body>
+</html>

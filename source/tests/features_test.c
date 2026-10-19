@@ -37,6 +37,7 @@ static void fresh(void)
     sq_req = 2;
     block();
     prj_new();
+    prj.bpm = 160;                              /* (these timings are for 160; a new song starts at 100) */
     prj.mode = 0;
     sq_next = 0xFF;
     ev_push(EV_KILL, NTRK, 0, 0, 0, 0);

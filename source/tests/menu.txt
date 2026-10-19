@@ -1,4 +1,5 @@
 # the PROJECTS menu, undo/redo, row insert, the engine strip, MOD page
+2500 btn 8
 2600 btn 9
 2900 shot m01-menu
 3000 enc 0 1

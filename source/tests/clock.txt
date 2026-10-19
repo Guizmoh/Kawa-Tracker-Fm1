@@ -1,4 +1,5 @@
 # the MIDI clock: on in OPTIONS (GLO twice, KNOB 3), 4 s of play at 160 BPM -> 4 s x 160/60 x 24 = 256 ticks
+2500 btn 8
 2600 btn 7
 2700 btn 7
 2800 enc 4 1

@@ -502,33 +502,33 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       langs: "Language",
       beta: "<b>This is a beta.</b> KAWA has not been tested on a real FM-1 yet. Read the safety section of the manual before you install it. The official firmware can always be reinstalled with M-UPGRADE; that is the risky step, so never unplug the FM-1 while it runs.",
       screen: "The FM-1's screen",
-      power: "The firmware runs here as it is, compiled to WebAssembly. Turn the sound on and power up.",
+      power: "The firmware runs here as it is, compiled to WebAssembly. Turn the sound on, power up, then press any key.",
       powerBtn: "POWER ON",
       err: "Sound could not start in this browser. Try a recent Chrome, Edge or Firefox.",
-      pages: ["TRACKS", "GRID", "SOUND", "ENVELOPE", "MIX", "MAGIC", "SCALE", "SONG", "PROJECTS", "OPTIONS", "EFFECTS", "HELP", "BOOT", "GROOVE"],
+      pages: ["TRACKS", "GRID", "SOUND", "ENVELOPE", "MIX", "MAGIC", "SCALE", "SONG", "PROJECTS", "OPTIONS", "EFFECTS", "HELP", "BOOT", "GROOVE", "SENDS"],
       track: "TRACK {n}", master: "MASTER",
-      "k.master": "VOLUME", "k.select": "ROW", "k.presets": "PATTERN / SOUND", "k.algo": "TRACK", "k.unused": "unused",
-      "b.oct": "OCTAVE", "b.fx": "EFFECTS", "b.scl": "SCALE", "b.env": "ENV / MIX", "b.lfo": "MAGIC", "b.edit": "SOUND", "b.glo": "SONG / OPT.",
-      "b.home": "TRACKS", "b.home.alt": "HOLD: HELP", "b.save": "PROJECTS", "b.save.alt": "HOLD: UNDO", "b.arp": "CLEAR", "b.seq": "GRID", "b.play": "PLAY", "b.rec": "REC",
+      "k.master": "VOLUME", "k.select": "ROW / PAGE", "k.presets": "PATTERN / SOUND", "k.algo": "TRACK", "k.unused": "unused",
+      "b.oct": "OCTAVE", "b.fx": "SENDS / LIVE", "b.scl": "SCALE / MAGIC", "b.env": "ENV / MIX", "b.lfo": "LFO / MOD", "b.edit": "SOUND", "b.glo": "SONG / OPT.",
+      "b.home": "TRACKS", "b.home.alt": "HOLD: HELP", "b.save": "PROJECTS", "b.save.alt": "HOLD: TOOLS", "b.arp": "CLEAR", "b.seq": "GRID", "b.play": "PLAY", "b.rec": "REC",
       colours: ["red", "yellow", "green", "blue"],
       "tt.MASTER": "MASTER: the volume of this page (wheel, drag, or the arrow keys when it has the focus).",
-      "tt.SELECT": "SELECT moves the cursor's row; on the first SOUND page it picks the engine; REC held + SELECT sets how many rows a written note jumps; ARP held + SELECT inserts or deletes a row.",
-      "tt.PRESETS": "PRESETS picks the pattern, or the sound or the song entry on their pages.",
-      "tt.ALGORITHM": "ALGORITHM picks the track; ARP held + ALGORITHM inserts or deletes a row in the whole pattern.",
+      "tt.SELECT": "SELECT moves the cursor's row on TRACKS; on EDIT, LFO, ENV / MIX, FX and GLO it goes through that button's pages; on the GRID it turns the 16-step page; REC held + SELECT sets how many rows a written note jumps; ARP held + SELECT inserts or deletes a row; with SAVE held it picks a tool.",
+      "tt.PRESETS": "PRESETS picks the factory sound on the first SOUND page (on a sound you edited, marked *, it only shows the next one in gold: OCT+ loads it, OCT− keeps yours), and the cursor on the other EDIT pages: operator, table row, slice. It picks the pattern on TRACKS, GRID, MAGIC, SCALE and FX, the chain entry's pattern on SONG, the click volume on OPTIONS. ARP held + PRESETS: the next or previous engine.",
+      "tt.ALGORITHM": "ALGORITHM picks the track (MIX goes up to the master); on SONG the entry of the chain, on GROOVE the step, on OPTIONS the metronome mode. ARP held + ALGORITHM inserts or deletes a row in the whole pattern.",
       "tt.K": "KNOB {n} ({c}): what it does on this page is written under it and on the bottom line of the screen.",
-      "tt.0": "OCT− lowers the keyboard's octave; on PROJECTS it goes back; SAVE held + OCT− undoes.",
-      "tt.1": "OCT+ raises the keyboard's octave; on PROJECTS it is OK; SAVE held + OCT+ redoes; on EFFECTS it opens the second bank.",
-      "tt.2": "FX held: play the white keys for 32 live effects (OCT+ the second bank) on the master or a track; a tap keeps the page open.",
-      "tt.3": "SCL opens the scale: its root, its notes, and the lock that keeps the keys in it.",
-      "tt.4": "ENV opens the track's envelope; press it again for MIX (levels and the master effect; black keys mute, ARP held + a black key solo).",
-      "tt.5": "LFO opens the magic: tools on the white keys that chop the break and write a beat, a melody or a bassline in the scale.",
-      "tt.6": "EDIT opens the track's sound (SELECT picks the engine); press it again for the next page: SOUND 2, the FM operators, EFFECT, LFO, MODULATION.",
-      "tt.7": "GLO opens the song (patterns played N times); press it again for OPTIONS: theme, language, CPU.",
-      "tt.8": "HOME shows the tracks; hold it for the help of the page you are on.",
-      "tt.9": "SAVE opens the projects menu (new song, save, save as, load, rename, demo; OCT+ OK, OCT− back); SAVE held + OCT− undoes, + OCT+ redoes.",
-      "tt.10": "ARP clears the cell; ARP held + SELECT inserts or deletes a row, + ALGORITHM in the whole pattern.",
-      "tt.11": "SEQ opens the grid: the track's 16 steps on the 16 white keys.",
-      "tt.12": "PLAY starts or stops the song.",
+      "tt.0": "OCT− lowers the keyboard's octave; on the GRID it takes the pattern down to 32, then 16 steps; on PROJECTS it goes back; on SOUND, while a factory sound is shown in gold, it keeps yours; SAVE held + OCT− undoes at once (patterns and sounds).",
+      "tt.1": "OCT+ raises the keyboard's octave; on the GRID it takes the pattern up to 32, then 64 steps (this pattern linked to the next one); on PROJECTS it is OK; on LIVE it opens the second bank; on SOUND, while a factory sound is shown in gold, it loads it; SAVE held + OCT+ redoes at once.",
+      "tt.2": "FX: a tap opens SENDS (drive, echo and reverb of each track), a second tap the LIVE effects, a third goes back; SELECT also goes from one to the other. Held from another page, a yellow bar labelled LIVE fills and LIVE shows while you hold: play the white keys for 32 live effects (OCT+ the second bank) on the master or a track. FX held and a key right away: that effect plays without waiting for the bar.",
+      "tt.3": "SCL opens the scale: its root, its notes, and the lock that keeps the keys in it; press it again for MAGIC (tools on the white keys that chop the break and write a beat, a melody or a bassline in the scale), a third time for TRACKS.",
+      "tt.4": "ENV opens the track's envelope; press it again (or turn SELECT) for MIX (levels and the master effect; black keys mute, ARP held + a black key solo).",
+      "tt.5": "LFO opens the track's LFO; press it again (or turn SELECT) for MODULATION.",
+      "tt.6": "EDIT opens the track's sound; press it again (or turn SELECT) for the next page: SOUND 2, the FM operators (or the sample editor), EFFECT, TABLE. PRESETS picks the factory sound, ARP held + PRESETS the engine.",
+      "tt.7": "GLO opens the song (patterns played N times); press it again for GROOVE, then OPTIONS (SELECT walks them too): theme, language, MIDI clock, font, and the metronome with its volume.",
+      "tt.8": "HOME shows the tracks; hold it, a yellow bar labelled HELP fills, for the help of the page you are on. HOME + PLAY: panic, the song stops and every sound is cut.",
+      "tt.9": "SAVE opens the projects menu (new song, save, save as, load, rename, demo; OCT+ OK, OCT− back); it blinks while there are unsaved changes. Hold it, a yellow bar labelled TOOLS fills, for the tools: OPTIONS, UNDO, REDO, CLEAR, COPY, PASTE, RANDOM. SELECT picks one and it runs when you let go; KNOB 3 chooses the track or the whole pattern. SAVE held + OCT− undoes, + OCT+ redoes, at once: 10 steps, for the patterns and the sounds (knob turns, sends, factory sounds loaded).",
+      "tt.10": "ARP is the clear / shift key, not an arpeggiator. A tap clears: the cell on TRACKS, the step you hold on the GRID, the TABLE step, the LIVE lane. Held: + SELECT inserts or deletes a row (+ ALGORITHM in the whole pattern), + KNOB 3 / 4 sets the cell's second effect, + PRESETS on SOUND picks the engine, + a black key on MIX solos. On SONG it switches LOOP / SONG; on SAMPLE EDIT it evens the slices.",
+      "tt.11": "SEQ opens the grid: 16 steps of the track on the 16 white keys; SELECT turns the page, OCT− / OCT+ set the pattern to 16, 32 or 64 steps.",
+      "tt.12": "PLAY starts or stops the song. HOME + PLAY: panic, everything stops and goes quiet.",
       "tt.13": "REC turns recording on or off: the keys write at the cursor (on the beat while it plays); REC held + SELECT sets how many rows a note jumps.",
       "s.h": "Your samples",
       "s.how": "Drop a sound on a slot (WAV, MP3, OGG, FLAC…) or choose a file. It becomes what the FM-1 keeps: mono, 22 kHz, 8 bits, up to 1.66 s, without the silence before it. Then, on a track's SOUND page (<b>EDIT</b>): engine <b>SAMPLE</b>, <b>SOURCE</b> = <b>MY 1…4</b> (or the preset MY SAMPLE 1…4 with <b>PRESETS</b>). Your sounds stay in this browser.",
@@ -570,18 +570,22 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       "p.full": "The browser's storage is full: export your projects to keep them.",
       "p.exported": "Exported: {f}",
       g1: "The basics",
-      g1l: "<li>A tracker for every style. Time runs down: each row is a step (a sixteenth), each column a track, each cell a note, its volume and an effect.</li>" +
-           "<li><b>PLAY</b> plays the demo. Six tracks, each with its engine: PULSE, WAVE, NOISE, FM (one track, 6 operators), KIT (8 kits) or SAMPLE (the breaks or your own sounds).</li>" +
+      g1l: "<li>A tracker made above all for chiptune and IDM (it can do other styles too). Time runs down: each row is a step (a sixteenth), each column a track, each cell a note, its volume and an effect.</li>" +
+           "<li>After <b>POWER ON</b>, press any key: the boot screen waits for you. <b>PLAY</b> plays the song. KAWA starts on an empty one (a box on TRACKS says what to do until the first note): the demo is in <b>SAVE</b> › DEMO. Six tracks, each with its engine: PULSE, WAVE, NOISE, FM (one track, 6 operators), KIT (8 kits) or SAMPLE (the breaks or your own sounds).</li>" +
            "<li><b>ALGORITHM</b> picks the track, <b>SELECT</b> the row, <b>PRESETS</b> the pattern. <b>KNOB 1–4</b> (<span class=\"k1\">red</span>, <span class=\"k2\">yellow</span>, <span class=\"k3\">green</span>, <span class=\"k4\">blue</span> on every page) edit the cell: their labels say what they do.</li>" +
-           "<li><b>REC</b>, then the keys: notes go in at the cursor (on the beat while it plays). REC held + SELECT: how many rows a note jumps. <b>ARP</b> clears the cell.</li>" +
-           "<li><b>HOME</b> tracks (held: the help of the page) · <b>SEQ</b> the grid · <b>EDIT</b> the sound, again for the next page (SELECT picks the engine) · <b>ENV</b> the envelope, again MIX · <b>GLO</b> the song, again the groove, then the options.</li>" +
-           "<li><b>SAVE</b>: new song, save, save as, load, rename, demo (<b>OCT+</b> OK, <b>OCT−</b> back). SAVE held + OCT−: undo, + OCT+: redo.</li>",
+           "<li><b>REC</b>, then the keys: notes go in at the cursor (on the beat while it plays). REC held + SELECT: how many rows a note jumps. <b>ARP</b> is the clear key (not an arpeggiator): it clears the cell.</li>" +
+           "<li><b>HOME</b> tracks (held: the help of the page) · <b>SEQ</b> the grid (OCT− / OCT+: 16, 32 or 64 steps) · <b>EDIT</b> the sound, again for the next page (ARP held + PRESETS picks the engine) · <b>LFO</b> the LFO, again MODULATION · <b>ENV</b> the envelope, again MIX · <b>GLO</b> the song, again the groove, then the options (with a metronome).</li>" +
+           "<li><b>SAVE</b>: new song, save, save as, load, rename, demo (<b>OCT+</b> OK, <b>OCT−</b> back); it blinks while there are unsaved changes. Hold SAVE for the tools: OPTIONS, UNDO, REDO, CLEAR, COPY, PASTE, RANDOM (SELECT picks one, it runs when you let go). SAVE held + OCT−: undo at once, + OCT+: redo. Undo covers the sounds too (knob turns, sends, factory sounds loaded): \"UNDONE: SOUND 3\", 10 steps.</li>" +
+           "<li>Hold <b>HOME</b>, <b>FX</b> or <b>SAVE</b>: a yellow bar labelled HELP, LIVE or TOOLS fills at the bottom of the screen, and the help, the LIVE effects or the tools appear when it is full.</li>" +
+           "<li><b>HOME</b> + <b>PLAY</b>: panic. The song stops, every voice and live effect is cut.</li>",
       g2: "Effects and magic",
-      g2l: "<li>Hold <b>FX</b> and play the white keys: 32 live effects (<b>OCT+</b> the second bank), on the master or a track. A tap keeps the page open.</li>" +
-           "<li><b>LFO</b> opens the magic: chop the break, write a beat, a melody or a bassline in the scale (<b>SCL</b>), Euclid, rolls…</li>" +
+      g2l: "<li><b>FX</b>: SENDS (a drive, an echo and a reverb for each track: ALGORITHM picks the track, KNOB 1–3 set the levels), again the LIVE effects, a third time back.</li>" +
+           "<li>Hold <b>FX</b> and play the white keys: 32 live effects (<b>OCT+</b> the second bank), on the master or a track. Let go and you are back.</li>" +
+           "<li><b>SCL</b> opens the scale, again the magic: chop the break, write a beat, a melody or a bassline in the scale, Euclid, rolls…</li>" +
            "<li><b>MIX</b> (ENV twice): the levels and the master effect. The black keys mute; ARP held + a black key: solo.</li>" +
            "<li>ARP held + SELECT: a row in or out; + ALGORITHM: in the whole pattern.</li>" +
-           "<li><b>EDIT</b> again and again: SOUND, SOUND 2, (FM: OPERATOR, OP ENVELOPE; SAMPLE: SAMPLE EDIT), EFFECT, LFO, MODULATION, TABLE.</li>" +
+           "<li><b>EDIT</b> again and again: SOUND, SOUND 2, (FM: OPERATOR, OP ENVELOPE; SAMPLE: SAMPLE EDIT), EFFECT, TABLE. <b>LFO</b>: the LFO, then MODULATION.</li>" +
+           "<li>On SOUND, <b>PRESETS</b> changes a sound you have not touched at once. A sound you edited (marked *) is kept: the next factory sound is only shown in gold, with ? and OCT+. Keep turning to browse; <b>OCT+</b> loads it, <b>OCT−</b> keeps yours.</li>" +
            "<li>Two effects a cell: <b>ARP</b> held + KNOB 3 and 4 set the second. HOP jumps to a row, END ends the pattern.</li>",
       g3: "On the keyboard",
       g3l: "<li>Notes: the rows <kbd>Z X C V…</kbd> and <kbd>Q W E R…</kbd> (key positions: QWERTY and AZERTY alike).</li>" +
@@ -601,33 +605,33 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       langs: "Langue",
       beta: "<b>Ceci est une bêta.</b> KAWA n'a pas encore été testé sur un vrai FM-1. Lis la partie sécurité du manuel avant de l'installer. Le firmware officiel se réinstalle toujours avec M-UPGRADE ; c'est l'étape risquée : ne débranche jamais le FM-1 pendant qu'elle tourne.",
       screen: "L'écran du FM-1",
-      power: "Le firmware tourne ici tel quel, compilé en WebAssembly. Mets le son et allume.",
+      power: "Le firmware tourne ici tel quel, compilé en WebAssembly. Mets le son, allume, puis appuie sur une touche.",
       powerBtn: "ALLUMER",
       err: "Le son n'a pas pu démarrer dans ce navigateur. Essaie un Chrome, Edge ou Firefox récent.",
-      pages: ["PISTES", "GRILLE", "SON", "ENVELOPPE", "MIX", "MAGIE", "GAMME", "CHAÎNE", "PROJETS", "OPTIONS", "EFFETS", "AIDE", "DÉMARRAGE", "GROOVE"],
+      pages: ["PISTES", "GRILLE", "SON", "ENVELOPPE", "MIX", "MAGIE", "GAMME", "CHAÎNE", "PROJETS", "OPTIONS", "EFFETS", "AIDE", "DÉMARRAGE", "GROOVE", "ENVOIS"],
       track: "PISTE {n}", master: "MASTER",
-      "k.master": "VOLUME", "k.select": "LIGNE", "k.presets": "MOTIF / SON", "k.algo": "PISTE", "k.unused": "inutilisé",
-      "b.oct": "OCTAVE", "b.fx": "EFFETS", "b.scl": "GAMME", "b.env": "ENV / MIX", "b.lfo": "MAGIE", "b.edit": "SON", "b.glo": "CHAÎNE / OPT.",
-      "b.home": "PISTES", "b.home.alt": "TENU : AIDE", "b.save": "PROJETS", "b.save.alt": "TENU : ANNULE", "b.arp": "EFFACE", "b.seq": "GRILLE", "b.play": "JOUE", "b.rec": "ENREG",
+      "k.master": "VOLUME", "k.select": "LIGNE / PAGE", "k.presets": "MOTIF / SON", "k.algo": "PISTE", "k.unused": "inutilisé",
+      "b.oct": "OCTAVE", "b.fx": "ENVOIS / LIVE", "b.scl": "GAMME / MAGIE", "b.env": "ENV / MIX", "b.lfo": "LFO / MOD", "b.edit": "SON", "b.glo": "CHAÎNE / OPT.",
+      "b.home": "PISTES", "b.home.alt": "TENU : AIDE", "b.save": "PROJETS", "b.save.alt": "TENU : OUTILS", "b.arp": "EFFACE", "b.seq": "GRILLE", "b.play": "JOUE", "b.rec": "ENREG",
       colours: ["rouge", "jaune", "vert", "bleu"],
       "tt.MASTER": "MASTER : le volume de cette page (molette, glisser, ou les flèches quand il a le focus).",
-      "tt.SELECT": "SELECT déplace la ligne du curseur ; sur la première page SON, il choisit le moteur ; REC tenu + SELECT règle de combien de lignes saute une note écrite ; ARP tenu + SELECT insère ou supprime une ligne.",
-      "tt.PRESETS": "PRESETS choisit le motif, ou le son, ou l'entrée de la chaîne sur leurs pages.",
-      "tt.ALGORITHM": "ALGORITHM choisit la piste ; ARP tenu + ALGORITHM insère ou supprime une ligne dans tout le motif.",
+      "tt.SELECT": "SELECT déplace la ligne du curseur sur PISTES ; sur EDIT, LFO, ENV / MIX, FX et GLO, il parcourt les pages de ce bouton ; sur la GRILLE, il tourne la page de 16 pas ; REC tenu + SELECT règle de combien de lignes saute une note écrite ; ARP tenu + SELECT insère ou supprime une ligne ; avec SAVE tenu, il choisit un outil.",
+      "tt.PRESETS": "PRESETS choisit le son d'usine sur la première page SON (sur un son modifié, marqué *, il montre seulement le suivant en doré : OCT+ le charge, OCT− garde le tien) et le curseur des autres pages EDIT : opérateur, ligne de table, tranche. Il choisit le motif sur PISTES, GRILLE, MAGIE, GAMME et FX, le motif de l'entrée de la chaîne sur CHAÎNE, le volume du clic sur OPTIONS. ARP tenu + PRESETS : le moteur suivant ou précédent.",
+      "tt.ALGORITHM": "ALGORITHM choisit la piste (MIX va jusqu'au master) ; sur CHAÎNE l'entrée de la chaîne, sur GROOVE le pas, sur OPTIONS le mode du métronome. ARP tenu + ALGORITHM insère ou supprime une ligne dans tout le motif.",
       "tt.K": "KNOB {n} ({c}) : ce qu'il fait sur cette page est écrit dessous et sur la ligne du bas de l'écran.",
-      "tt.0": "OCT− baisse l'octave du clavier ; sur PROJETS, il revient en arrière ; SAVE tenu + OCT− annule.",
-      "tt.1": "OCT+ monte l'octave du clavier ; sur PROJETS, c'est OK ; SAVE tenu + OCT+ refait ; sur EFFETS, il ouvre la deuxième banque.",
-      "tt.2": "FX tenu : joue les touches blanches pour 32 effets live (OCT+ la deuxième banque), sur le master ou une piste ; un appui court garde la page ouverte.",
-      "tt.3": "SCL ouvre la gamme : sa tonique, ses notes, et le verrou qui garde les touches dedans.",
-      "tt.4": "ENV ouvre l'enveloppe de la piste ; appuie encore pour MIX (niveaux et effet master ; touches noires : muet, ARP tenu + touche noire : solo).",
-      "tt.5": "LFO ouvre la magie : des outils sur les touches blanches qui découpent le break et écrivent un beat, une mélodie ou une basse dans la gamme.",
-      "tt.6": "EDIT ouvre le son de la piste (SELECT choisit le moteur) ; appuie encore pour la page suivante : SON 2, les opérateurs FM, EFFET, LFO, MODULATION.",
-      "tt.7": "GLO ouvre la chaîne (des motifs joués N fois) ; appuie encore pour les OPTIONS : thème, langue, CPU.",
-      "tt.8": "HOME montre les pistes ; tiens-le pour l'aide de la page où tu es.",
-      "tt.9": "SAVE ouvre le menu des projets (nouveau morceau, sauver, sauver sous, charger, renommer, démo ; OCT+ OK, OCT− retour) ; SAVE tenu + OCT− annule, + OCT+ refait.",
-      "tt.10": "ARP efface la case ; ARP tenu + SELECT insère ou supprime une ligne, + ALGORITHM dans tout le motif.",
-      "tt.11": "SEQ ouvre la grille : les 16 pas de la piste sur les 16 touches blanches.",
-      "tt.12": "PLAY lance ou arrête le morceau.",
+      "tt.0": "OCT− baisse l'octave du clavier ; sur la GRILLE, il ramène le motif à 32, puis 16 pas ; sur PROJETS, il revient en arrière ; sur SON, quand un son d'usine est montré en doré, il garde le tien ; SAVE tenu + OCT− annule aussitôt (motifs et sons).",
+      "tt.1": "OCT+ monte l'octave du clavier ; sur la GRILLE, il passe le motif à 32, puis 64 pas (ce motif lié au suivant) ; sur PROJETS, c'est OK ; sur LIVE, il ouvre la deuxième banque ; sur SON, quand un son d'usine est montré en doré, il le charge ; SAVE tenu + OCT+ refait aussitôt.",
+      "tt.2": "FX : un appui court ouvre ENVOIS (saturation, écho et reverb de chaque piste), un deuxième les effets LIVE, un troisième revient en arrière ; SELECT passe aussi de l'un à l'autre. Tenu depuis une autre page, une barre jaune marquée LIVE se remplit et LIVE s'affiche tant que tu le tiens : joue les touches blanches pour 32 effets live (OCT+ la deuxième banque), sur le master ou une piste. FX tenu et une touche tout de suite : cet effet joue sans attendre la barre.",
+      "tt.3": "SCL ouvre la gamme : sa tonique, ses notes, et le verrou qui garde les touches dedans ; appuie encore pour la MAGIE (des outils sur les touches blanches qui découpent le break et écrivent un beat, une mélodie ou une basse dans la gamme), une troisième fois pour PISTES.",
+      "tt.4": "ENV ouvre l'enveloppe de la piste ; appuie encore (ou tourne SELECT) pour MIX (niveaux et effet master ; touches noires : muet, ARP tenu + touche noire : solo).",
+      "tt.5": "LFO ouvre le LFO de la piste ; appuie encore (ou tourne SELECT) pour la MODULATION.",
+      "tt.6": "EDIT ouvre le son de la piste ; appuie encore (ou tourne SELECT) pour la page suivante : SON 2, les opérateurs FM (ou l'éditeur de sample), EFFET, TABLE. PRESETS choisit le son d'usine, ARP tenu + PRESETS le moteur.",
+      "tt.7": "GLO ouvre la chaîne (des motifs joués N fois) ; appuie encore pour le GROOVE, puis les OPTIONS (SELECT les parcourt aussi) : thème, langue, horloge MIDI, police, et le métronome avec son volume.",
+      "tt.8": "HOME montre les pistes ; tiens-le, une barre jaune marquée AIDE se remplit, pour l'aide de la page où tu es. HOME + PLAY : panique, le morceau s'arrête et tout son est coupé.",
+      "tt.9": "SAVE ouvre le menu des projets (nouveau morceau, sauver, sauver sous, charger, renommer, démo ; OCT+ OK, OCT− retour) ; il clignote tant qu'il y a des changements pas sauvés. Tiens-le, une barre jaune marquée OUTILS se remplit, pour les outils : OPTIONS, ANNULER, REFAIRE, EFFACER, COPIER, COLLER, HASARD. SELECT en choisit un, il s'exécute quand tu lâches ; KNOB 3 choisit la piste ou tout le motif. SAVE tenu + OCT− annule, + OCT+ refait, aussitôt : 10 pas, pour les motifs et les sons (tours de potard, envois, sons d'usine chargés).",
+      "tt.10": "ARP est la touche d'effacement / de décalage, pas un arpégiateur. Un appui court efface : la case sur PISTES, le pas tenu sur la GRILLE, le pas de TABLE, la voie LIVE. Tenu : + SELECT insère ou supprime une ligne (+ ALGORITHM dans tout le motif), + KNOB 3 / 4 règle le second effet de la case, + PRESETS sur SON choisit le moteur, + une touche noire sur MIX met en solo. Sur CHAÎNE, il bascule BOUCLE / CHAÎNE ; sur l'édition du sample, il égalise les tranches.",
+      "tt.11": "SEQ ouvre la grille : 16 pas de la piste sur les 16 touches blanches ; SELECT tourne la page, OCT− / OCT+ règlent le motif à 16, 32 ou 64 pas.",
+      "tt.12": "PLAY lance ou arrête le morceau. HOME + PLAY : panique, tout s'arrête et se tait.",
       "tt.13": "REC active ou coupe l'enregistrement : les touches écrivent au curseur (sur le temps pendant la lecture) ; REC tenu + SELECT règle de combien de lignes saute une note.",
       "s.h": "Tes samples",
       "s.how": "Dépose un son sur un emplacement (WAV, MP3, OGG, FLAC…) ou choisis un fichier. Il devient ce que garde le FM-1 : mono, 22 kHz, 8 bits, 1,66 s au plus, sans le silence du début. Puis, page SON d'une piste (<b>EDIT</b>) : moteur <b>SAMPLE</b>, <b>SOURCE</b> = <b>MON 1…4</b> (ou le preset MON SAMPLE 1…4 avec <b>PRESETS</b>). Tes sons restent dans ce navigateur.",
@@ -669,18 +673,22 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       "p.full": "Le stockage du navigateur est plein : exporte tes projets pour les garder.",
       "p.exported": "Exporté : {f}",
       g1: "Les bases",
-      g1l: "<li>Un tracker pour tous les styles. Le temps descend : chaque ligne est un pas (une double croche), chaque colonne une piste, chaque case une note, son volume et un effet.</li>" +
-           "<li><b>PLAY</b> lance la démo. Six pistes, chacune avec son moteur : PULSE, WAVE, NOISE, FM (une piste, 6 opérateurs), KIT (8 kits) ou SAMPLE (les breaks ou tes propres sons).</li>" +
+      g1l: "<li>Un tracker fait avant tout pour la chiptune et l'IDM (il sait faire d'autres styles aussi). Le temps descend : chaque ligne est un pas (une double croche), chaque colonne une piste, chaque case une note, son volume et un effet.</li>" +
+           "<li>Après <b>ALLUMER</b>, appuie sur une touche : l'écran de démarrage t'attend. <b>PLAY</b> lance le morceau. KAWA démarre sur un morceau vide (un cadre sur PISTES dit quoi faire jusqu'à la première note) : la démo est dans <b>SAVE</b> › DÉMO. Six pistes, chacune avec son moteur : PULSE, WAVE, NOISE, FM (une piste, 6 opérateurs), KIT (8 kits) ou SAMPLE (les breaks ou tes propres sons).</li>" +
            "<li><b>ALGORITHM</b> choisit la piste, <b>SELECT</b> la ligne, <b>PRESETS</b> le motif. <b>KNOB 1 à 4</b> (<span class=\"k1\">rouge</span>, <span class=\"k2\">jaune</span>, <span class=\"k3\">vert</span>, <span class=\"k4\">bleu</span> sur toutes les pages) changent la case : leurs étiquettes disent ce qu'ils font.</li>" +
-           "<li><b>REC</b> puis les touches : les notes s'écrivent au curseur (sur le temps pendant la lecture). REC tenu + SELECT : de combien de lignes saute une note. <b>ARP</b> efface la case.</li>" +
-           "<li><b>HOME</b> les pistes (tenu : l'aide de la page) · <b>SEQ</b> la grille · <b>EDIT</b> le son, encore pour la page suivante (SELECT choisit le moteur) · <b>ENV</b> l'enveloppe, encore MIX · <b>GLO</b> la chaîne, encore le groove, puis les options.</li>" +
-           "<li><b>SAVE</b> : nouveau morceau, sauver, sauver sous, charger, renommer, démo (<b>OCT+</b> OK, <b>OCT−</b> retour). SAVE tenu + OCT− : annuler, + OCT+ : refaire.</li>",
+           "<li><b>REC</b> puis les touches : les notes s'écrivent au curseur (sur le temps pendant la lecture). REC tenu + SELECT : de combien de lignes saute une note. <b>ARP</b> est la touche d'effacement (pas un arpégiateur) : elle efface la case.</li>" +
+           "<li><b>HOME</b> les pistes (tenu : l'aide de la page) · <b>SEQ</b> la grille (OCT− / OCT+ : 16, 32 ou 64 pas) · <b>EDIT</b> le son, encore pour la page suivante (ARP tenu + PRESETS choisit le moteur) · <b>LFO</b> le LFO, encore la MODULATION · <b>ENV</b> l'enveloppe, encore MIX · <b>GLO</b> la chaîne, encore le groove, puis les options (avec un métronome).</li>" +
+           "<li><b>SAVE</b> : nouveau morceau, sauver, sauver sous, charger, renommer, démo (<b>OCT+</b> OK, <b>OCT−</b> retour) ; il clignote tant qu'il y a des changements pas sauvés. SAVE tenu : les outils OPTIONS, ANNULER, REFAIRE, EFFACER, COPIER, COLLER, HASARD (SELECT en choisit un, il s'exécute quand tu lâches). SAVE tenu + OCT− : annuler aussitôt, + OCT+ : refaire. Annuler marche aussi sur les sons (tours de potard, envois, sons d'usine chargés) : « ANNULE: SON 3 », 10 pas.</li>" +
+           "<li>Tiens <b>HOME</b>, <b>FX</b> ou <b>SAVE</b> : une barre jaune marquée AIDE, LIVE ou OUTILS se remplit en bas de l'écran, et l'aide, les effets LIVE ou les outils apparaissent quand elle est pleine.</li>" +
+           "<li><b>HOME</b> + <b>PLAY</b> : panique. Le morceau s'arrête, chaque voix et chaque effet live est coupé.</li>",
       g2: "Effets et magie",
-      g2l: "<li>Garde <b>FX</b> enfoncé et joue les touches blanches : 32 effets live (<b>OCT+</b> la deuxième banque), sur le master ou une piste. Un appui court garde la page ouverte.</li>" +
-           "<li><b>LFO</b> ouvre la magie : découper le break, écrire un beat, une mélodie ou une basse dans la gamme (<b>SCL</b>), Euclide, roulements…</li>" +
+      g2l: "<li><b>FX</b> : ENVOIS (une saturation, un écho et une reverb par piste : ALGORITHM choisit la piste, KNOB 1–3 règlent les niveaux), encore les effets LIVE, une troisième fois retour.</li>" +
+           "<li>Garde <b>FX</b> enfoncé et joue les touches blanches : 32 effets live (<b>OCT+</b> la deuxième banque), sur le master ou une piste. Relâche et tu reviens.</li>" +
+           "<li><b>SCL</b> ouvre la gamme, encore la magie : découper le break, écrire un beat, une mélodie ou une basse dans la gamme, Euclide, roulements…</li>" +
            "<li><b>MIX</b> (ENV deux fois) : les niveaux et l'effet master. Les touches noires coupent ; ARP tenu + touche noire : solo.</li>" +
            "<li>ARP tenu + SELECT : une ligne en plus ou en moins ; + ALGORITHM : dans tout le motif.</li>" +
-           "<li><b>EDIT</b> encore et encore : SON, SON 2, (FM : OPÉRATEUR, ENV. OP ; SAMPLE : ÉDITER LE SAMPLE), EFFET, LFO, MODULATION, TABLE.</li>" +
+           "<li><b>EDIT</b> encore et encore : SON, SON 2, (FM : OPÉRATEUR, ENV. OP ; SAMPLE : ÉDITER LE SAMPLE), EFFET, TABLE. <b>LFO</b> : le LFO, puis la MODULATION.</li>" +
+           "<li>Sur SON, <b>PRESETS</b> change tout de suite un son pas touché. Un son modifié (marqué *) est gardé : le son d'usine suivant est seulement montré en doré, avec ? et OCT+. Continue de tourner pour parcourir ; <b>OCT+</b> le charge, <b>OCT−</b> garde le tien.</li>" +
            "<li>Deux effets par case : <b>ARP</b> tenu + KNOB 3 et 4 règlent le second. SAU saute à une ligne, FIN termine le motif.</li>",
       g3: "Au clavier",
       g3l: "<li>Notes : rangées <kbd>W X C V…</kbd> et <kbd>A Z E R…</kbd> (positions des touches, AZERTY ou QWERTY).</li>" +
@@ -700,33 +708,33 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       langs: "Idioma",
       beta: "<b>Esto es una beta.</b> KAWA aún no se ha probado en un FM-1 real. Lee la sección de seguridad del manual antes de instalarlo. El firmware oficial siempre se puede reinstalar con M-UPGRADE; es el paso delicado: nunca desconectes el FM-1 mientras se ejecuta.",
       screen: "La pantalla del FM-1",
-      power: "El firmware funciona aquí tal cual, compilado a WebAssembly. Sube el sonido y enciende.",
+      power: "El firmware funciona aquí tal cual, compilado a WebAssembly. Sube el sonido, enciende y luego pulsa una tecla.",
       powerBtn: "ENCENDER",
       err: "El sonido no pudo arrancar en este navegador. Prueba un Chrome, Edge o Firefox reciente.",
-      pages: ["PISTAS", "REJILLA", "SONIDO", "ENVOLVENTE", "MEZCLA", "MAGIA", "ESCALA", "CANCIÓN", "PROYECTOS", "OPCIONES", "EFECTOS", "AYUDA", "ARRANQUE", "GROOVE"],
+      pages: ["PISTAS", "REJILLA", "SONIDO", "ENVOLVENTE", "MEZCLA", "MAGIA", "ESCALA", "CANCIÓN", "PROYECTOS", "OPCIONES", "EFECTOS", "AYUDA", "ARRANQUE", "GROOVE", "ENVÍOS"],
       track: "PISTA {n}", master: "MASTER",
-      "k.master": "VOLUMEN", "k.select": "FILA", "k.presets": "PATRÓN / SONIDO", "k.algo": "PISTA", "k.unused": "sin uso",
-      "b.oct": "OCTAVA", "b.fx": "EFECTOS", "b.scl": "ESCALA", "b.env": "ENV / MEZCLA", "b.lfo": "MAGIA", "b.edit": "SONIDO", "b.glo": "CANCIÓN / OPC.",
-      "b.home": "PISTAS", "b.home.alt": "MANT.: AYUDA", "b.save": "PROYECTOS", "b.save.alt": "MANT.: DESHACER", "b.arp": "BORRAR", "b.seq": "REJILLA", "b.play": "TOCAR", "b.rec": "GRABAR",
+      "k.master": "VOLUMEN", "k.select": "FILA / PÁGINA", "k.presets": "PATRÓN / SONIDO", "k.algo": "PISTA", "k.unused": "sin uso",
+      "b.oct": "OCTAVA", "b.fx": "ENVÍOS / LIVE", "b.scl": "ESCALA / MAGIA", "b.env": "ENV / MEZCLA", "b.lfo": "LFO / MOD", "b.edit": "SONIDO", "b.glo": "CANCIÓN / OPC.",
+      "b.home": "PISTAS", "b.home.alt": "MANT.: AYUDA", "b.save": "PROYECTOS", "b.save.alt": "MANT.: HERRAM.", "b.arp": "BORRAR", "b.seq": "REJILLA", "b.play": "TOCAR", "b.rec": "GRABAR",
       colours: ["rojo", "amarillo", "verde", "azul"],
       "tt.MASTER": "MASTER: el volumen de esta página (rueda, arrastrar, o las flechas cuando tiene el foco).",
-      "tt.SELECT": "SELECT mueve la fila del cursor; en la primera página SONIDO elige el motor; REC mantenido + SELECT ajusta cuántas filas salta una nota escrita; ARP mantenido + SELECT inserta o borra una fila.",
-      "tt.PRESETS": "PRESETS elige el patrón, o el sonido o la entrada de la canción en sus páginas.",
-      "tt.ALGORITHM": "ALGORITHM elige la pista; ARP mantenido + ALGORITHM inserta o borra una fila en todo el patrón.",
+      "tt.SELECT": "SELECT mueve la fila del cursor en PISTAS; en EDIT, LFO, ENV / MEZCLA, FX y GLO recorre las páginas de ese botón; en la REJILLA pasa la página de 16 pasos; REC mantenido + SELECT ajusta cuántas filas salta una nota escrita; ARP mantenido + SELECT inserta o borra una fila; con SAVE mantenido elige una herramienta.",
+      "tt.PRESETS": "PRESETS elige el sonido de fábrica en la primera página SONIDO (en un sonido editado, marcado con *, solo muestra el siguiente en dorado: OCT+ lo carga, OCT− conserva el tuyo) y el cursor en las demás páginas EDIT: operador, fila de tabla, corte. Elige el patrón en PISTAS, REJILLA, MAGIA, ESCALA y FX, el patrón de la entrada de la canción en CANCIÓN, el volumen del clic en OPCIONES. ARP mantenido + PRESETS: el motor siguiente o anterior.",
+      "tt.ALGORITHM": "ALGORITHM elige la pista (MEZCLA llega hasta el master); en CANCIÓN la entrada de la canción, en GROOVE el paso, en OPCIONES el modo del metrónomo. ARP mantenido + ALGORITHM inserta o borra una fila en todo el patrón.",
       "tt.K": "KNOB {n} ({c}): lo que hace en esta página está escrito debajo y en la línea de abajo de la pantalla.",
-      "tt.0": "OCT− baja la octava del teclado; en PROYECTOS vuelve atrás; SAVE mantenido + OCT− deshace.",
-      "tt.1": "OCT+ sube la octava del teclado; en PROYECTOS es OK; SAVE mantenido + OCT+ rehace; en EFECTOS abre el segundo banco.",
-      "tt.2": "FX mantenido: toca las teclas blancas para 32 efectos en vivo (OCT+ el segundo banco), en el master o en una pista; un toque corto deja la página abierta.",
-      "tt.3": "SCL abre la escala: su tónica, sus notas y el bloqueo que mantiene las teclas dentro.",
-      "tt.4": "ENV abre la envolvente de la pista; púlsalo otra vez para MEZCLA (niveles y efecto master; teclas negras: silencio, ARP mantenido + tecla negra: solo).",
-      "tt.5": "LFO abre la magia: herramientas en las teclas blancas que trocean el break y escriben un ritmo, una melodía o un bajo en la escala.",
-      "tt.6": "EDIT abre el sonido de la pista (SELECT elige el motor); púlsalo otra vez para la página siguiente: SONIDO 2, los operadores FM, EFECTO, LFO, MODULACIÓN.",
-      "tt.7": "GLO abre la canción (patrones tocados N veces); púlsalo otra vez para OPCIONES: tema, idioma, CPU.",
-      "tt.8": "HOME muestra las pistas; mantenlo para la ayuda de la página en la que estás.",
-      "tt.9": "SAVE abre el menú de proyectos (canción nueva, guardar, guardar como, cargar, renombrar, demo; OCT+ OK, OCT− atrás); SAVE mantenido + OCT− deshace, + OCT+ rehace.",
-      "tt.10": "ARP borra la celda; ARP mantenido + SELECT inserta o borra una fila, + ALGORITHM en todo el patrón.",
-      "tt.11": "SEQ abre la rejilla: los 16 pasos de la pista en las 16 teclas blancas.",
-      "tt.12": "PLAY arranca o para la canción.",
+      "tt.0": "OCT− baja la octava del teclado; en la REJILLA baja el patrón a 32 y luego a 16 pasos; en PROYECTOS vuelve atrás; en SONIDO, cuando un sonido de fábrica se muestra en dorado, conserva el tuyo; SAVE mantenido + OCT− deshace al instante (patrones y sonidos).",
+      "tt.1": "OCT+ sube la octava del teclado; en la REJILLA sube el patrón a 32 y luego a 64 pasos (este patrón enlazado con el siguiente); en PROYECTOS es OK; en LIVE abre el segundo banco; en SONIDO, cuando un sonido de fábrica se muestra en dorado, lo carga; SAVE mantenido + OCT+ rehace al instante.",
+      "tt.2": "FX: un toque corto abre ENVÍOS (saturación, eco y reverb de cada pista), un segundo toque los efectos LIVE, un tercero vuelve atrás; SELECT también pasa de uno a otro. Mantenido desde otra página, se llena una barra amarilla con el nombre LIVE y LIVE se muestra mientras lo mantienes: toca las teclas blancas para 32 efectos en vivo (OCT+ el segundo banco), en el master o en una pista. FX mantenido y una tecla enseguida: ese efecto suena sin esperar a la barra.",
+      "tt.3": "SCL abre la escala: su tónica, sus notas y el bloqueo que mantiene las teclas dentro; púlsalo otra vez para la MAGIA (herramientas en las teclas blancas que trocean el break y escriben un ritmo, una melodía o un bajo en la escala), una tercera vez para PISTAS.",
+      "tt.4": "ENV abre la envolvente de la pista; púlsalo otra vez (o gira SELECT) para MEZCLA (niveles y efecto master; teclas negras: silencio, ARP mantenido + tecla negra: solo).",
+      "tt.5": "LFO abre el LFO de la pista; púlsalo otra vez (o gira SELECT) para la MODULACIÓN.",
+      "tt.6": "EDIT abre el sonido de la pista; púlsalo otra vez (o gira SELECT) para la página siguiente: SONIDO 2, los operadores FM (o el editor de sample), EFECTO, TABLA. PRESETS elige el sonido de fábrica, ARP mantenido + PRESETS el motor.",
+      "tt.7": "GLO abre la canción (patrones tocados N veces); púlsalo otra vez para el GROOVE y luego OPCIONES (SELECT también los recorre): tema, idioma, reloj MIDI, fuente y el metrónomo con su volumen.",
+      "tt.8": "HOME muestra las pistas; mantenlo, se llena una barra amarilla con el nombre AYUDA, para la ayuda de la página en la que estás. HOME + PLAY: pánico, la canción se para y todo sonido se corta.",
+      "tt.9": "SAVE abre el menú de proyectos (canción nueva, guardar, guardar como, cargar, renombrar, demo; OCT+ OK, OCT− atrás); parpadea mientras hay cambios sin guardar. Mantenlo, se llena una barra amarilla con el nombre HERRAM., para las herramientas: OPCIONES, DESHACER, REHACER, BORRAR, COPIAR, PEGAR, AZAR. SELECT elige una y se ejecuta al soltar; KNOB 3 elige la pista o todo el patrón. SAVE mantenido + OCT− deshace, + OCT+ rehace, al instante: 10 pasos, para los patrones y los sonidos (giros de potenciómetro, envíos, sonidos de fábrica cargados).",
+      "tt.10": "ARP es la tecla de borrar / desplazar, no un arpegiador. Un toque borra: la celda en PISTAS, el paso que mantienes en la REJILLA, el paso de TABLA, el carril LIVE. Mantenido: + SELECT inserta o borra una fila (+ ALGORITHM en todo el patrón), + KNOB 3 / 4 ajusta el segundo efecto de la celda, + PRESETS en SONIDO elige el motor, + una tecla negra en MEZCLA hace solo. En CANCIÓN cambia BUCLE / CANCIÓN; en EDITAR SAMPLE iguala los cortes.",
+      "tt.11": "SEQ abre la rejilla: 16 pasos de la pista en las 16 teclas blancas; SELECT pasa la página, OCT− / OCT+ fijan el patrón en 16, 32 o 64 pasos.",
+      "tt.12": "PLAY arranca o para la canción. HOME + PLAY: pánico, todo se para y se calla.",
       "tt.13": "REC activa o desactiva la grabación: las teclas escriben en el cursor (a tiempo mientras suena); REC mantenido + SELECT ajusta cuántas filas salta una nota.",
       "s.h": "Tus samples",
       "s.how": "Suelta un sonido en una ranura (WAV, MP3, OGG, FLAC…) o elige un archivo. Se convierte en lo que guarda el FM-1: mono, 22 kHz, 8 bits, 1,66 s como mucho, sin el silencio del principio. Luego, en la página SONIDO de una pista (<b>EDIT</b>): motor <b>SAMPLE</b>, <b>FUENTE</b> = <b>MI 1…4</b> (o el preset MI SAMPLE 1…4 con <b>PRESETS</b>). Tus sonidos se quedan en este navegador.",
@@ -768,18 +776,22 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       "p.full": "El almacenamiento del navegador está lleno: exporta tus proyectos para conservarlos.",
       "p.exported": "Exportado: {f}",
       g1: "Lo básico",
-      g1l: "<li>Un tracker para todos los estilos. El tiempo baja: cada fila es un paso (una semicorchea), cada columna una pista, cada celda una nota, su volumen y un efecto.</li>" +
-           "<li><b>PLAY</b> arranca la demo. Seis pistas, cada una con su motor: PULSE, WAVE, NOISE, FM (una pista, 6 operadores), KIT (8 kits) o SAMPLE (los breaks o tus propios sonidos).</li>" +
+      g1l: "<li>Un tracker hecho ante todo para el chiptune y el IDM (sabe hacer otros estilos también). El tiempo baja: cada fila es un paso (una semicorchea), cada columna una pista, cada celda una nota, su volumen y un efecto.</li>" +
+           "<li>Tras <b>ENCENDER</b>, pulsa una tecla: la pantalla de arranque te espera. <b>PLAY</b> toca la canción. KAWA arranca con una canción vacía (un recuadro en PISTAS dice qué hacer hasta la primera nota): la demo está en <b>SAVE</b> › DEMO. Seis pistas, cada una con su motor: PULSE, WAVE, NOISE, FM (una pista, 6 operadores), KIT (8 kits) o SAMPLE (los breaks o tus propios sonidos).</li>" +
            "<li><b>ALGORITHM</b> elige la pista, <b>SELECT</b> la fila, <b>PRESETS</b> el patrón. <b>KNOB 1 a 4</b> (<span class=\"k1\">rojo</span>, <span class=\"k2\">amarillo</span>, <span class=\"k3\">verde</span>, <span class=\"k4\">azul</span> en todas las páginas) cambian la celda: sus etiquetas dicen lo que hacen.</li>" +
-           "<li><b>REC</b> y luego las teclas: las notas se escriben en el cursor (a tiempo mientras suena). REC mantenido + SELECT: cuántas filas salta una nota. <b>ARP</b> borra la celda.</li>" +
-           "<li><b>HOME</b> las pistas (mantenido: la ayuda de la página) · <b>SEQ</b> la rejilla · <b>EDIT</b> el sonido, otra vez para la página siguiente (SELECT elige el motor) · <b>ENV</b> la envolvente, otra vez MEZCLA · <b>GLO</b> la canción, otra vez el groove, luego las opciones.</li>" +
-           "<li><b>SAVE</b>: canción nueva, guardar, guardar como, cargar, renombrar, demo (<b>OCT+</b> OK, <b>OCT−</b> atrás). SAVE mantenido + OCT−: deshacer, + OCT+: rehacer.</li>",
+           "<li><b>REC</b> y luego las teclas: las notas se escriben en el cursor (a tiempo mientras suena). REC mantenido + SELECT: cuántas filas salta una nota. <b>ARP</b> es la tecla de borrar (no un arpegiador): borra la celda.</li>" +
+           "<li><b>HOME</b> las pistas (mantenido: la ayuda de la página) · <b>SEQ</b> la rejilla (OCT− / OCT+: 16, 32 o 64 pasos) · <b>EDIT</b> el sonido, otra vez para la página siguiente (ARP mantenido + PRESETS elige el motor) · <b>LFO</b> el LFO, otra vez la MODULACIÓN · <b>ENV</b> la envolvente, otra vez MEZCLA · <b>GLO</b> la canción, otra vez el groove, luego las opciones (con un metrónomo).</li>" +
+           "<li><b>SAVE</b>: canción nueva, guardar, guardar como, cargar, renombrar, demo (<b>OCT+</b> OK, <b>OCT−</b> atrás); parpadea mientras hay cambios sin guardar. SAVE mantenido: las herramientas OPCIONES, DESHACER, REHACER, BORRAR, COPIAR, PEGAR, AZAR (SELECT elige una, se ejecuta al soltar). SAVE mantenido + OCT−: deshacer al instante, + OCT+: rehacer. Deshacer también cubre los sonidos (giros de potenciómetro, envíos, sonidos de fábrica cargados): «DESHECHO: SONIDO 3», 10 pasos.</li>" +
+           "<li>Mantén <b>HOME</b>, <b>FX</b> o <b>SAVE</b>: una barra amarilla con el nombre AYUDA, LIVE o HERRAM. se llena en la parte de abajo de la pantalla, y la ayuda, los efectos LIVE o las herramientas aparecen cuando está llena.</li>" +
+           "<li><b>HOME</b> + <b>PLAY</b>: pánico. La canción se para, cada voz y cada efecto en directo se corta.</li>",
       g2: "Efectos y magia",
-      g2l: "<li>Mantén <b>FX</b> y toca las teclas blancas: 32 efectos en vivo (<b>OCT+</b> el segundo banco), en el master o en una pista. Un toque corto deja la página abierta.</li>" +
-           "<li><b>LFO</b> abre la magia: trocear el break, escribir un ritmo, una melodía o un bajo en la escala (<b>SCL</b>), Euclides, redobles…</li>" +
+      g2l: "<li><b>FX</b>: ENVÍOS (una saturación, un eco y una reverb por pista: ALGORITHM elige la pista, KNOB 1–3 ajustan los niveles), otra vez los efectos LIVE, una tercera vez atrás.</li>" +
+           "<li>Mantén <b>FX</b> y toca las teclas blancas: 32 efectos en vivo (<b>OCT+</b> el segundo banco), en el master o en una pista. Suéltalo y vuelves.</li>" +
+           "<li><b>SCL</b> abre la escala, otra vez la magia: trocear el break, escribir un ritmo, una melodía o un bajo en la escala, Euclides, redobles…</li>" +
            "<li><b>MEZCLA</b> (ENV dos veces): los niveles y el efecto master. Las teclas negras silencian; ARP mantenido + tecla negra: solo.</li>" +
            "<li>ARP mantenido + SELECT: una fila más o menos; + ALGORITHM: en todo el patrón.</li>" +
-           "<li><b>EDIT</b> una y otra vez: SONIDO, SONIDO 2, (FM: OPERADOR, ENV. OP; SAMPLE: EDITAR SAMPLE), EFECTO, LFO, MODULACIÓN, TABLA.</li>" +
+           "<li><b>EDIT</b> una y otra vez: SONIDO, SONIDO 2, (FM: OPERADOR, ENV. OP; SAMPLE: EDITAR SAMPLE), EFECTO, TABLA. <b>LFO</b>: el LFO, luego la MODULACIÓN.</li>" +
+           "<li>En SONIDO, <b>PRESETS</b> cambia al instante un sonido sin tocar. Un sonido editado (marcado con *) se conserva: el sonido de fábrica siguiente solo se muestra en dorado, con ? y OCT+. Sigue girando para recorrerlos; <b>OCT+</b> lo carga, <b>OCT−</b> conserva el tuyo.</li>" +
            "<li>Dos efectos por celda: <b>ARP</b> mantenido + KNOB 3 y 4 ajustan el segundo. SAL salta a una fila, FIN termina el patrón.</li>",
       g3: "Con el teclado",
       g3l: "<li>Notas: las filas <kbd>Z X C V…</kbd> y <kbd>Q W E R…</kbd> (posiciones de las teclas, QWERTY o AZERTY).</li>" +

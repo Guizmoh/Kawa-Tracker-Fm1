@@ -234,7 +234,7 @@ static void prj_new(void)
     memset(&prj, 0, sizeof prj);
     prj.magic = PRJ_MAGIC;
     prj.version = PRJ_VERSION;
-    prj.bpm = 160;
+    prj.bpm = 100;
     prj.swing = 50;
     prj.root = 9;                               /* A */
     prj.scale = 2;                              /* MINOR */
@@ -307,6 +307,7 @@ static void prj_demo(void)
 {
     uint32_t p, r;
     prj_new();
+    prj.bpm = 160;                              /* (the demo is written for 160; a new song starts at 100) */
     memcpy(prj.name, "KAWA QUEST", 11);
     prj.root = 0;                               /* C major (the dungeon and the boss are A minor: the same notes) */
     prj.scale = 1;
@@ -407,9 +408,20 @@ static void prj_demo(void)
 }
 
 /* ---- undo and redo: the last edits of patterns (SAVE held: OCT- undo, OCT+ redo; SAVE held alone: undo) */
-#define NUNDO 6u
+#define NUNDO 10u
+/* a sound as it was (UNDO and REDO cover the sounds too, a factory sound loaded by mistake comes back): its engine, parameters
+ * and SAT send, its table, its sample edit, and the FM patch (one track at most plays FM) */
 typedef struct {
-    pat_t pat[NUNDO];
+    sound_t snd;
+    table_t tbl;
+    sedit_t sed;
+    uint8_t fmp[156];
+} snap_t;
+typedef union { pat_t p; snap_t s; } hslot_t;
+typedef char snap_fits_a_slot[sizeof(snap_t) <= sizeof(pat_t) ? 1 : -1];
+#define H_SND 0x80u                             /* idx: H_SND | track is a sound, else a pattern */
+typedef struct {
+    hslot_t slot[NUNDO];
     uint8_t idx[NUNDO], n, top;
     uint8_t sop[NUNDO], sat[NUNDO];             /* and the song with it (CLONE): 1 take entry sat out, 2 put it back */
 } hist_t;
@@ -428,14 +440,29 @@ static void touched(void)
 }
 static void hist_push(hist_t *h, uint32_t p)
 {
-    h->pat[h->top] = prj.pat[p];
+    h->slot[h->top].p = prj.pat[p];
     h->idx[h->top] = (uint8_t)p;
     h->sop[h->top] = 0;
     h->top = (uint8_t)((h->top + 1u) % NUNDO);
     if (h->n < NUNDO)
         h->n++;
 }
-static int hist_pop(hist_t *h, hist_t *other)   /* put the last state back, keep the present in other */
+static void hist_push_snd(hist_t *h, uint32_t t)
+{
+    snap_t *s = &h->slot[h->top].s;
+    s->snd = prj.snd[t];
+    s->tbl = prj.tbl[t];
+    s->sed = prj.sed[t];
+    memcpy(s->fmp, prj.fmp, sizeof s->fmp);
+    h->idx[h->top] = (uint8_t)(H_SND | t);
+    h->sop[h->top] = 0;
+    h->top = (uint8_t)((h->top + 1u) % NUNDO);
+    if (h->n < NUNDO)
+        h->n++;
+}
+/* put the last state back, keep the present in other: the pattern's number, 0x100 | track for a sound, -1 nothing,
+ * -2 an FM sound that cannot come back (another track plays FM now) */
+static int hist_pop(hist_t *h, hist_t *other)
 {
     uint32_t p, op, at, o;
     if (!h->n)
@@ -443,11 +470,32 @@ static int hist_pop(hist_t *h, hist_t *other)   /* put the last state back, keep
     h->top = (uint8_t)((h->top + NUNDO - 1u) % NUNDO);
     h->n--;
     p = h->idx[h->top];
+    if (p & H_SND) {
+        uint32_t t = p & 7u;
+        const snap_t *s = &h->slot[h->top].s;
+        if (t >= NTRK || (s->snd.engine == E_FM && !fm_free(t))) {
+            h->top = (uint8_t)((h->top + 1u) % NUNDO);   /* (it stays where it was) */
+            h->n++;
+            return -2;
+        }
+        hist_push_snd(other, t);
+        if (s->snd.engine != prj.snd[t].engine)
+            ev_push(EV_KILL, t, 0, 0, 0, 0);    /* another engine: the old one's voices would never end */
+        prj.snd[t] = s->snd;
+        prj.tbl[t] = s->tbl;
+        prj.sed[t] = s->sed;
+        if (s->snd.engine == E_FM)
+            memcpy(prj.fmp, s->fmp, sizeof prj.fmp);
+        sound_build(t);
+        undo_pat_last = 0xFFu;
+        touched();
+        return (int)(0x100u | t);
+    }
     op = h->sop[h->top];
     at = h->sat[h->top];
     hist_push(other, p);
     o = (other->top + NUNDO - 1u) % NUNDO;
-    prj.pat[p] = h->pat[h->top];
+    prj.pat[p] = h->slot[h->top].p;
     if (op == 1u && at < prj.song_len && prj.song[at].pat == p && prj.song_len > 1u) {
         song_delete(at);                        /* CLONE undone: its song entry goes too */
         other->sop[o] = 2;
@@ -474,6 +522,19 @@ static void undo_push_merge(uint32_t p, int merge)   /* before an edit of patter
     touched();
 }
 static void undo_push(uint32_t p) { undo_push_merge(p, 0); }   /* a step of its own */
+static void undo_push_snd(uint32_t t, int merge)   /* before an edit of track t's sound: knob turns within 1.5 s are one step */
+{
+    redo_h.n = 0;
+    if (merge && undo_pat_last == (H_SND | t) && fm1_ms - undo_ms_last < 1500u) {
+        undo_ms_last = fm1_ms;
+        touched();
+        return;
+    }
+    hist_push_snd(&undo_h, t);
+    undo_pat_last = merge ? (H_SND | t) : 0xFFu;
+    undo_ms_last = fm1_ms;
+    touched();
+}
 static int undo_pop(void) { return hist_pop(&undo_h, &redo_h); }   /* the pattern put back, or -1 */
 static int redo_pop(void) { return hist_pop(&redo_h, &undo_h); }
 static void hist_clear(void) { undo_h.n = redo_h.n = 0; }
@@ -777,12 +838,17 @@ static void lane_apply(uint32_t tool, pat_t *p, uint32_t t, uint32_t inten, uint
 static const char *mg_clone(uint32_t pi, uint32_t song_at)
 {
     uint32_t k, q = NPAT;
-    for (k = 1; k < NPAT; k++)
-        if (pat_empty(&prj.pat[(pi + k) % NPAT])) { q = (pi + k) % NPAT; break; }
+    if (pat_in_pair(pi))
+        return TR("MOTIF LIE", "LINKED", "ENLAZADO");   /* (a 64-step pair: its two halves would not both come) */
+    for (k = 1; k < NPAT; k++) {
+        uint32_t c = (pi + k) % NPAT;
+        if (pat_empty(&prj.pat[c]) && !pat_in_pair(c)) { q = c; break; }   /* (an empty half of a pair is not free) */
+    }
     if (q >= NPAT)
         return TR("PLUS DE PLACE", "NO ROOM", "SIN ESPACIO");
     undo_push(q);
     prj.pat[q] = prj.pat[pi];
+    prj.pat[q].pad[0] = 0;                      /* (a copy goes on into nothing) */
     if (song_at >= prj.song_len || prj.song[song_at].pat != pi) {
         int f = song_find(pi);
         song_at = f < 0 ? prj.song_len : (uint32_t)f;
@@ -823,7 +889,7 @@ static const char *magic_run(uint32_t tool, uint32_t pi, uint32_t t, uint32_t sc
         return "MAX 32";
     undo_push(pi);                              /* each tool its own undo step */
     if (tool == MG_PASTE) {
-        if (clip_kind == 2) *p = clip_pat;
+        if (clip_kind == 2) { uint8_t lk = p->pad[0]; *p = clip_pat; p->pad[0] = lk; }   /* (its own link stays) */
         else
             for (k = 0; k < NROW; k++) p->c[k][t] = clip_lane[k];
         return TR("COLLE", "PASTED", "PEGADO");
@@ -1022,6 +1088,7 @@ static void prj_sanitize(void)                  /* a loaded project: nothing out
     for (t = 0; t < NTRK; t++) {
         sound_t *s = &prj.snd[t];
         if (s->engine >= E_N) s->engine = E_PULSE;
+        if (s->sat > 15u) s->sat = 0;           /* (0.5: the SAT send, in what 0.4 kept as padding) */
         for (i = 0; i < NPARAM; i++) {
             const pdesc_t *d = &PDESC[s->engine][i];
             if (d->name[0]) s->p[i] = (int8_t)clampi(s->p[i], d->lo, d->hi);
@@ -1031,6 +1098,9 @@ static void prj_sanitize(void)                  /* a loaded project: nothing out
     for (k = 0; k < NPAT; k++) {
         uint32_t r;
         if (!prj.pat[k].len || prj.pat[k].len > NROW) prj.pat[k].len = 16;
+        prj.pat[k].pad[0] &= 1u;                /* (0.5: a 64-step pattern goes on into the next one; 0.4's pad is 0) */
+        if (prj.pat[k].pad[0] && (k + 1u >= NPAT || (k && (prj.pat[k - 1u].pad[0] & 1u))))
+            prj.pat[k].pad[0] = 0;              /* (a pair is two patterns: a second half goes on into nothing, the last one neither) */
         for (r = 0; r < NROW; r++)
             for (t = 0; t < NTRK; t++) {
                 cell_t *c = &prj.pat[k].c[r][t];

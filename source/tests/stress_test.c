@@ -311,6 +311,61 @@ int main(void)
     set.clock = 0;
     quiet_all();
     printf("13. the MIDI clock in at 300 and 40 BPM, a burst, a gap, START again: ok\n");
+    /* 14. 0.5: the SAT send of every track (0, 7, 15) on every factory sound and with a track effect, the metronome at its loudest
+     * over a loud song at the tempo's ends, a 64-step pattern in the loop and in the song */
+    n = 0;
+    for (k = 0; k < NPRESET; k++)
+        for (a = 7; a <= 15u; a += 8u) {
+            prj_new();
+            t = PRESETS[k].engine == E_FM ? 1u : 0u;
+            if (PRESETS[k].engine == E_FM) sound_preset(1, k);
+            else {
+                sound_preset(0, k);
+                if (prj.snd[1].engine == E_FM) sound_preset(1, preset_first(E_PULSE));
+            }
+            prj.snd[t].p[P_VOL] = 15;
+            prj.snd[t].sat = (uint8_t)a;
+            prj.snd[t].p[P_FXT] = (int8_t)(a == 7u ? FXT_OFF : FXT_DIST);
+            prj.snd[t].p[P_FXA] = 15;
+            prj.snd[t].p[P_FXM] = 15;
+            for (d = 0; d < 3u; d++) {
+                ev_push(EV_ON, t, IS_TONAL(t) ? 36u + d * 19u : 1u + d * 5u, 15, 0, 0);
+                render(12);
+            }
+            ev_push(EV_OFF, t, 74, 0, 0, 0);
+            render(20);
+            n++;
+            quiet_all();
+        }
+    for (a = 0; a < 2u; a++) {
+        prj_demo();
+        loud_faders();
+        for (t = 0; t < NTRK; t++) prj.snd[t].sat = 15;
+        prj.bpm = (uint16_t)(a ? 300u : 40u);
+        prj.mode = 1;
+        met_mode = 1;
+        met_vol = 2;
+        sq_req = 1;
+        render(600);
+        met_mode = 0;
+        quiet_all();
+    }
+    prj_demo();                                 /* a 64-step pattern: P1 + P2, the demo's notes on both, in the loop and the song */
+    prj.pat[0].len = 32;
+    prj.pat[0].pad[0] = 1;
+    prj.pat[1] = prj.pat[2];
+    prj.pat[1].len = 32;
+    prj.pat[1].pad[0] = 0;
+    for (a = 0; a < 2u; a++) {
+        prj.mode = (uint8_t)a;
+        prj.bpm = 300;
+        sq_start_pat = 0;
+        sq_start_pos = 0;
+        sq_req = 1;
+        render(900);
+        quiet_all();
+    }
+    printf("14. the SAT send (%u sounds), the metronome at both ends of the tempo, a 64-step pattern: ok\n", n);
     /* 8. everything ends: no voice left on once all is stopped */
     render(400);
     for (t = 0; t < NTRK; t++)
