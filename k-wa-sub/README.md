@@ -24,8 +24,9 @@ séquenceur, sans pistes, sans samples ni batteries : tout le processeur va au s
 | **FX** | SATURATION (soft, tube, hard, fold) · BITCRUSH · CHORUS (au-dessus de ~150 Hz : le sub reste mono) · DUB DELAY ping-pong calé sur le tempo, plus sombre à chaque répétition · REVERB · MASTER (glue, sub boost, sortie) |
 | **Jeu** | MONO, LEGATO (glide entre touches tenues), POLY 4 voix ; glide ; pitch bend |
 
-23 presets d'usine (DEEP PRESSURE, REESE CLASSIC, WOBBLE 01, YOI TALKER, NEURO GROWL, 808 DROP, DUB STAB, TECHNO
-RUMBLE, ACID LINE…) et 32 emplacements utilisateur.
+42 presets d'usine (+ INIT), chacun avec son genre : DNB, DUB, DUBSTEP, TECHNO, JUNGLE, UK GARAGE, TRAP, HOUSE, NEUROFUNK,
+DUB TECHNO, BREAKS, MINIMAL ; et 32 emplacements utilisateur (banque B). La liste des presets affiche, en petit à
+droite, le genre et les moteurs de chaque patch.
 
 ## Le wobble en live
 
@@ -52,7 +53,15 @@ RUMBLE, ACID LINE…) et 32 emplacements utilisateur.
 | `ARP` | 07 PRESETS | banque A (usine) · banque B (utilisateur) |
 | `GLO` | 08 SYSTEM | canal MIDI, mode de voix, glide, bend, vélocité, tempo, horloge, octave, style |
 
-Les points en haut à droite de l'écran montrent les vues de la page (la vue affichée est allumée). `SELECT` choisit la ligne, `ALGORITHM` change sa valeur, `K1`–`K4` font ce qu'indique le bas de l'écran (dans
+Les points en haut à droite de l'écran montrent les vues de la page (la vue affichée est allumée). **Banques et presets.** L'encodeur `PRESETS` ne marche que sur `HOME` et `EDIT` (pour ne rien changer par erreur
+ailleurs) ; il parcourt la banque A puis les patches enregistrés de la banque B, en boucle. Si le son a été modifié
+et pas enregistré, il demande d'abord : `SEL` charge, un autre bouton garde le son (sans réponse en 6 s : gardé).
+La page `ARP` › PRESETS montre la banque A, `ARP` encore la banque B (`K1` défile, `K3` charge).
+
+**Thèmes.** `SYSTEM › THEME` : NEON (le premier) ou PURE (dans l'esprit de Pure SUB : anthracite, onglet vert-jaune,
+valeurs et courbes violettes).
+
+`SELECT` choisit la ligne, `ALGORITHM` change sa valeur, `K1`–`K4` font ce qu'indique le bas de l'écran (dans
 l'émulateur, leur fonction s'affiche sous chaque potard), `PRESETS` charge le patch suivant depuis n'importe quelle
 page. `SAVE` ouvre l'enregistrement (emplacement, nom lettre par lettre, style) ; `SAVE` à nouveau écrit.
 **`SAVE` maintenu = UNDO** : il annule la dernière modification (les tours d'un même bouton dans la même seconde
@@ -62,13 +71,13 @@ reste appuyé, jusqu'à 16 en arrière.
 
 ## Installer sur le FM-1
 
-Le paquet est [`install/k-wa-sub-0.2.fwsc`](install/k-wa-sub-0.2.fwsc) (identité `FM-1_972` ; les anciens dans `install/older/`). Il s'installe exactement
+Le paquet est [`install/k-wa-sub-0.3.fwsc`](install/k-wa-sub-0.3.fwsc) (identité `FM-1_973` ; les anciens dans `install/older/`). Il s'installe exactement
 comme KAWA, avec le même chargeur de mise à jour, et fonctionne depuis le firmware d'origine comme depuis KAWA :
 
 - **Dans le navigateur** (Chrome ou Edge, Web MIDI) : la page d'installation de KAWA ([`../index.html`](../index.html)),
-  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.2.fwsc`.
+  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.3.fwsc`.
 - **Avec Python 3** : `INSTALL-Linux.sh`, `INSTALL-Mac.command` ou `INSTALL-Windows.bat` dans ce dossier (ou
-  `python3 install/fm1_install.py install/k-wa-sub-0.2.fwsc`).
+  `python3 install/fm1_install.py install/k-wa-sub-0.3.fwsc`).
 
 Un câble USB **de données**, aucun autre logiciel MIDI ouvert, rien à débrancher avant la fin. Pour revenir à KAWA :
 installer `kawa-0.5.fwsc` de la même façon. Pour le firmware officiel : M-UPGRADE, comme décrit pour KAWA. En cas de
@@ -113,7 +122,7 @@ cd source
 python3 tools/gen_ksub.py        # tables (hauteurs, filtre, enveloppes, tables d'onde) et polices
 web/make_emulator.sh             # -> ../emulator/index.html (clang avec la cible wasm32 et wasm-ld)
 tools/get_toolchain.sh           # la chaîne JieLi (une fois), + les 3 fichiers du SDK AC79 (voir ../../source/BUILDING.md)
-./build.sh --release 0.2         # -> build/k-wa-sub-0.2.fwsc, avec toutes les vérifications de KAWA
+./build.sh --release 0.2         # -> build/k-wa-sub-0.3.fwsc, avec toutes les vérifications de KAWA
 tests/run_loader_tests.sh        # la mise à jour sur l'ordinateur (de KAWA vers K-WA SUB, coupure, paquet abîmé...)
 tests/run_stress.sh              # chaque preset, chaque paramètre aux extrêmes, sous UBSan : aucun entier ne déborde
 node tests/shots.mjs && python3 tests/png.py   # les écrans de tests/tour.txt -> build/shots/sheet.png, et un WAV

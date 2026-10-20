@@ -10,7 +10,7 @@
 enum { PG_PLAY, PG_BASS, PG_ENV, PG_FILT, PG_LFO, PG_FX, PG_PRE, PG_SYS, NPAGE };
 static const uint8_t PAGE_BTN[NPAGE] = {BTN_HOME, BTN_EDIT, BTN_ENV, BTN_SEQ, BTN_LFO, BTN_FX, BTN_ARP, BTN_GLO};
 enum { LY_PLAY, LY_LIST, LY_BOX, LY_FILT, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
-enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, I_NONE = 255 };
+enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, I_NONE = 255 };
 
 typedef struct {
     uint8_t lay;
@@ -45,8 +45,8 @@ static const view_t VIEWS[] = {
     {LY_PRESET, "PRESET BANK A", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_PRESET, "PRESET BANK B", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_SAVE, "SAVE PATCH", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
-    {LY_SYS, "GLOBAL SETUP", 12, {G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_OCT, P_STYLE, G_CORES, G_CPU, G_FW},
-     {V_MODE, V_GLIDE, G_BPM, G_MIDICH}, "SYSTEM"},
+    {LY_SYS, "GLOBAL SETUP", 12, {G_THEME, G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_OCT, P_STYLE, G_CORES, G_CPU},
+     {G_THEME, V_MODE, G_BPM, G_MIDICH}, "SYSTEM"},
 };
 static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 11, 14, 20, 23, 24};   /* each page's first view */
 static const char *const FX_TITLE[6] = {"SATURATION", "BITCRUSH", "CHORUS", "DUB DELAY", "REVERB", "MASTER"};
@@ -67,7 +67,8 @@ static struct {
     uint8_t ver, midich, clock, oct;            /* midich 0: omni; clock 0 internal, 1 MIDI */
     uint16_t bpm10;
     uint8_t bank, idx, cores;                   /* cores 1: both (the voices on core 1) */
-} set = {2, 0, 0, 0xFF, 1400, 0, 0, 1};
+    uint8_t theme;                              /* 0 NEON, 1 PURE */
+} set = {3, 0, 0, 0xFF, 1400, 0, 0, 1, 0};
 static char pname[14];
 static uint8_t page, vcur[NPAGE], cursor[24], pre_cur[2], save_slot, save_pos, hold;
 static uint8_t key_note[27], latched[128], phys[128];
@@ -132,6 +133,20 @@ static uint8_t up_sum(const upatch_t *u)
 }
 static int up_valid(uint32_t k) { return k < NUSER && ustore[k].magic == UP_MAGIC && ustore[k].sum == up_sum(&ustore[k]); }
 
+/* the engines a patch plays: "SUPER + ANALOG", "FM x FOLD" (ring), "VOCAL < FM" (B cross-modulates A) */
+static char *eng_str(char *p, const int8_t *pp)
+{
+    int a = pp[A_LVL] || pp[X_MODE] == 1, b = pp[B_LVL] || pp[X_MODE];
+    if (a) p = str_cat(p, L_ENG[pp[A_ENG] & 7]);
+    if (a && b) p = str_cat(p, pp[X_MODE] == 1 ? " x " : pp[X_MODE] == 2 ? " < " : " + ");
+    if (b) p = str_cat(p, L_ENG[pp[B_ENG] & 7]);
+    if (!a && !b) p = str_cat(p, "SUB");
+    return p;
+}
+static uint8_t pdirty;                          /* the sound changed since it was loaded or saved */
+static uint8_t pend_on, pend_bank, pend_k;      /* a load waiting for SEL (the sound changed) */
+static uint32_t pend_ms;
+
 /* ---- undo: the patch before each change (turns of the same knob within 1.5 s are one change), 16 deep */
 #define NUNDO 16u
 static int8_t undo_p[NUNDO][NP_MAX];
@@ -148,6 +163,7 @@ static void undo_push(void)
 }
 static void undo_mark(uint32_t id)              /* a parameter is about to change */
 {
+    pdirty = 1;
     if (id != undo_id || fm1_ms - undo_ms > 1500u) undo_push();
     undo_id = id;
     undo_ms = fm1_ms;
@@ -188,6 +204,8 @@ static void load_preset(uint32_t bank, uint32_t k)
     set_dirty = 1;
     set_ms = fm1_ms;
     prev_dirty = 1;
+    pdirty = 0;
+    pend_on = 0;
 }
 static void save_user(uint32_t k)
 {
@@ -198,6 +216,7 @@ static void save_user(uint32_t k)
     memcpy(u->p, patch, NP_MAX);
     u->sum = up_sum(u);
     if (store_save()) { toast("SAVE FAILED"); return; }
+    pdirty = 0;
     set.bank = 1;
     set.idx = (uint8_t)k;
     set_dirty = 1;
@@ -212,7 +231,7 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
     if (item_patch(id)) { *lo = PD[id].lo; *hi = PD[id].hi; return; }
     *lo = 0;
-    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES ? 1 : id == G_OCT ? 6 : 0;
+    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_THEME ? 1 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
 }
 static int32_t item_get(uint32_t id)
@@ -225,6 +244,7 @@ static int32_t item_get(uint32_t id)
     case G_CLOCK: return set.clock;
     case G_OCT: return OCT + 3;
     case G_CORES: return set.cores;
+    case G_THEME: return set.theme;
     default: return 0;
     }
 }
@@ -246,6 +266,7 @@ static void item_set(uint32_t id, int32_t v)
     case G_CLOCK: set.clock = (uint8_t)v; break;
     case G_OCT: set.oct = (uint8_t)(int8_t)(v - 3); break;
     case G_CORES: set.cores = (uint8_t)v; toast("RESTART TO APPLY"); break;
+    case G_THEME: set.theme = (uint8_t)v; theme_set(set.theme); g_force = 1; break;
     default: return;
     }
     set_dirty = 1;
@@ -273,6 +294,7 @@ static const char *item_name(uint32_t id)
     case G_OCT: return "KEYS OCTAVE";
     case G_CORES: return "AUDIO CORES";
     case G_CPU: return "CPU LOAD";
+    case G_THEME: return "THEME";
     case G_FW: return "FIRMWARE";
     default: return "";
     }
@@ -284,7 +306,7 @@ static const char *item_sname(uint32_t id)
     if (k) return ENG_P[e][k - 1];
     if (id == I_L1RATE || id == I_L2RATE) return "RATE";
     if (item_patch(id)) return PD[id].sname;
-    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : "";
+    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : "";
 }
 static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
 {
@@ -354,6 +376,7 @@ static void item_text(uint32_t id, char *b)
         case G_CLOCK: str_cat(b, v ? "MIDI" : "INTERNAL"); break;
         case G_OCT: fmt_s(b, v - 3); break;
         case G_CORES: str_cat(b, !v ? "SINGLE" : dual_on ? "DUAL \xB7 ON" : KS_DUAL ? "DUAL \xB7 OFF" : "DUAL (FM-1)"); break;
+        case G_THEME: str_cat(b, v ? "PURE" : "NEON"); break;
         case G_CPU:                             /* each core's share of a block, and the governor's step */
             b = str_cat(b, "C0 "); b = fmt_u(b, ks_load[0], 0); b = str_cat(b, "%");
             if (dual_on) { b = str_cat(b, " C1 "); b = fmt_u(b, ks_load[1], 0); b = str_cat(b, "%"); }
@@ -442,7 +465,13 @@ static void draw_head(const char *cat)
     char n[8], *p = n;
     g_rect(0, g_y0, 240, (int32_t)BAND_H, K_BG);
     if (!g_vis(0, 72)) return;
-    g_text(&F_M, 8, 5, "K-WA SUB", K_LIME);
+    if (theme == 1u) {                          /* PURE: the section on a lime tab with a cut corner */
+        int32_t w = g_text_w(&F_S, cat) + 26, y;
+        for (y = 0; y < 20; y++) if (g_vis(y, 1)) g_rect(0, y, w + (19 - y) / 2 + 6, 1, K_LIME);
+        g_text(&F_S, 9, 5, cat, K_INK);
+    } else {
+        g_text(&F_M, 8, 5, "K-WA SUB", K_LIME);
+    }
     p = fmt_u(p, (uint32_t)page + 1u, 2);
     if (page == PG_PLAY) str_cat(p, "/08");
     g_text_r(&F_XS, 232, 7, n, K_GREY);
@@ -451,6 +480,7 @@ static void draw_head(const char *cat)
         int32_t x = 232 - g_text_w(&F_XS, n) - 6 - (int32_t)nv * 8;
         for (i = 0; nv > 1u && i < nv; i++) g_rect(x + (int32_t)i * 8, 8, 5, 5, i == vcur[page] ? K_LIME : K_LINE);
     }
+    if (theme == 1u) { g_text(&F_XS, 8, 25, "K-WA SUB", K_GREY); return; }
     g_rect(6, 19, 228, 1, K_LINE);
     g_text(&F_S, 8, 24, cat, K_LIME);
 }
@@ -559,8 +589,10 @@ static void draw_play(const view_t *v)
         g_text(&F_L, 8, y, pname, K_WHITE);
         ysub = 61;
     }
-    p = str_cat(p, L_STYLE[patch[P_STYLE] & 7]);
-    p = str_cat(p, set.bank ? " / BANK B " : " / BANK A ");
+    p = str_cat(p, L_STYLE[clampi(patch[P_STYLE], 0, NSTYLE - 1)]);
+    p = str_cat(p, " \xB7 ");
+    p = eng_str(p, patch);
+    p = str_cat(p, set.bank ? " \xB7 B" : " \xB7 A");
     fmt_u(p, (uint32_t)set.idx + 1u, 2);
     g_text(&F_XS, 8, ysub, sub, K_GREY);
     p = sub;
@@ -574,9 +606,9 @@ static void draw_play(const view_t *v)
         uint32_t w = scope_w - 512u, k, at = 0;
         for (k = 1; k < 288u; k++) if (scope[(w + k - 1u) & 511u] < 0 && scope[(w + k) & 511u] >= 0) { at = k; break; }
         for (k = 0; k < 224u; k++) live[k] = scope[(w + at + k) & 511u];
-        draw_wave(sy, sh, live, 224, K_LIME);
+        draw_wave(sy, sh, live, 224, K_WAVE);
     } else
-        draw_wave(sy, sh, prev_wave, 224, K_LIME);
+        draw_wave(sy, sh, prev_wave, 224, K_WAVE);
     by = sy + sh + 6;
     bh = (220 - by - 6) / 2;
     for (i = 0; i < 4; i++)
@@ -619,7 +651,7 @@ static void draw_presets(uint32_t bank)
     char sub[32], *p;
     p = str_cat(sub, bank ? "USER \xB7 " : "FACTORY \xB7 ");
     p = fmt_u(p, n, 0);
-    str_cat(p, bank ? " SLOTS" : " PATCHES");
+    str_cat(p, bank ? " SLOTS \xB7 K3 LOADS" : " PATCHES \xB7 K3 LOADS");
     draw_title("SELECT PATCH", sub, K_GREY);
     top = c >= 2u ? c - 2u : 0u;
     if (top + 5u > n) top = n - 5u;
@@ -632,6 +664,14 @@ static void draw_presets(uint32_t bank)
         *p++ = ' '; *p++ = ' ';
         str_cat(p, nm);
         draw_row(y, b, "", k == c, K_CYAN);
+        if ((!bank || up_valid(k)) && g_vis(y, 24)) {   /* its music and its engines, small, on the right */
+            int8_t pp[NP_MAX];
+            char nb[14], e[32];
+            if (bank) memcpy(pp, ustore[k].p, NP_MAX); else preset_factory(k, pp, nb);
+            eng_str(e, pp);
+            g_text_r(&F_XS, 214, y + 4, L_STYLE[clampi(pp[P_STYLE], 0, NSTYLE - 1)], k == c ? K_LIME : K_GREY);
+            g_text_r(&F_XS, 214, y + 13, e, K_CYAN);
+        }
         if (set.bank == bank && set.idx == k && g_vis(y, 24)) {   /* the one playing */
             int32_t j;
             for (j = 0; j < 4; j++) g_rect(220 + j, y + 8 + j, 1, 8 - 2 * j, k == c ? K_LIME : K_CYAN);
@@ -657,7 +697,7 @@ static void draw_save(void)
         draw_row(74, "SLOT", b, 1, K_CYAN);
     }
     draw_row(103, "NOW IN SLOT", sub, 0, K_GREY);
-    draw_row(132, "STYLE", L_STYLE[patch[P_STYLE] & 7], 0, K_CYAN);
+    draw_row(132, "STYLE", L_STYLE[clampi(patch[P_STYLE], 0, NSTYLE - 1)], 0, K_CYAN);
     if (g_vis(170, 30)) {
         g_text(&F_XS, 8, 172, "K2 LETTER POSITION \xB7 K3 LETTER", K_GREY);
         g_text(&F_XS, 8, 184, "K4 STYLE \xB7 PRESS SAVE AGAIN TO WRITE", K_LIME);
@@ -731,6 +771,25 @@ static void draw_all(void)
         draw_foot(v, "SELECT ROW \xB7 ALGO VALUE");
         break;
     }
+    if (pend_on && g_vis(126, 90)) {            /* the question */
+        char q[32], e[32], *p;
+        int8_t pp[NP_MAX];
+        char nb[14];
+        g_box(14, 126, 212, 88, K_PANEL, K_ORANGE);
+        g_text_c(&F_XS, 120, 134, "SOUND CHANGED \xB7 NOT SAVED", K_ORANGE);
+        p = str_cat(q, "LOAD ");
+        if (pend_bank) { p = str_cat(p, "B"); p = fmt_u(p, pend_k + 1u, 2); memcpy(pp, ustore[pend_k].p, NP_MAX); }
+        else { p = fmt_u(p, pend_k + 1u, 2); preset_factory(pend_k, pp, nb); }
+        p = str_cat(p, " ");
+        str_cat(p, pend_bank ? ustore[pend_k].name : FACTORY[pend_k].name);
+        g_text_c(&F_S, 120, 150, q, K_WHITE);
+        p = str_cat(e, L_STYLE[clampi(pp[P_STYLE], 0, NSTYLE - 1)]);
+        p = str_cat(p, " \xB7 ");
+        eng_str(p, pp);
+        g_text_c(&F_XS, 120, 168, e, K_CYAN);
+        g_text_c(&F_XS, 120, 188, "SEL = LOAD \xB7 OTHER BUTTON = KEEP", K_LIME);
+        g_text_c(&F_XS, 120, 200, "PRESETS: ANOTHER ONE", K_GREY);
+    }
     if (toast_ms && g_vis(196, 22)) {
         g_box(30, 196, 180, 22, K_PANEL, K_LIME);
         g_text_c(&F_S, 120, 202, toast_txt, K_WHITE);
@@ -803,18 +862,21 @@ static void edit_item(uint32_t id, int32_t d)
     last_turn_ms = fm1_ms;
     item_set(id, v + d * step);
 }
-static void preset_step(int32_t d)
+static void ask_load(uint32_t bank, uint32_t k)   /* load, or (the sound changed) ask first: SEL loads */
 {
-    uint32_t bank = set.bank, n = bank ? NUSER : NFACTORY, k = set.idx, tries;
-    d %= (int32_t)n;
-    for (tries = 0; tries < n; tries++) {
-        k = (uint32_t)((int32_t)k + d + (int32_t)n) % n;
-        d = d < 0 ? -1 : 1;
-        if (!bank || up_valid(k)) break;
-    }
-    load_preset(bank, k);
+    if (bank && !up_valid(k)) { toast("EMPTY SLOT"); return; }
     pre_cur[bank] = (uint8_t)k;
+    if (pdirty) { pend_on = 1; pend_bank = (uint8_t)bank; pend_k = (uint8_t)k; pend_ms = fm1_ms; return; }
+    load_preset(bank, k);
     toast(pname);
+}
+static void preset_step(int32_t d)              /* bank A then the user's saved patches of bank B, round */
+{
+    uint32_t n = NFACTORY + NUSER, at = pend_on ? (pend_bank ? NFACTORY + pend_k : pend_k) : (set.bank ? NFACTORY + set.idx : set.idx);
+    uint32_t st = d < 0 ? n - 1u : 1u, cnt = (uint32_t)(d < 0 ? -d : d);
+    while (cnt--)
+        do at = (at + st) % n; while (at >= NFACTORY && !up_valid(at - NFACTORY));
+    ask_load(at >= NFACTORY, at >= NFACTORY ? at - NFACTORY : at);
 }
 static void save_open(void)
 {
@@ -833,6 +895,12 @@ static void name_trim(void) { int32_t i; for (i = 12; i >= 0 && pname[i] == ' ';
 static void on_button(uint32_t b)
 {
     uint32_t i;
+    if (pend_on) {                              /* the question: SEL loads, any other button keeps the sound */
+        pend_on = 0;
+        if (b == BTN_SEL) { load_preset(pend_bank, pend_k); toast(pname); }
+        else toast("KEPT");
+        return;
+    }
     for (i = 0; i < NPAGE; i++)
         if (PAGE_BTN[i] == b) {
             if (page == i) vcur[i] = (uint8_t)((vcur[i] + 1u) % (uint32_t)(PAGE_V0[i + 1u] - PAGE_V0[i]));
@@ -885,11 +953,15 @@ static void on_enc(uint32_t e, int32_t d)
 {
     const view_t *v = view();
     uint32_t vi = vidx();
-    if (e == ENC_PRESETS) { preset_step(d); return; }
+    if (e == ENC_PRESETS) {                     /* (on PLAY and BASS only: not by mistake elsewhere) */
+        if (page == PG_PLAY || page == PG_BASS) preset_step(d);
+        else toast("PRESETS: HOME OR EDIT");
+        return;
+    }
     if (v->lay == LY_PRESET) {
         uint32_t bank = vi - PAGE_V0[PG_PRE], n = bank ? NUSER : NFACTORY;
         if (e == ENC_SELECT || e == ENC_KNOB1) pre_cur[bank] = (uint8_t)clampi(pre_cur[bank] + d, 0, (int32_t)n - 1);
-        else if (e == ENC_KNOB3 || e == ENC_ALGORITHM) load_preset(bank, pre_cur[bank]);
+        else if (e == ENC_KNOB3 || e == ENC_ALGORITHM) ask_load(bank, pre_cur[bank]);
         return;
     }
     if (v->lay == LY_SAVE) {
@@ -900,7 +972,7 @@ static void on_enc(uint32_t e, int32_t d)
             int32_t i, n = (int32_t)sizeof CH - 1;
             for (i = 0; i < n && CH[i] != pname[save_pos]; i++) {}
             pname[save_pos] = CH[((i + d) % n + n) % n];
-        } else if (e == ENC_KNOB4) patch[P_STYLE] = (int8_t)clampi(patch[P_STYLE] + d, 0, 7);
+        } else if (e == ENC_KNOB4) patch[P_STYLE] = (int8_t)clampi(patch[P_STYLE] + d, 0, NSTYLE - 1);
         return;
     }
     if (e == ENC_SELECT) {
@@ -973,8 +1045,8 @@ static void midi_in(void)
         else if (ty == 0xB0) {
             switch (d1) {
             case 1: ks_wheel = d2 * 258; break;
-            case 74: patch[F_CUT] = (int8_t)d2; break;
-            case 71: patch[F_RES] = (int8_t)d2; break;
+            case 74: patch[F_CUT] = (int8_t)d2; pdirty = 1; break;
+            case 71: patch[F_RES] = (int8_t)d2; pdirty = 1; break;
             case 76: patch[L1_DIV] = (int8_t)(d2 >> 3); break;
             case 77: patch[L1_DEP] = (int8_t)(d2 - 64); break;
             case 123: notes_all_off(); ev_push(EV_PANIC, 0, 0); break;
@@ -991,10 +1063,12 @@ static uint32_t ui_frame_ms, prev_ms;
 static void app_init(void)
 {
     uint32_t i;
-    if (settings_load(&set, sizeof set) || set.ver != 2u) {
-        set.ver = 2; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1;
+    if (settings_load(&set, sizeof set) || set.ver != 3u) {
+        set.theme = 0;
+        set.ver = 3; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1;
     }
     set.cores = set.cores ? 1u : 0u;
+    theme_set(set.theme);
     set.bpm10 = (uint16_t)clampi(set.bpm10, 600, 2400);
     set.oct = (uint8_t)(int8_t)clampi(OCT, -3, 3);
     ks_bpm10 = set.bpm10;
@@ -1029,7 +1103,8 @@ static void app_init(void)
 static void app_step(void)
 {
     ui_input();
-    if (toast_ms && (int32_t)(fm1_ms - toast_ms) > 1400) toast_ms = 0;   /* (toast_ms can be 1 ms ahead: | 1) */
+    if (toast_ms && (int32_t)(fm1_ms - toast_ms) > 1400) toast_ms = 0;
+    if (pend_on && fm1_ms - pend_ms > 6000u) { pend_on = 0; toast("KEPT"); }   /* (toast_ms can be 1 ms ahead: | 1) */
     if (prev_dirty && fm1_ms - prev_ms > 60u) { prev_dirty = 0; prev_ms = fm1_ms; preview_make(); }
     if (fm1_ms - ui_frame_ms >= 33u) {          /* ~30 frames a second, only what changed is sent */
         ui_frame_ms = fm1_ms;

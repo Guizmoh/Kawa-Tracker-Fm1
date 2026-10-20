@@ -9,17 +9,36 @@ static int32_t g_y0;
 static uint32_t g_hash[NBAND];
 static uint8_t g_force = 1, g_tx;
 
-/* the colours of the design */
-#define K_BG RGB(11, 18, 20)
-#define K_PANEL RGB(17, 27, 30)
-#define K_LINE RGB(40, 56, 60)
-#define K_LIME RGB(200, 240, 60)
-#define K_LIMED RGB(30, 40, 20)
-#define K_CYAN RGB(80, 216, 208)
-#define K_WHITE RGB(236, 242, 242)
-#define K_GREY RGB(130, 146, 148)
-#define K_TRACK RGB(36, 52, 56)
-#define K_ORANGE RGB(240, 140, 60)
+/* the colours: two themes. NEON (the first design: teal black, lime, cyan) and PURE (after Arturia's Pure SUB:
+ * charcoal, a neon lime for the section tabs, lavender for values and curves) */
+enum { KC_BG, KC_PANEL, KC_LINE, KC_LIME, KC_LIMED, KC_CYAN, KC_WHITE, KC_GREY, KC_TRACK, KC_ORANGE, KC_WAVE, KC_INK, KC_N };
+#define NTHEME 2u
+static const uint16_t THEMES[NTHEME][KC_N] = {
+    {RGB(11, 18, 20), RGB(17, 27, 30), RGB(40, 56, 60), RGB(200, 240, 60), RGB(30, 40, 20), RGB(80, 216, 208),
+     RGB(236, 242, 242), RGB(130, 146, 148), RGB(36, 52, 56), RGB(240, 140, 60), RGB(200, 240, 60), RGB(11, 18, 20)},
+    {RGB(28, 28, 32), RGB(42, 42, 47), RGB(62, 62, 70), RGB(204, 240, 58), RGB(50, 50, 58), RGB(160, 132, 248),
+     RGB(238, 238, 242), RGB(150, 150, 162), RGB(60, 60, 68), RGB(240, 150, 70), RGB(160, 132, 248), RGB(20, 20, 22)},
+};
+static uint16_t kc[KC_N];
+static uint8_t theme;
+static void theme_set(uint32_t t)
+{
+    uint32_t i;
+    theme = (uint8_t)(t < NTHEME ? t : 0u);
+    for (i = 0; i < KC_N; i++) kc[i] = THEMES[theme][i];
+}
+#define K_BG kc[KC_BG]
+#define K_PANEL kc[KC_PANEL]
+#define K_LINE kc[KC_LINE]
+#define K_LIME kc[KC_LIME]
+#define K_LIMED kc[KC_LIMED]
+#define K_CYAN kc[KC_CYAN]
+#define K_WHITE kc[KC_WHITE]
+#define K_GREY kc[KC_GREY]
+#define K_TRACK kc[KC_TRACK]
+#define K_ORANGE kc[KC_ORANGE]
+#define K_WAVE kc[KC_WAVE]
+#define K_INK kc[KC_INK]
 
 static int g_vis(int32_t y, int32_t h) { return y < g_y0 + (int32_t)BAND_H && y + h > g_y0; }
 static uint16_t g_mix(uint16_t a, uint16_t b, uint32_t t)   /* a .. b, t = 0..256 */
