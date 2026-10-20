@@ -28,11 +28,20 @@ enum {
 enum { E_ANALOG, E_SUPER, E_WAVE, E_FM, E_PHASE, E_FOLD, E_SYNC, E_VOCAL };
 enum { FT_LP24, FT_LP12, FT_BP, FT_HP, FT_NOTCH, FT_VOWEL, FT_COMB, NFT };
 enum { D_OFF, D_CUT, D_RES, D_PITCH, D_AP1, D_AP2, D_BP1, D_BP2, D_ALVL, D_BLVL, D_XMOD, D_DRV, D_AMP, D_SUB, D_NOISE,
-       D_WOB, D_AP3, D_BP3, D_APIT, D_BPIT, D_NCOL, ND };   /* (stored in patches: append only) */
+       D_WOB, D_AP3, D_BP3, D_APIT, D_BPIT, D_NCOL, D_FENV, D_L2DEP,
+       D_L1RATE, D_L2RATE, D_GATE, D_DRAMT, D_DRMIX, D_CRBITS, D_CRRATE, D_CRMIX, D_CHRATE, D_CHDEP, D_CHMIX,   /* global: */
+       D_DLFB, D_DLTONE, D_DLMIX, D_RVSIZE, D_RVDAMP, D_RVMIX, D_GLUE, D_SUBB, D_VOL,   /* once a block, not a voice */
+       ND };   /* (stored in patches: append only) */
 #define IS_PITCH(d) ((d) == D_PITCH || (d) == D_APIT || (d) == D_BPIT)
 /* the order DEST steps through: the oscillators' EDIT rows together (ksub_ui.c skips an oscillator that is off) */
-static const uint8_t DST_ORDER[ND] = {D_OFF, D_CUT, D_RES, D_DRV, D_PITCH, D_ALVL, D_AP1, D_AP2, D_AP3, D_APIT, D_BLVL,
-                                      D_BP1, D_BP2, D_BP3, D_BPIT, D_XMOD, D_SUB, D_NOISE, D_NCOL, D_AMP, D_WOB};
+static const uint8_t DST_ORDER[ND] = {D_OFF, D_CUT, D_RES, D_DRV, D_FENV, D_PITCH, D_ALVL, D_AP1, D_AP2, D_AP3, D_APIT, D_BLVL,
+                                      D_BP1, D_BP2, D_BP3, D_BPIT, D_XMOD, D_SUB, D_NOISE, D_NCOL, D_AMP, D_WOB, D_L1RATE,
+                                      D_L2RATE, D_L2DEP, D_GATE, D_DRAMT, D_DRMIX, D_CRBITS, D_CRRATE, D_CRMIX, D_CHRATE,
+                                      D_CHDEP, D_CHMIX, D_DLFB, D_DLTONE, D_DLMIX, D_RVSIZE, D_RVDAMP, D_RVMIX, D_GLUE, D_SUBB,
+                                      D_VOL};
+/* the parameter each global destination moves */
+#define D_G0 D_L1RATE
+
 enum { SR_OFF, SR_LFO1, SR_LFO2, SR_FENV, SR_MENV, SR_VEL, SR_WHEEL, SR_PRESS, SR_NOTE, SR_RAND, SR_STEP, NSRC };
 enum { VM_MONO, VM_LEGATO, VM_POLY };
 
@@ -51,8 +60,12 @@ static const char *const L_DIV[16] = {"4 BAR", "2 BAR", "1 BAR", "1/2", "1/4D", 
 static const uint32_t DIV_CPB[16] = {4096, 8192, 16384, 32768, 43691, 49152, 65536, 87381, 98304, 131072, 196608,
                                      262144, 393216, 524288, 786432, 1048576};   /* cycles per beat, Q16 */
 static const char *const L_DST[ND] = {"OFF", "CUTOFF", "RESO", "PITCH", "A SHAPE", "A COLOR", "B SHAPE", "B COLOR",
-                                      "A LEVEL", "B LEVEL", "X-MOD", "DRIVE", "AMP", "SUB", "NOISE", "WOB DEPTH",
-                                      "A EDGE", "B EDGE", "A PITCH", "B PITCH", "NOISE COLOR"};
+                                      "A LEVEL", "B LEVEL", "X-MOD", "FILT DRIVE", "AMP", "SUB", "NOISE", "WOB DEPTH",
+                                      "A EDGE", "B EDGE", "A PITCH", "B PITCH", "NOISE COLOR", "FILT ENV", "LFO2 DEPTH",
+                                      "WOB RATE", "LFO2 RATE", "STEP GATE", "DRIVE AMT", "DRIVE MIX", "CRUSH BITS",
+                                      "CRUSH RATE", "CRUSH MIX", "CHORUS RATE", "CHORUS DEPTH", "CHORUS MIX", "DELAY FDBK",
+                                      "DELAY TONE", "DELAY MIX", "VERB SIZE", "VERB DAMP", "VERB MIX", "GLUE", "SUB BOOST",
+                                      "VOLUME"};
 static const char *const L_SRC[NSRC] = {"OFF", "LFO 1", "LFO 2", "FILT ENV", "MOD ENV", "VELOCITY", "MOD WHEEL",
                                         "PRESSURE", "NOTE", "RANDOM", "STEP"};
 /* the STEP patterns: 16 steps, a level 0..F each ("RANDOM": a new one every bar) */

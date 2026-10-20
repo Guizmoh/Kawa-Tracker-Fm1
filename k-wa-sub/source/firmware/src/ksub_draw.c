@@ -63,6 +63,13 @@ static int32_t dest_of(uint32_t id)             /* the destination that moves th
     case B_OCT: case B_SEMI: case B_FINE: return D_BPIT;
     case X_AMT: return D_XMOD; case S_LVL: return D_SUB; case N_LVL: return D_NOISE; case N_COL: return D_NCOL;
     case L1_DEP: return D_WOB;
+    case F_ENV: return D_FENV; case L2_DEP: return D_L2DEP; case L1_RATE: case L1_DIV: return D_L1RATE;
+    case L2_RATE: case L2_DIV: return D_L2RATE; case ST_GATE: return D_GATE;
+    case DR_AMT: return D_DRAMT; case DR_MIX: return D_DRMIX; case CR_BITS: return D_CRBITS; case CR_RATE: return D_CRRATE;
+    case CR_MIX: return D_CRMIX; case CH_RATE: return D_CHRATE; case CH_DEP: return D_CHDEP; case CH_MIX: return D_CHMIX;
+    case DL_FB: return D_DLFB; case DL_TONE: return D_DLTONE; case DL_MIX: return D_DLMIX; case RV_SIZE: return D_RVSIZE;
+    case RV_DAMP: return D_RVDAMP; case RV_MIX: return D_RVMIX; case MS_GLUE: return D_GLUE; case MS_SUB: return D_SUBB;
+    case MS_VOL: return D_VOL; case I_L1RATE: return D_L1RATE; case I_L2RATE: return D_L2RATE;
     default: return -1;
     }
 }

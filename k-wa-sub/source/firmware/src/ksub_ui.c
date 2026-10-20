@@ -339,6 +339,12 @@ static int dst_on(uint32_t d)                   /* an oscillator that is off is 
 {
     if (d == D_ALVL || d == D_AP1 || d == D_AP2 || d == D_AP3 || d == D_APIT) return patch[A_LVL] || patch[X_MODE] == 1;
     if (d == D_BLVL || d == D_BP1 || d == D_BP2 || d == D_BP3 || d == D_BPIT) return patch[B_LVL] || patch[X_MODE];
+    if (d == D_GATE) return patch[ST_ON];       /* an effect that is off is not offered either */
+    if (d == D_DRAMT || d == D_DRMIX) return patch[DR_ON];
+    if (d >= D_CRBITS && d <= D_CRMIX) return patch[CR_ON];
+    if (d >= D_CHRATE && d <= D_CHMIX) return patch[CH_ON];
+    if (d >= D_DLFB && d <= D_DLMIX) return patch[DL_ON];
+    if (d >= D_RVSIZE && d <= D_RVMIX) return patch[RV_ON];
     return 1;
 }
 static int32_t dst_step(int32_t v, int32_t d)

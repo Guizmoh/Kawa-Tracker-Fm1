@@ -46,6 +46,7 @@ static volatile uint8_t env_st_show[3];         /* the newest voice's envelopes:
 static volatile int32_t env_lv_show[3], cut_show; /* ... and its cutoff after the modulation (Q8 units) */
 static volatile int32_t step_val;               /* the STEP effect: its level now (Q15), its step */
 static volatile uint8_t step_pos;
+static volatile int32_t gmod[ND];               /* the global destinations' modulation (Q8 units), once a block */
 static volatile int32_t meter_pk, meter_gr;     /* the output's peak and the glue's gain (Q15), for MASTER */
 #define BEATS_WRAP (48u << 24)
 
@@ -383,10 +384,10 @@ static void lfo_run(uint32_t k, uint32_t beats)
     if (p[L1_SYNC]) {
         uint32_t b = beats - (p[L1_TRIG] ? l->b0 : 0u);
         if (b >= BEATS_WRAP) b += BEATS_WRAP;   /* (wrapped below the start) */
-        ph = (uint32_t)((uint64_t)(b >> 8) * DIV_CPB[p[L1_DIV] & 15]);
+        ph = (uint32_t)((uint64_t)(b >> 8) * DIV_CPB[clampi(p[L1_DIV] + (gmod[D_L1RATE + k] >> 8) * 15 / 127, 0, 15)]);
         l->ph = ph;
     } else
-        ph = l->ph += KS_LFO_INC[p[L1_RATE] & 127];
+        ph = l->ph += KS_LFO_INC[clampi(p[L1_RATE] + (gmod[D_L1RATE + k] >> 8), 0, 127)];
     ph += off;
     if (ph < l->last && l->last - ph > 0x40000000u) {   /* a new cycle: a new random value */
         l->sh0 = l->sh;
@@ -489,10 +490,10 @@ static void note_off(uint32_t n)
 }
 
 /* the modulation of one voice for one block: param units x 256 (or Q8 semitones for the pitch) */
+static void route(int32_t *m, const int32_t *src);
 static void voice_mods(voice_t *v, int32_t *m, int32_t fenv, int32_t menv)
 {
-    int32_t src[NSRC], wob = 0;
-    uint32_t k;
+    int32_t src[NSRC];
     src[SR_OFF] = 0;
     src[SR_LFO1] = lfo[0].out;
     src[SR_LFO2] = lfo[1].out;
@@ -504,6 +505,16 @@ static void voice_mods(voice_t *v, int32_t *m, int32_t fenv, int32_t menv)
     src[SR_NOTE] = clip(((int32_t)v->note - 60) * 512, 32767);
     src[SR_RAND] = v->rand;
     src[SR_STEP] = step_val;
+    route(m, src);
+    m[D_CUT] += ((patch[F_ENV] + (m[D_FENV] >> 8)) * fenv) >> 6;
+    m[D_CUT] += (int32_t)((((int64_t)(v->pitch - 60 * 256) * 276) >> 8) * patch[F_KEY] >> 7);
+    m[D_CUT] += (patch[F_VEL] * (v->vel - 64)) >> 1;
+}
+/* the matrix, the two LFOs, the STEP effect and the mod envelope into m (param units x 256, Q8 semitones) */
+static void route(int32_t *m, const int32_t *src)
+{
+    int32_t wob;
+    uint32_t k;
     for (k = 0; k < ND; k++) m[k] = 0;
     for (k = 0; k < 4u; k++) {                  /* the matrix, then the LFOs (their depth can be a destination) */
         const int8_t *s = patch + M1_SRC + 3u * k;
@@ -516,7 +527,7 @@ static void voice_mods(voice_t *v, int32_t *m, int32_t fenv, int32_t menv)
     wob = m[D_WOB] >> 8;
     for (k = 0; k < 2u; k++) {
         const int8_t *p = patch + k * LFO_2;
-        int32_t d = clampi(p[L1_DEP] + (k == 0u ? wob : 0), -64, 64), dst = p[L1_DST];
+        int32_t d = clampi(p[L1_DEP] + (k == 0u ? wob : m[D_L2DEP] >> 8), -64, 64), dst = p[L1_DST];   /* (LFO 1 can move LFO 2) */
         if (!dst || !d) continue;
         if (IS_PITCH(dst)) m[dst] += (int32_t)(((int64_t)(d < 0 ? -d * d : d * d) * 3 * lfo[k].out) >> 15);
         else m[dst] += (d * lfo[k].out) >> 6;
@@ -528,12 +539,34 @@ static void voice_mods(voice_t *v, int32_t *m, int32_t fenv, int32_t menv)
     }
     if (patch[ME_DST] && patch[ME_AMT]) {
         int32_t a = patch[ME_AMT];
-        if (IS_PITCH(patch[ME_DST])) m[patch[ME_DST]] += (int32_t)(((int64_t)(a < 0 ? -a * a : a * a) * 3 * menv) >> 15);
-        else m[patch[ME_DST]] += (a * menv) >> 6;
+        if (IS_PITCH(patch[ME_DST])) m[patch[ME_DST]] += (int32_t)(((int64_t)(a < 0 ? -a * a : a * a) * 3 * src[SR_MENV]) >> 15);
+        else m[patch[ME_DST]] += (a * src[SR_MENV]) >> 6;
     }
-    m[D_CUT] += (patch[F_ENV] * fenv) >> 6;
-    m[D_CUT] += (int32_t)((((int64_t)(v->pitch - 60 * 256) * 276) >> 8) * patch[F_KEY] >> 7);
-    m[D_CUT] += (patch[F_VEL] * (v->vel - 64)) >> 1;
+}
+/* the global destinations (the effects, the rates, the gate): once a block, the newest note's envelopes */
+static void fx_mods(void)
+{
+    int32_t src[NSRC], m[ND];
+    uint32_t k;
+    voice_t *v = 0;
+    for (k = 0; k < NVOICE; k++) if (vo[k].on && vo[k].age == vage) v = &vo[k];
+    src[SR_OFF] = 0;
+    src[SR_LFO1] = lfo[0].out;
+    src[SR_LFO2] = lfo[1].out;
+    src[SR_FENV] = v ? v->ef.lv >> 15 : 0;
+    src[SR_MENV] = v ? v->em.lv >> 15 : 0;
+    src[SR_VEL] = v ? v->vel * 258 : 0;
+    src[SR_WHEEL] = ks_wheel;
+    src[SR_PRESS] = ks_press;
+    src[SR_NOTE] = v ? clip(((int32_t)v->note - 60) * 512, 32767) : 0;
+    src[SR_RAND] = v ? v->rand : 0;
+    src[SR_STEP] = step_val;
+    route(m, src);
+    for (k = D_G0; k < ND; k++) gmod[k] = m[k];
+}
+static int32_t fpv(uint32_t id, uint32_t d)     /* a parameter of the effects, modulated */
+{
+    return clampi(patch[id] + (gmod[d] >> 8), PD[id].lo, PD[id].hi);
 }
 static inline int32_t pv(int32_t base, int32_t mod) { return clampi(base * 256 + mod, 0, 127 * 256); }   /* -> Q8 units */
 static inline int32_t q8to15(int32_t q8) { return q8 + (q8 >> 7); }
@@ -749,14 +782,15 @@ static void voices_render(int32_t *dst, uint32_t n, uint32_t t0, uint32_t budget
         for (k = 0; k < KS_CB; k++) acc[k] = 0;
         for (k = 0; k < NVOICE; k++)
             if (vo[k].on) { voice_block(&vo[k], acc); any = 1; }
-        if (patch[ST_ON] && patch[ST_GATE]) {   /* the gate: the steps cut the sound, ramped over the block */
+        if (patch[ST_ON] && fpv(ST_GATE, D_GATE)) {   /* the gate: the steps cut the sound, ramped over the block */
             static int32_t g0 = 32767;
-            int32_t g1 = 32767 - (((32767 - step_val) * patch[ST_GATE]) >> 7), dg = (g1 - g0) / (int32_t)KS_CB;
+            int32_t g1 = 32767 - (((32767 - step_val) * fpv(ST_GATE, D_GATE)) >> 7), dg = (g1 - g0) / (int32_t)KS_CB;
             for (k = 0; k < KS_CB; k++) { g0 += dg; acc[k] = mul15(acc[k], g0); }
             g0 = g1;
         }
     }
     ks_sounding = (uint8_t)any;
+    fx_mods();
 }
 
 /* ================================================================ the effects (core 0) */
@@ -776,12 +810,13 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
 {
     const int8_t *P = patch;
     uint32_t i, k;
-    int32_t dr_g = 256 + P[DR_AMT] * P[DR_AMT] * 3 / 4, dr_mix = P[DR_MIX] * 258, cr_mix = P[CR_MIX] * 258;
-    int32_t bits = 16 - ((P[CR_BITS] * 14) >> 7), hold = 1 + ((P[CR_RATE] * 31) >> 7);
-    int32_t ch_rate = 4870 + P[CH_RATE] * P[CH_RATE] * 30, ch_dep = P[CH_DEP] * 2, ch_mix = P[CH_MIX] * 258;
-    int32_t dl_fb = P[DL_FB] * 250, dl_lpk = 3000 + P[DL_TONE] * 233, dl_mix = P[DL_MIX] * 258, dl_t;
-    int32_t rv_fb = 22000 + P[RV_SIZE] * 80, rv_d = P[RV_DAMP] * 200, rv_mix = P[RV_MIX] * 258;
-    int32_t vol = (P[MS_VOL] * P[MS_VOL] * 419) >> 10, boost = P[MS_SUB] * 200, glue = P[MS_GLUE];
+    int32_t da = fpv(DR_AMT, D_DRAMT), cr = fpv(CR_RATE, D_CRRATE), chr = fpv(CH_RATE, D_CHRATE), mv = fpv(MS_VOL, D_VOL);
+    int32_t dr_g = 256 + da * da * 3 / 4, dr_mix = fpv(DR_MIX, D_DRMIX) * 258, cr_mix = fpv(CR_MIX, D_CRMIX) * 258;
+    int32_t bits = 16 - ((fpv(CR_BITS, D_CRBITS) * 14) >> 7), hold = 1 + ((cr * 31) >> 7);
+    int32_t ch_rate = 4870 + chr * chr * 30, ch_dep = fpv(CH_DEP, D_CHDEP) * 2, ch_mix = fpv(CH_MIX, D_CHMIX) * 258;
+    int32_t dl_fb = fpv(DL_FB, D_DLFB) * 250, dl_lpk = 3000 + fpv(DL_TONE, D_DLTONE) * 233, dl_mix = fpv(DL_MIX, D_DLMIX) * 258, dl_t;
+    int32_t rv_fb = 22000 + fpv(RV_SIZE, D_RVSIZE) * 80, rv_d = fpv(RV_DAMP, D_RVDAMP) * 200, rv_mix = fpv(RV_MIX, D_RVMIX) * 258;
+    int32_t vol = (mv * mv * 419) >> 10, boost = fpv(MS_SUB, D_SUBB) * 200, glue = fpv(MS_GLUE, D_GLUE);
     int32_t thr = 32767 - glue * 180, makeup = 4096 + glue * 24;
     {                                           /* the delay time from the tempo */
         uint32_t cpb = DIV_CPB[P[DL_TIME] & 15], spb = 26460000u / (ks_bpm10 | 1u), t = (spb << 8) / (cpb >> 8);

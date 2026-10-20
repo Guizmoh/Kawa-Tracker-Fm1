@@ -19,7 +19,7 @@ séquenceur, sans pistes, sans samples ni batteries : tout le processeur va au s
 | **Filtre** | 7 caractères : ladder `LP 24`, `LP 12`, `BAND`, `HIGH`, `NOTCH` (avec compensation des basses), `VOWEL` (formants : le cutoff parcourt A E I O U, idéal pour les « yoi »), `COMB` (accordé par le cutoff, au clavier avec KEY TRACK) ; drive, enveloppe, suivi de clavier, vélocité |
 | **Enveloppes** | AMP (ADSR), FILTER (ADSR), MOD (AD vers la destination de son choix, ex. chute de pitch 808) |
 | **LFO 1 « WOBBLE » / LFO 2** | 9 formes (SINE, TRI, SAW, SQUARE, S&H, WUB, STEPS, DRIFT), libre en Hz ou **calé sur le tempo** (4 mesures … 1/64, pointées et triolets), retrig à la note, phase, lissage, une destination directe + la matrice |
-| **Destinations** | Les mêmes pour les deux LFO, l'enveloppe MOD et la matrice : cutoff, résonance, drive, pitch, puis **tous les réglages d'EDIT des oscillateurs actifs** (niveau, les 3 timbres sous le nom de leur moteur, ex. `A WAVE`, `A PWIDTH`, `B DETUNE`, et la hauteur propre de chaque oscillateur), X-MOD, sub, bruit, couleur du bruit, ampli, profondeur du wobble. Un oscillateur éteint n'est pas proposé. |
+| **Destinations** | Les mêmes pour les deux LFO, l'enveloppe MOD et la matrice : cutoff, résonance, drive, pitch, puis **tous les réglages d'EDIT des oscillateurs actifs** (niveau, les 3 timbres sous le nom de leur moteur, ex. `A WAVE`, `A PWIDTH`, `B DETUNE`, et la hauteur propre de chaque oscillateur), X-MOD, sub, bruit, couleur du bruit, ampli, quantité d'enveloppe du filtre, la vitesse de chaque LFO (en synchro : d'une division à l'autre), la profondeur du wobble et du LFO 2, le gate du STEP, et **chaque réglage des effets** : drive (quantité, mix), crush (bits, rate, mix), chorus (rate, profondeur, mix), delay (feedback, tone, mix), reverb (taille, amorti, mix), glue, sub boost, volume. Un oscillateur ou un effet éteint n'est pas proposé. |
 | **STEP** | Un effet pas-à-pas de 16 pas sur le tempo (vue `LFO` › STEP FX) : 16 motifs (OFFBEAT, PUMP, DUB CHOP, TRANCE, TRIPLET, BROKEN, SKANK, GALLOP, STAIRS, DNB ROLL, HALFTIME, STUTTER, ACID, SYNCOPE, RANDOM…), au 1/4 jusqu'au 1/32 et en triolets ; il coupe le son (GATE) et/ou module une destination, et c'est aussi une source de la matrice. |
 | **Matrice** | 4 liaisons source › destination (LFO, enveloppes, vélocité, molette, aftertouch, note, aléatoire) |
 | **FX** | SATURATION (soft, tube, hard, fold) · BITCRUSH · CHORUS (au-dessus de ~150 Hz : le sub reste mono) · DUB DELAY ping-pong calé sur le tempo, plus sombre à chaque répétition · REVERB · MASTER (glue, sub boost, sortie) |
@@ -84,13 +84,13 @@ reste appuyé, jusqu'à 16 en arrière.
 
 ## Installer sur le FM-1
 
-Le paquet est [`install/k-wa-sub-0.4.fwsc`](install/k-wa-sub-0.4.fwsc) (identité `FM-1_974` ; les anciens dans `install/older/`). Il s'installe exactement
+Le paquet est [`install/k-wa-sub-0.5.fwsc`](install/k-wa-sub-0.5.fwsc) (identité `FM-1_975` ; les anciens dans `install/older/`). Il s'installe exactement
 comme KAWA, avec le même chargeur de mise à jour, et fonctionne depuis le firmware d'origine comme depuis KAWA :
 
 - **Dans le navigateur** (Chrome ou Edge, Web MIDI) : la page d'installation de KAWA ([`../index.html`](../index.html)),
-  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.4.fwsc`.
+  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.5.fwsc`.
 - **Avec Python 3** : `INSTALL-Linux.sh`, `INSTALL-Mac.command` ou `INSTALL-Windows.bat` dans ce dossier (ou
-  `python3 install/fm1_install.py install/k-wa-sub-0.4.fwsc`).
+  `python3 install/fm1_install.py install/k-wa-sub-0.5.fwsc`).
 
 Un câble USB **de données**, aucun autre logiciel MIDI ouvert, rien à débrancher avant la fin. Pour revenir à KAWA :
 installer `kawa-0.5.fwsc` de la même façon. Pour le firmware officiel : M-UPGRADE, comme décrit pour KAWA. En cas de
@@ -135,7 +135,7 @@ cd source
 python3 tools/gen_ksub.py        # tables (hauteurs, filtre, enveloppes, tables d'onde) et polices
 web/make_emulator.sh             # -> ../emulator/index.html (clang avec la cible wasm32 et wasm-ld)
 tools/get_toolchain.sh           # la chaîne JieLi (une fois), + les 3 fichiers du SDK AC79 (voir ../../source/BUILDING.md)
-./build.sh --release 0.2         # -> build/k-wa-sub-0.4.fwsc, avec toutes les vérifications de KAWA
+./build.sh --release 0.2         # -> build/k-wa-sub-0.5.fwsc, avec toutes les vérifications de KAWA
 tests/run_loader_tests.sh        # la mise à jour sur l'ordinateur (de KAWA vers K-WA SUB, coupure, paquet abîmé...)
 tests/run_stress.sh              # chaque preset, chaque paramètre aux extrêmes, sous UBSan : aucun entier ne déborde
 node tests/shots.mjs && python3 tests/png.py   # les écrans de tests/tour.txt -> build/shots/sheet.png, et un WAV
