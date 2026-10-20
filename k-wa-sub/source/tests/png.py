@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""build/shots/*.raw (240 x 240 RGB565) -> build/shots/*.png and build/shots/sheet.png (all of them)"""
-import sys
+"""build/shots/*.raw (240 x 240 RGB565) -> build/shots/*.png and build/shots/sheet.png (all of them; SHOTS=d* only those)"""
+import os, sys
 from pathlib import Path
 from PIL import Image
 d = Path("build/shots")
 ims = []
-for f in sorted(d.glob("*.raw")):
+for f in sorted(d.glob(os.environ.get("SHOTS", "*") + ".raw")):
     b = f.read_bytes()
     im = Image.new("RGB", (240, 240))
     px = [((v >> 11) * 255 // 31, ((v >> 5) & 63) * 255 // 63, (v & 31) * 255 // 31)

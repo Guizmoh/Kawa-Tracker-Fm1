@@ -282,6 +282,37 @@ static uint32_t vpop_ms;
 static char vpop_before[24], vpop_pre[12];
 static uint32_t splash_until;
 static struct { uint8_t b, used, fired; uint32_t at, next; } hb = {0xFF, 0, 0, 0, 0};   /* the button held */
+#if KS_B
+/* DOUBLE SHIFT (version B): a page's first screen is 12 settings in three columns of four, one row a knob: the knobs
+ * alone move the left column (the base), OCT- held the middle one, OCT+ held the right one (OCT tapped: the octave).
+ * The page's button (or SEL) then goes through its other views, and back. ini: the cell's initials (0: the engine's) */
+typedef struct { const char *title, *head[3]; uint8_t id[3][4]; const char *ini[3][4]; } col3_t;
+static const col3_t COL3[NPAGE] = {
+    [PG_PLAY] = {"PLAY \xB7 LIVE", {"LIVE", "MIX", "TONE"},
+                 {{F_CUT, I_L1RATE, L1_DEP, F_RES}, {S_LVL, DR_AMT, DL_MIX, MS_VOL}, {A_P1, B_P1, X_AMT, F_ENV}},
+                 {{"CUT", "RT", "DP", "RES"}, {"SUB", "SAT", "DLY", "VOL"}, {"A1", "B1", "XM", "ENV"}}},
+    [PG_BASS] = {"EDIT \xB7 OSCILLATORS", {"MIX", "OSC A", "OSC B"},
+                 {{A_LVL, B_LVL, S_LVL, X_AMT}, {A_P1, A_P2, A_P3, A_SEMI}, {B_P1, B_P2, B_P3, B_SEMI}},
+                 {{"A", "B", "SUB", "XM"}, {0, 0, 0, "PT"}, {0, 0, 0, "PT"}}},
+    [PG_ENV] = {"ENVELOPES", {"AMP", "FILTER", "MOD"},
+                {{AE_A, AE_D, AE_S, AE_R}, {FE_A, FE_D, FE_S, FE_R}, {ME_A, ME_D, ME_AMT, ME_DST}},
+                {{"A", "D", "S", "R"}, {"A", "D", "S", "R"}, {"A", "D", "AMT", "DST"}}},
+    [PG_FILT] = {"FILTER", {"FILTER", "KEYS", "SUB"},
+                 {{F_CUT, F_RES, F_DRV, F_ENV}, {F_TYPE, F_KEY, F_VEL, S_ROUTE}, {S_WAVE, S_OCT, N_LVL, N_COL}},
+                 {{"CUT", "RES", "DRV", "ENV"}, {"TYP", "KEY", "VEL", "RTE"}, {"WAV", "OCT", "NOI", "COL"}}},
+    [PG_LFO] = {"LFO \xB7 LIVE", {"WOBBLE", "LFO 1", "LFO 2"},
+                {{I_L1RATE, L1_DEP, L1_DST, G_GRID}, {L1_SHP, L1_PH, L1_SMO, L1_TRIG}, {L2_SHP, I_L2RATE, L2_DEP, L2_DST}},
+                {{"RT", "DP", "DST", "GRD"}, {"SHP", "PH", "SMO", "TRG"}, {"SHP", "RT", "DP", "DST"}}},
+    [PG_FX] = {"FX RACK", {"SPACE", "DRIVE", "MASTER"},
+               {{DL_TIME, DL_FB, DL_MIX, RV_MIX}, {DR_TYPE, DR_AMT, DR_MIX, CR_BITS}, {MS_GLUE, MS_SUB, MS_VOL, CR_MIX}},
+               {{"DT", "FB", "DLY", "REV"}, {"TYP", "SAT", "MIX", "BIT"}, {"GLU", "SUB", "VOL", "CRU"}}},
+};
+static uint8_t c3_show[NPAGE] = {1, 1, 1, 1, 1, 1, 0, 0}, c3_cur;
+#define C3_ON (COL3[page].title && c3_show[page])
+static uint32_t c3_col(void) { return hb.b == BTN_OCT_DOWN ? 1u : hb.b == BTN_OCT_UP ? 2u : 0u; }
+#else
+#define C3_ON 0
+#endif
 static uint32_t hold_time(uint32_t b);
 #define PRE_BROWSING (page == PG_PRE && vcur[PG_PRE] < 2u)   /* (SAVE held there: a favorite) */
 static const char *hold_label(uint32_t b);
@@ -772,6 +803,19 @@ static void save_open(void)
 }
 static void name_trim(void) { int32_t i; for (i = 12; i >= 0 && pname[i] == ' '; i--) pname[i] = 0; }
 
+static void view_next(void)                     /* the page's next view (version B: the 3 columns first) */
+{
+    uint32_t nv = (uint32_t)(PAGE_V0[page + 1u] - PAGE_V0[page]);
+#if KS_B
+    if (COL3[page].title) {
+        if (c3_show[page]) { c3_show[page] = 0; vcur[page] = 0; }
+        else if (vcur[page] + 1u >= nv) { c3_show[page] = 1; vcur[page] = 0; }
+        else vcur[page]++;
+        return;
+    }
+#endif
+    vcur[page] = (uint8_t)((vcur[page] + 1u) % nv);
+}
 static void on_button(uint32_t b)
 {
     uint32_t i;
@@ -784,7 +828,7 @@ static void on_button(uint32_t b)
     }
     for (i = 0; i < NPAGE; i++)
         if (PAGE_BTN[i] == b) {
-            if (page == i) vcur[i] = (uint8_t)((vcur[i] + 1u) % (uint32_t)(PAGE_V0[i + 1u] - PAGE_V0[i]));
+            if (page == i) view_next();
             else page = (uint8_t)i;
             if (VIEWS[vidx()].lay == LY_SAVE) vcur[i]++;   /* (SAVE opens from SAVE only: on to the ARP) */
             name_trim();
@@ -792,7 +836,7 @@ static void on_button(uint32_t b)
         }
     switch (b) {
     case BTN_SEL:
-        vcur[page] = (uint8_t)((vcur[page] + 1u) % (uint32_t)(PAGE_V0[page + 1u] - PAGE_V0[page]));
+        view_next();
         if (VIEWS[vidx()].lay == LY_SAVE) vcur[page]++;
         name_trim();
         break;
@@ -834,10 +878,37 @@ static void on_button(uint32_t b)
     }
 }
 
+#if KS_B
+static void c3_edit(uint32_t id, int32_t d)     /* (an effect that is off comes on when its setting moves up) */
+{
+    static const uint8_t ONS[5] = {DR_ON, CR_ON, CH_ON, DL_ON, RV_ON};
+    uint32_t k;
+    for (k = 5; k-- > 0;)
+        if (id > ONS[k] && id < MS_GLUE) {
+            if (!patch[ONS[k]] && d > 0) { patch[ONS[k]] = 1; toast(k == 0 ? "SATURATION ON" : k == 1 ? "CRUSH ON" : k == 2 ? "CHORUS ON" : k == 3 ? "DELAY ON" : "REVERB ON"); }
+            break;
+        }
+    vpop_pre[0] = 0;
+    edit_item(id, d);
+}
+#endif
 static void on_enc(uint32_t e, int32_t d)
 {
     const view_t *v = view();
     uint32_t vi = vidx();
+#if KS_B
+    if (C3_ON && e != ENC_PRESETS) {
+        const col3_t *c = &COL3[page];
+        if (e == ENC_SELECT) { c3_cur = (uint8_t)clampi(c3_cur + d, 0, 11); return; }
+        if (e == ENC_ALGORITHM) { c3_edit(c->id[c3_cur >> 2][c3_cur & 3u], d); return; }
+        if (e >= ENC_KNOB1 && e <= ENC_KNOB4) {
+            uint32_t col = c3_col(), r = e - ENC_KNOB1;
+            c3_cur = (uint8_t)(col * 4u + r);
+            c3_edit(c->id[col][r], d);
+        }
+        return;
+    }
+#endif
     if (e == ENC_PRESETS) {                     /* (on PLAY and BASS only: not by mistake elsewhere) */
         if (page == PG_PLAY || page == PG_BASS) preset_step(d);
         else toast("PRESETS: HOME OR EDIT");
@@ -878,7 +949,7 @@ static void on_enc(uint32_t e, int32_t d)
 }
 
 static int page_of_btn(uint32_t b) { uint32_t i; for (i = 0; i < NPAGE; i++) if (PAGE_BTN[i] == b) return (int)i; return -1; }
-static int holdable(uint32_t b) { return page_of_btn(b) >= 0 || b == BTN_SAVE || b == BTN_SEL || b == BTN_PLAY; }
+static int holdable(uint32_t b) { return page_of_btn(b) >= 0 || b == BTN_SAVE || b == BTN_SEL || b == BTN_PLAY || (KS_B && b <= BTN_OCT_UP); }
 static void hold_toggle(void)
 {
     uint32_t i;
@@ -892,7 +963,7 @@ static uint32_t hold_time(uint32_t b)           /* how long until the held actio
     if (b == BTN_SEL) return 400u;
     if (b == BTN_PLAY) return 600u;
     if (b == BTN_ARP) return 0u;
-    if (b == BTN_LFO || b == BTN_ENV) return 0u;   /* (they wait for a knob: QUICK ASSIGN) */
+    if (b == BTN_LFO || b == BTN_ENV || b <= BTN_OCT_UP) return 0u;   /* (they wait for a knob: QUICK ASSIGN, SHIFT) */
     return 1200u;
 }
 static const char *hold_label(uint32_t b)
@@ -987,6 +1058,11 @@ static void ui_input(void)
     for (b = 0; b < 14u; b++) {
         if (!(pr & (1u << b))) continue;
         splash_until = 0;
+        if (KS_B && b <= BTN_OCT_UP && (fm1_in.buttons & 3u) == 3u) {
+            notes_all_off(); ev_push(EV_PANIC, 0, 0); toast("ALL NOTES OFF");
+            if (hb.b <= BTN_OCT_UP) hb.used = 1;
+            continue;
+        }
         if (holdable(b) && hb.b == 0xFF && !pend_on) { hb.b = (uint8_t)b; hb.used = hb.fired = 0; hb.at = fm1_ms; hb.next = hold_time(b); }
         else if (!holdable(b) || pend_on) on_button(b);
     }
@@ -1004,14 +1080,18 @@ static void ui_input(void)
             uint32_t bb = hb.b;
             hb.b = 0xFF;
             if (cmp_on) compare(0);
-            else if (!hb.used && !hb.fired) on_button(bb);
+            else if (!hb.used && !hb.fired && (bb > BTN_OCT_UP || fm1_ms - hb.at < 500u)) on_button(bb);   /* (OCT held long: no octave) */
         }
     }
     for (b = 0; b < 7u; b++) if ((d = fm1_enc_take(b)) != 0) {
         if (cmp_on) continue;                   /* (comparing: nothing changes) */
+        if (hb.b <= BTN_OCT_UP && b >= ENC_KNOB1 && b <= ENC_KNOB4) hb.used = 1;   /* (SHIFT: no octave on release) */
         if (hb.b != 0xFF && (hb.b == BTN_LFO || hb.b == BTN_ENV) && ((b >= ENC_KNOB1 && b <= ENC_KNOB4) || b == ENC_ALGORITHM)) {
             const view_t *v = view();
             uint32_t id = b == ENC_ALGORITHM ? (v->n ? v->it[cursor[vidx()]] : I_NONE) : v->k[b - ENC_KNOB1];
+#if KS_B
+            if (C3_ON) id = b == ENC_ALGORITHM ? COL3[page].id[c3_cur >> 2][c3_cur & 3u] : COL3[page].id[0][b - ENC_KNOB1];
+#endif
             hb.used = 1;
             if (id != I_NONE) quick_assign(hb.b, rate_like(id), d);
             continue;

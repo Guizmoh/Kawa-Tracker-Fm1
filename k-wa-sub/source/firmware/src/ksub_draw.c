@@ -770,11 +770,110 @@ static void th_rack(const view_t *v, uint32_t vi)
     }
 }
 
+#if KS_B
+/* ---------------------------------------------------------------- DOUBLE SHIFT (version B): three columns
+ * fluo green the base (knobs alone), yellow OCT- held, orange OCT+ held; the column not played is dimmed. The name of a
+ * setting shows in full only while it turns (at the top, with what it was), the cells keep their initials */
+static const uint16_t C3_RGB[3] = {RGB(96, 255, 64), RGB(255, 224, 48), RGB(255, 144, 48)};
+static uint16_t c3c(uint32_t k) { return theme_pal >= 4u ? K_WHITE : C3_RGB[k]; }
+static void draw_c3(void)
+{
+    const col3_t *c = &COL3[page];
+    uint32_t act = c3_col(), k;
+    int32_t pk = -1;
+    char t[48], sub[48], b[24], *p;
+    if (vpop_ms) for (k = 0; k < 12u; k++) if (c->id[k >> 2][k & 3u] == vpop_id) pk = (int32_t)k;
+    if (g_vis(0, 46)) {
+        if (pk >= 0) {                          /* the setting turning: its column, its knob, its name, its value */
+            uint16_t cc = c3c((uint32_t)pk >> 2);
+            g_box(4, 2, 232, 42, K_PANEL, cc);
+            p = str_cat(t, c->head[pk >> 2]);
+            p = str_cat(p, " \xB7 K");
+            *p++ = (char)('1' + (pk & 3)); *p = 0;
+            g_text(T_XS, 10, 6, t, cc);
+            p = t;                              /* (the effects' settings with their effect's name) */
+            if (vpop_id > DR_ON && vpop_id < MS_GLUE)
+                p = str_cat(p, vpop_id < CR_ON ? "SAT " : vpop_id < CH_ON ? "CRUSH " : vpop_id < DL_ON ? "CHORUS " : vpop_id < RV_ON ? "DELAY " : "VERB ");
+            str_cat(p, item_name(vpop_id));
+            g_text(T_S, 10, 22, t, K_WHITE);
+            item_text(vpop_id, b);
+            g_text_r(g_text_w(T_B, b) > 120 ? T_S : T_B, 230, 18, b, cc);
+            if (!str_eq(b, vpop_before)) { str_cat(str_cat(t, "WAS "), vpop_before); g_text_r(T_XS, 230, 6, t, K_MOD); }
+        } else {
+            const char *ti;
+            *sub = 0;
+            if (page == PG_BASS) {
+                p = str_cat(t, L_ENG[patch[A_ENG] & 7]); p = str_cat(p, " + "); str_cat(p, L_ENG[patch[B_ENG] & 7]);
+                p = str_cat(sub, "MODE "); str_cat(p, L_XMODE[patch[X_MODE] & 3]);
+                ti = t;
+            } else if (page == PG_FX) {
+                p = str_cat(t, "SAT "); p = str_cat(p, patch[DR_ON] ? L_DRT[patch[DR_TYPE] & 3] : "OFF");
+                p = str_cat(p, " \xB7 DELAY "); str_cat(p, patch[DL_ON] ? L_DIV[patch[DL_TIME] & 15] : "OFF");
+                str_cat(sub, patch[RV_ON] ? "REVERB ON" : "REVERB OFF");
+                ti = t;
+            } else if (page == PG_ENV) {
+                str_cat(t, "3 ENVELOPES");
+                str_cat(str_cat(sub, "MOD ENV > "), dst_name((uint32_t)patch[ME_DST]));
+                ti = t;
+            } else ti = view_title(PAGE_V0[page], t, sub);
+            g_text(T_XS, 6, 3, c->title, c3c(0));
+            g_text(T_B, 6, 13, ti, K_WHITE);
+            g_text(T_XS, 6, 33, sub, K_GREY);
+            p = str_cat(b, PAGE_SHORT[page]);
+            str_cat(p, " \xB7 SEL: MORE");
+            g_text_r(T_XS, 234, 3, b, K_GREY);
+        }
+    }
+    if (g_vis(46, 13))                          /* the three heads: the one played filled */
+        for (k = 0; k < 3u; k++) {
+            int32_t x = 12 + (int32_t)k * 76;
+            uint16_t cc = c3c(k);
+            p = t;
+            if (k == 1u) p = str_cat(p, "- ");
+            p = str_cat(p, c->head[k]);
+            if (k == 2u) str_cat(p, " +");
+            g_box(x, 46, 74, 12, k == act ? cc : K_BG, cc);
+            g_text_c(T_XS, x + 37, 48, t, k == act ? K_INK : cc);
+        }
+    for (k = 0; k < 12u; k++) {                 /* the cells: initials, value, bar, what modulates it */
+        uint32_t col = k >> 2, r = k & 3u, id = c->id[col][r];
+        int32_t x = 12 + (int32_t)col * 76, y = 61 + (int32_t)r * 39;
+        int on = col == act;
+        uint16_t cc = c3c(col), dim = g_mix(K_PANEL, cc, 120);
+        const ks_font_t *f;
+        const char *tg;
+        if (!g_vis(y, 37)) continue;
+        if (col == 0u) { char kn[3] = {'K', (char)('1' + r), 0}; g_text_c(T_XS, 6, y + 14, kn, K_GREY); }
+        g_box(x, y, 74, 37, K_PANEL, k == c3_cur ? (on ? K_WHITE : K_GREY) : on ? g_mix(K_LINE, cc, 70) : K_LINE);
+        if (c->ini[col][r]) str_cat(t, c->ini[col][r]);
+        else { const char *sn = item_sname(id); t[0] = sn[0]; t[1] = sn[0] ? sn[1] : 0; t[2] = t[1] ? sn[2] : 0; t[3] = 0; }
+        g_text(T_XS, x + 4, y + 3, t, on ? cc : dim);
+        if ((tg = mod_tag(id)) != 0) g_text_r(T_XS, x + 70, y + 3, tg, K_MOD);
+        item_text(id, b);
+        f = g_text_w(T_M, b) <= 66 ? T_M : g_text_w(T_S, b) <= 66 ? T_S : T_XS;
+        g_text(f, x + 4, y + 14, b, on ? K_WHITE : K_GREY);
+        g_bar(x + 4, y + 31, 66, 3, item_frac(id), on ? cc : dim);
+    }
+    if (g_vis(220, 20)) {                       /* which button gives which column */
+        g_rect(0, 219, 240, 1, K_LINE);
+        g_rect(5, 226, 7, 7, c3c(1));
+        g_text(T_XS, 15, 225, "OCT- HOLD", K_GREY);
+        g_text_c(T_XS, 120, 225, "TAP: OCTAVE", K_GREY);
+        g_text_r(T_XS, 223, 225, "OCT+ HOLD", K_GREY);
+        g_rect(228, 226, 7, 7, c3c(2));
+    }
+}
+#endif
+
 static void draw_all(void)
 {
     const view_t *v = view();
     uint32_t vi = vidx();
     g_rect(0, g_y0, 240, (int32_t)BAND_H, K_BG);
+#if KS_B
+    if (C3_ON) draw_c3();
+    else
+#endif
     switch (theme) {
     case TH_STUDIO: th_studio(v, vi); break;
     case TH_PURE: th_pure(v, vi); break;
@@ -831,7 +930,7 @@ static void draw_all(void)
         g_text_c(T_XS, 120, 188, "SEL = LOAD \xB7 OTHER BUTTON = KEEP", K_LIME);
         g_text_c(T_XS, 120, 200, "PRESETS: ANOTHER ONE", K_GREY);
     }
-    if (vpop_ms && !dpop_ms && !pend_on && g_vis(72, 66)) {   /* the value turned, big: before -> now */
+    if (vpop_ms && !dpop_ms && !pend_on && !C3_ON && g_vis(72, 66)) {   /* the value turned, big: before -> now */
         char now[24], t[40];
         str_cat(str_cat(t, vpop_pre), item_name(vpop_id));
         item_text(vpop_id, now);
@@ -844,7 +943,7 @@ static void draw_all(void)
         g_rect(0, 0, 240, 18, K_ORANGE);
         g_text_c(T_XS, 120, 4, "A/B \xB7 SAVED SOUND \xB7 RELEASE SEL", K_INK);
     }
-    if (hb.b != 0xFF && !hb.used && !hb.fired && fm1_ms - hb.at > 180u && g_vis(178, 42)) {   /* a button held: what comes */
+    if (hb.b != 0xFF && hb.b > BTN_OCT_UP && !hb.used && !hb.fired && fm1_ms - hb.at > 180u && g_vis(178, 42)) {   /* a button held: what comes */
         uint32_t el = fm1_ms - hb.at, fr = hb.next ? (el >= hb.next ? 256u : el * 256u / hb.next) : 0u;
         g_box(14, 180, 212, 38, K_PANEL, hb.next ? K_LIME : K_MOD);
         g_text_c(T_XS, 120, 186, hold_label(hb.b), hb.next ? K_WHITE : K_MOD);

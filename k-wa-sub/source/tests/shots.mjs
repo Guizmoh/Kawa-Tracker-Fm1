@@ -2,7 +2,7 @@
 //   node tests/shots.mjs [script.txt] -> build/shots/*.raw, build/shots/out.wav (tests/png.py makes the PNGs)
 // Script lines: "ms btn ID" (tap), "ms down ID" / "ms up ID" (held), "ms on KEY" / "ms off KEY", "ms enc ID STEPS", "ms shot NAME", "ms end"
 import fs from "fs";
-const wasm = fs.readFileSync(new URL("../build/web/ksub.wasm", import.meta.url));
+const wasm = fs.readFileSync(process.env.WASM || new URL("../build/web/ksub.wasm", import.meta.url));
 const { instance } = await WebAssembly.instantiate(wasm, {});
 const x = instance.exports;
 const script = fs.readFileSync(process.argv[2] || new URL("tour.txt", import.meta.url), "utf8")

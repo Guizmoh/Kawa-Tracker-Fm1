@@ -144,6 +144,30 @@ de 0 à +24 demi-tons, modulable par les LFO : la vraie « sync sweep »). Ce mo
 normale. Les patches faits avec PHASE, FOLD, SYNC ou VOCAL sont convertis au chargement ; les patches enregistrés
 restent compatibles entre les deux versions.
 
+**Double Shift (version B seulement).** Sur PLAY, EDIT, ENV, FILTER, LFO et FX, le premier écran montre 12 réglages
+en 3 colonnes de 4 (une ligne par potard `K1`–`K4`) :
+
+| Colonne | Couleur | Pour la jouer |
+|---|---|---|
+| gauche : la base (MIX, AMP, WOBBLE, SPACE…) | vert fluo | les potards seuls |
+| milieu : OSC A, FILTER ENV, LFO 1, DRIVE… | jaune | `OCT−` maintenu + potard |
+| droite : OSC B, MOD ENV, LFO 2, MASTER… | orange | `OCT+` maintenu + potard |
+
+`OCT−` / `OCT+` tapés seuls changent toujours l'octave (tenus plus d'une demi-seconde sans potard : rien) ; les deux
+ensemble coupent tout. Les cases ne montrent que des initiales ; le nom complet, la valeur et l'ancienne valeur
+s'affichent en haut pendant qu'on tourne. `SELECT` + `ALGO` règlent aussi n'importe laquelle des 12 cases. Le
+bouton de la page (ou `SEL`) passe ensuite aux vues détaillées habituelles, puis revient aux 3 colonnes. Un effet
+éteint s'allume quand on monte un de ses réglages.
+
+| Page | Gauche (base) | Milieu (`OCT−`) | Droite (`OCT+`) |
+|---|---|---|---|
+| PLAY | cutoff, wob rate, wob depth, résonance | sub, saturation, delay, volume | A P1, B P1, X-MOD, filter env |
+| EDIT | niveaux A, B, SUB, X-MOD | OSC A : P1, P2, P3, demi-tons | OSC B : P1, P2, P3, demi-tons |
+| ENV | AMP A D S R | FILTER A D S R | MOD A, D, quantité, destination |
+| FILTER | cutoff, résonance, drive, env | type, key, vélocité, route du sub | sub : onde, octave, bruit, couleur |
+| LFO | wob rate, depth, destination, grille | LFO 1 : forme, phase, lissage, retrig | LFO 2 : forme, rate, depth, destination |
+| FX | delay temps, feedback, mix, reverb | saturation type, quantité, mix, bits | glue, sub boost, volume, crush mix |
+
 ## À faire
 
 - **Page MIDI** (prévue, pas encore faite) : canal par fonction, start/stop du SEQ par l'horloge MIDI, envoi de
