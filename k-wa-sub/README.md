@@ -25,7 +25,7 @@ séquenceur, sans pistes, sans samples ni batteries : tout le processeur va au s
 | **FX** | SATURATION (soft, tube, hard, fold) · BITCRUSH · CHORUS (au-dessus de ~150 Hz : le sub reste mono) · DUB DELAY ping-pong calé sur le tempo, plus sombre à chaque répétition · REVERB · MASTER (glue, sub boost, sortie) |
 | **Jeu** | MONO, LEGATO (glide entre touches tenues), POLY 4 voix ; glide ; pitch bend |
 
-42 presets d'usine (+ INIT), chacun avec son genre : DNB, DUB, DUBSTEP, TECHNO, JUNGLE, UK GARAGE, TRAP, HOUSE, NEUROFUNK,
+50 presets d'usine (+ INIT), chacun avec son genre : DNB, DUB, DUBSTEP, TECHNO, JUNGLE, UK GARAGE, TRAP, HOUSE, NEUROFUNK,
 DUB TECHNO, BREAKS, MINIMAL ; et 32 emplacements utilisateur (banque B). La liste des presets affiche, en petit à
 droite, le genre et les moteurs de chaque patch.
 
@@ -53,7 +53,7 @@ droite, le genre et les moteurs de chaque patch.
 | `ENV` | 03 ENVELOPE | AMP · FILTER · MOD |
 | `SEQ` | 04 FILTER | cutoff / résonance / drive · modulations du filtre · **SEQ BASS** |
 | `LFO` | 05 LFO | LFO 1 WOBBLE · LFO 2 · STEP FX · matrice |
-| `FX` | 06 FX | saturation · crush · chorus · delay · reverb · master |
+| `FX` | 06 FX | saturation · compresseur · crush · chorus · phaser · delay · reverb · master |
 | `ARP` | 07 PRESETS | banque A (usine) · banque B (utilisateur) · **ARP** |
 | `GLO` | 08 SYSTEM | canal MIDI, mode de voix, glide, bend, vélocité, tempo, horloge, octave, style |
 
@@ -72,11 +72,30 @@ La page `ARP` › PRESETS montre la banque A, `ARP` encore la banque B (`K1` dé
 `SYSTEM › PALETTE` donne 6 palettes par thème : la sienne, une variante (AMBER, OCEAN, PURE RED, MAGMA), SYNTHWAVE,
 MINT, noir et blanc, et INVERTED (tons de gris : fond gris clair, cases un peu plus foncées, texte sombre). `SYSTEM › FONT` : SANS (DejaVu Sans Bold), MONO (IBM Plex Mono),
 HYPER (Atkinson Hyperlegible Mono, faite pour être lue par tous) ou PIXEL (Press Start 2P, nette à 8 px).
+`SYSTEM › LOUPE` (juste sous FONT) : les lignes et les valeurs passent à la plus grande taille qui tient dans leurs
+cases (SANS 9 → 11, MONO et HYPER 10 → 12, valeurs 11-12 → 13-14) ; un texte qui toucherait le bord de sa case repasse
+à la taille du dessous. PIXEL n'a que 8 et 16 : la loupe n'y change rien.
 
 **Visuels.** Chaque vue montre ce qu'elle règle : forme d'onde de chaque oscillateur et du sub, enveloppes (avec un
 point qui suit la note jouée), courbe du filtre (avec le cutoff modulé en direct), LFO (avec leur position),
 grille STEP (avec le pas joué), courbe de saturation, crush, chorus, échos du delay, queue de la reverb, vu-mètre et
-compression du master, charge des cœurs.
+compression du master, charge des cœurs. Chaque moteur a son dessin : **WAVE** montre les 8 images de la table en
+profondeur, celle qui est lue en clair (elle avance quand on tourne POSITION) ; **FM** montre les deux opérateurs
+(le modulateur et son ratio, la flèche de l'index, la boucle de feedback, la porteuse) ; **SUPER / REESE** l'éventail
+des scies selon le detune ; **ANALOG** sa place sur l'échelle SIN TRI SAW SQR. Le compresseur dessine sa courbe, ce
+qu'il retire et un tour de son PUMP ; le phaser ses creux qui bougent ; delay et reverb changent de dessin avec leur
+type. La grande valeur qui s'affiche quand on tourne se place sous le dessin, pour le voir changer.
+
+**Effets.** **COMPRESSEUR** : AMOUNT (seuil et ratio ensemble, avec gain de rattrapage), PUMP (le creux du sidechain
+sur le tempo, 1/4, 1/8, 1/2 ou 1 mesure, sur toute la sortie, reverb comprise), ATTACK, RELEASE. **PHASER** : 4
+étages par côté, RATE, DEPTH, FEEDBACK, MIX. **DELAY › TYPE** : PING-PONG, TAPE (pleurage, saturé, plus sombre),
+DIGITAL (net, stéréo), DUB (plus sombre, plus long). **REVERB › TYPE** : ROOM, HALL (celle d'avant), PLATE (dense,
+claire), SPRING (ressort : bande médium dans des peignes courts, pour le dub). Réglages modulables par les LFO :
+COMP AMOUNT, PHASER RATE / DEPTH / MIX. **GLIDE** (durée) : `EDIT › COMBINE` (5e ligne) et `SYSTEM`. Les patches
+utilisateur gardent ces nouveaux réglages (dans le 2e secteur du stockage) ; ceux d'avant les ont éteints.
+
+**Nouveaux presets** : SYNC SWEEP (dubstep, sync modulée), PUMP HOUSE, PHASE DUB (phaser, delay TAPE, reverb SPRING),
+TAPE TECHNO, REESE PHASER, FM 808, WAVE MORPH (dub techno, delay DUB, reverb PLATE), PLATE STAB.
 
 `SELECT` choisit la ligne, `ALGORITHM` change sa valeur, `K1`–`K4` règlent toujours **les 4 premières lignes de la vue, dans l'ordre** (les réglages les plus joués sont mis en tête ; le bas de l'écran les rappelle) (dans
 l'émulateur, leur fonction s'affiche sous chaque potard), `PRESETS` charge le patch suivant depuis n'importe quelle
@@ -170,8 +189,10 @@ d'abord) :
 
 Le **hard sync** devient un mode du mélange A + B : `COMBINE › MODE = SYNC` (B redémarre avec A, `X-MOD` monte B
 de 0 à +24 demi-tons, modulable par les LFO : la vraie « sync sweep »). Ce mode existe aussi dans la version
-normale. Les patches faits avec PHASE, FOLD, SYNC ou VOCAL sont convertis au chargement ; les patches enregistrés
-restent compatibles entre les deux versions.
+normale. Les 9 presets d'usine qui utilisaient PHASE, FOLD, SYNC ou VOCAL ont leur propre version B, refaite sur les
+4 moteurs (CONCRETE, YOI TALKER, NEURO GROWL, PHASE HORN, SYNC RIPPER, TEAROUT, NEURO STAB, MINIMAL CLICK, YOI
+RIDDIM) ; les patches utilisateur faits avec ces moteurs sont convertis au chargement et restent compatibles entre
+les deux versions.
 
 ## Deux façons de jouer : CLASSIC ou SHIFT
 

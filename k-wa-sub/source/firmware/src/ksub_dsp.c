@@ -693,7 +693,7 @@ static void voice_block(voice_t *v, int32_t *acc)
         if (!v->g) v->g = g_t;
         dg = (g_t - v->g) / (int32_t)KS_CB;
         for (i = 0; i < (int32_t)KS_CB; i++) {
-            int32_t x = (s[i] * gain) >> 12, u;
+            int32_t x = (int32_t)(((int64_t)s[i] * gain) >> 12), u;   /* (64-bit: the macros can push the mix past 2^17) */
             if (drv) x = sat15(x);
             v->g += dg;
             u = sat15(((x * comp) >> 12) - (int32_t)(((int64_t)v->y4 * k) >> 12));
@@ -714,7 +714,7 @@ static void voice_block(voice_t *v, int32_t *acc)
             a[k] = VOX_A[vi][k] + ((((int32_t)VOX_A[vi + 1u][k] - VOX_A[vi][k]) * (int32_t)vk) >> 15);
         }
         for (i = 0; i < (int32_t)KS_CB; i++) {
-            int32_t x = (s[i] * gain) >> 12, h;
+            int32_t x = (int32_t)(((int64_t)s[i] * gain) >> 12), h;
             if (drv) x = sat15(x);
             h = x - v->l1 - mul15(v->b1, q); v->b1 = clip(v->b1 + mul15(f[0], h), 200000); v->l1 += mul15(f[0], v->b1);
             h = x - v->l2 - mul15(v->b2, q); v->b2 = clip(v->b2 + mul15(f[1], h), 200000); v->l2 += mul15(f[1], v->b2);
@@ -729,7 +729,7 @@ static void voice_block(voice_t *v, int32_t *acc)
         if (L > (int32_t)(CMB_N - 2u) << 8) L = (int32_t)(CMB_N - 2u) << 8;
         if (L < 2 << 8) L = 2 << 8;
         for (i = 0; i < (int32_t)KS_CB; i++) {
-            int32_t x = (s[i] * gain) >> 12, d0, d1, y;
+            int32_t x = (int32_t)(((int64_t)s[i] * gain) >> 12), d0, d1, y;
             uint32_t r = (v->cw - (uint32_t)(L >> 8)) & (CMB_N - 1u);
             if (drv) x = sat15(x);
             d0 = v->cmb[r];
@@ -954,7 +954,22 @@ static int16_t rv_a[556 + 441 + 579 + 464];
 static struct {
     int32_t dco[2], dc_y, cr_hold, cr_n, hp_ch, dl_lp[2], dl_hp[2], dl_t, rv_lp[8], rv_hp, sub_lp, env, gain;
     uint32_t dl_w, ch_w, chph, rv_i[8], ap_i[4];
+    int32_t cp_env, cp_g, ph_x[2][4], ph_y[2][4], ph_last[2], sp_hp, sp_lp;   /* compressor, phaser, the spring's band */
+    uint32_t cp_n, phph, dl_wow;
 } fx;
+static volatile int32_t meter_cp = 32767;       /* the compressor's gain (the COMPRESSOR view) */
+/* PUMP: the dip on the tempo, deepest at the beat, a curve back up (rate 0 1/4, 1 1/8, 2 1/2, 3 a bar); Q15 gain */
+static int32_t pump_gain(uint32_t pos, uint32_t rate, int32_t depth)
+{
+    static const uint8_t SH[4] = {0, 1, 1, 2};
+    uint32_t fr = (rate == 1u ? pos << 1 : rate ? pos >> SH[rate & 3u] : pos) & 0xFFFFFFu;
+    int32_t u = 32767 - (int32_t)(fr >> 9), g = 32767 - mul15(mul15(u, u), depth * 258);
+    if ((fr >> 16) < 5u) g = 32767 - (32767 - g) * (int32_t)(fr >> 8) / 1280;   /* (a 2 % slope in, no click) */
+    return g;
+}
+/* the reverb's types: its combs' length (Q8), feedback and damping added; SPRING: a band into short combs */
+static const uint16_t RV_SC[4] = {150, 256, 205, 86};
+static const int16_t RV_FBA[4] = {-1800, 0, 1500, 4200}, RV_DA[4] = {-2000, 0, -7000, 3000};
 
 static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
 {
@@ -969,7 +984,12 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
     int32_t vol = (mv * mv * 419) >> 10, boost = fpv(MS_SUB, D_SUBB) * 200, glue = fpv(MS_GLUE, D_GLUE);
     int32_t thr = 32767 - glue * 180, makeup = 4096 + glue * 24;
     int32_t dj_f = 0, dj_q = 0, dj_mix = 0;
-    uint32_t pb = 0, pinc = 0;
+    uint32_t pb = ks_beats, pinc = (ks_bpm10 * 41546u) >> 16;   /* (the beat, Q24, and its step a sample: PUMP) */
+    int32_t cp_amt = fpv(CP_AMT, D_CPAMT), cp_thr = 32767 - cp_amt * 200, cp_r = 2 + cp_amt / 16, cp_mk = 32768 + cp_amt * 150;
+    int32_t cp_atk = 32768 / (1 + P[CP_ATK] * 11), cp_rel = 1048576 / (441 + P[CP_REL] * 270), cp_pump = P[CP_ON] ? P[CP_PUMP] : 0;
+    int32_t ph_dep = fpv(PH_DEP, D_PHDEP) * 160, ph_fb = P[PH_FB] * 200, ph_mix = fpv(PH_MIX, D_PHMIX) * 258;
+    uint32_t ph_inc = KS_LFO_INC[fpv(PH_RATE, D_PHRATE)] / KS_CB, rvt = (uint32_t)P[RV_TYPE] & 3u, dlt = (uint32_t)P[DL_TYPE] & 3u;
+    int32_t rv_fb2 = clampi(rv_fb + RV_FBA[rvt], 0, 31800), rv_d2 = clampi(rv_d + RV_DA[rvt], 0, 32000);
     {                                           /* the delay time from the tempo */
         uint32_t cpb = DIV_CPB[P[DL_TIME] & 15], spb = 26460000u / (ks_bpm10 | 1u), t = (spb << 8) / (cpb >> 8);
         dl_t = (int32_t)(t > DL_N - 4u ? DL_N - 4u : t) << 8;
@@ -997,8 +1017,6 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
         if (dj_f > 24000) dj_f = 24000;
         dj_q = 46000 - lfx_fres * 280;
         dj_mix = v * 4096 > 32767 ? 32767 : v * 4096;
-        pb = ks_beats;
-        pinc = (ks_bpm10 * 41546u) >> 16;       /* beats a sample, Q24 */
     }
     for (i = 0; i < n; i++) {
         int32_t x = in[i] * 7 / 8, L, R, w;
@@ -1046,6 +1064,21 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
             }
             x += mul15(fx.cr_hold - x, cr_mix);
         }
+        if (P[CP_ON]) {                         /* the compressor: a peak follower, the gain every 16 samples, slid */
+            int32_t a = x < 0 ? -x : x;
+            if (a > 131071) a = 131071;
+            if (a > fx.cp_env) fx.cp_env += (int32_t)(((int64_t)(a - fx.cp_env) * cp_atk) >> 15);
+            else fx.cp_env -= (int32_t)(((int64_t)(fx.cp_env - a) * cp_rel) >> 20) + 1;
+            if (fx.cp_env < 0) fx.cp_env = 0;
+            if (!fx.cp_g) fx.cp_g = 32767;
+            if (!(fx.cp_n++ & 15u)) {
+                int32_t e = fx.cp_env > 1 ? fx.cp_env : 1, gt = 32767;
+                if (e > cp_thr && e >= 4) gt = (((cp_thr + (e - cp_thr) / cp_r) >> 2) << 15) / (e >> 2);   /* (32-bit: e < 2^17) */
+                fx.cp_g += (gt - fx.cp_g) >> 1;
+                meter_cp = fx.cp_g;
+            }
+            x = (int32_t)(((int64_t)mul15(x, fx.cp_g) * cp_mk) >> 15);
+        } else meter_cp = 32767;
         x = clip(x, 120000);
         L = R = x;
         if (P[CH_ON] && !ks_shed) {             /* chorus on what is above ~150 Hz (the sub stays mono) */
@@ -1065,19 +1098,44 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
             R += mul15(w, ch_mix);
             fx.ch_w++;
         }
-        if (P[DL_ON]) {                         /* the dub delay: ping-pong, darker and thinner at every repeat */
-            int32_t o[2];
+        if (P[PH_ON] && !ks_shed) {             /* the phaser: four all-passes a side, swept by its LFO, a feedback */
+            uint32_t c;
+            fx.phph += ph_inc;
+            for (c = 0; c < 2u; c++) {
+                int32_t lfo = (tri32(fx.phph + (c ? 0x40000000u : 0u)) + 32768) >> 1;   /* (0..32767) */
+                int32_t a = 4900 + mul15(lfo, ph_dep), y = clip(x + mul15(fx.ph_last[c], ph_fb), 120000);
+                if (a > 31000) a = 31000;
+                for (k = 0; k < 4u; k++) {      /* y = a (x - y1) + x1 */
+                    int32_t o = fx.ph_x[c][k] + mul15(a, y - fx.ph_y[c][k]);
+                    fx.ph_x[c][k] = y;
+                    fx.ph_y[c][k] = o = clip(o, 150000);
+                    y = o;
+                }
+                fx.ph_last[c] = y;
+                if (c) R += mul15((y - x) >> 1, ph_mix); else L += mul15((y - x) >> 1, ph_mix);
+            }
+        }
+        if (P[DL_ON]) {                         /* the delay: PING-PONG, TAPE (wow, saturated, darker), DIGITAL, DUB */
+            int32_t o[2], t = fx.dl_t, lpk = dlt == 2u ? 32767 : dlt == 3u ? dl_lpk * 2 / 3 : dlt == 1u ? dl_lpk * 3 / 4 : dl_lpk;
+            int ping = dlt == 0u || dlt == 3u;
             fx.dl_t += (dl_t - fx.dl_t) >> 11;
-            for (k = 0; k < 2u; k++) {
-                uint32_t r = (fx.dl_w - (uint32_t)(fx.dl_t >> 8)) & (DL_N - 1u);
-                int32_t a = dl_buf[k][r], b = dl_buf[k][(r - 1u) & (DL_N - 1u)];
-                o[k] = a + (((b - a) * (fx.dl_t & 255)) >> 8);
+            if (dlt == 1u) {                    /* TAPE: wow, about 0.4 Hz, a little flutter on top */
+                fx.dl_wow += 39000u;
+                t += (int32_t)(((int64_t)sin32(fx.dl_wow) * (fx.dl_t >> 9)) >> 15) + (sin32(fx.dl_wow * 13u) >> 9);
+                if (t < 512) t = 512;
             }
             for (k = 0; k < 2u; k++) {
-                int32_t fbk = mul15(o[k ^ 1u], dl_fb), ink = k == 0u ? (x >> 1) : 0;
-                fx.dl_lp[k] += mul15(fbk - fx.dl_lp[k], dl_lpk);
-                fx.dl_hp[k] += (fx.dl_lp[k] - fx.dl_hp[k]) >> 7;
-                dl_buf[k][fx.dl_w & (DL_N - 1u)] = (int16_t)sat15(ink + fx.dl_lp[k] - fx.dl_hp[k]);
+                uint32_t r = (fx.dl_w - (uint32_t)(t >> 8)) & (DL_N - 1u);
+                int32_t a = dl_buf[k][r], b = dl_buf[k][(r - 1u) & (DL_N - 1u)];
+                o[k] = a + (((b - a) * (t & 255)) >> 8);
+            }
+            for (k = 0; k < 2u; k++) {
+                int32_t fbk = mul15(o[ping ? k ^ 1u : k], dl_fb), ink = ping ? (k == 0u ? (x >> 1) : 0) : (x >> 1), w2;
+                if (dlt == 3u) fbk += fbk >> 3;
+                fx.dl_lp[k] += mul15(fbk - fx.dl_lp[k], lpk);
+                fx.dl_hp[k] += (fx.dl_lp[k] - fx.dl_hp[k]) >> (dlt == 2u ? 12 : dlt == 3u ? 6 : 7);
+                w2 = ink + fx.dl_lp[k] - fx.dl_hp[k];
+                dl_buf[k][fx.dl_w & (DL_N - 1u)] = (int16_t)(dlt == 2u ? clip(w2, 32767) : sat15(dlt == 1u ? w2 + (w2 >> 2) : w2));
             }
             fx.dl_w++;
             L += mul15(o[0], dl_mix);
@@ -1088,22 +1146,33 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
             uint32_t base = 0;
             fx.rv_hp += (x - fx.rv_hp) >> 5;
             rin = (x - fx.rv_hp) >> 3;
+            if (rvt == 3u) {                    /* SPRING: a band (about 300 Hz .. 3 kHz) into the short combs */
+                fx.sp_hp += (rin - fx.sp_hp) >> 4;
+                fx.sp_lp += ((rin - fx.sp_hp) - fx.sp_lp) >> 1;
+                rin = fx.sp_lp << 1;
+            }
             for (k = 0; k < 8u; k++) {
                 int16_t *c = rv_c + base;
-                int32_t y = c[fx.rv_i[k]];
-                fx.rv_lp[k] = y + mul15(fx.rv_lp[k] - y, rv_d);
-                c[fx.rv_i[k]] = (int16_t)clip(rin + mul15(fx.rv_lp[k], rv_fb), 32767);
-                if (++fx.rv_i[k] >= RV_LEN[k]) fx.rv_i[k] = 0;
+                uint32_t len = (RV_LEN[k] * RV_SC[rvt]) >> 8;
+                int32_t y;
+                if (fx.rv_i[k] >= len) fx.rv_i[k] = 0;
+                y = c[fx.rv_i[k]];
+                fx.rv_lp[k] = y + mul15(fx.rv_lp[k] - y, rv_d2);
+                c[fx.rv_i[k]] = (int16_t)clip(rin + mul15(fx.rv_lp[k], rv_fb2), 32767);
+                if (++fx.rv_i[k] >= len) fx.rv_i[k] = 0;
                 acc[k >> 2] += y;
                 base += RV_LEN[k];
             }
             base = 0;
             for (k = 0; k < 4u; k++) {
                 int16_t *a = rv_a + base;
-                int32_t b = a[fx.ap_i[k]], in2 = acc[k >> 1];
+                uint32_t len = (AP_LEN[k] * (rvt == 3u ? 128u : RV_SC[rvt])) >> 8;
+                int32_t b, in2 = acc[k >> 1];
+                if (fx.ap_i[k] >= len) fx.ap_i[k] = 0;
+                b = a[fx.ap_i[k]];
                 a[fx.ap_i[k]] = (int16_t)clip(in2 + (b >> 1), 32767);
                 acc[k >> 1] = b - in2;
-                if (++fx.ap_i[k] >= AP_LEN[k]) fx.ap_i[k] = 0;
+                if (++fx.ap_i[k] >= len) fx.ap_i[k] = 0;
                 base += AP_LEN[k];
             }
             L += mul15(acc[0], rv_mix);
@@ -1127,11 +1196,11 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
             }
             L = c[0]; R = c[1];
         }
-        if (lfx_pump) {                         /* PUMP: down on each beat (or 1/8, 1/2, a bar), back up as a curve */
-            static const uint8_t SH[4] = {0, 1, 1, 2};
-            uint32_t pos = pb + pinc * i, fr = (lfx_prate == 1u ? pos << 1 : lfx_prate ? pos >> SH[lfx_prate] : pos) & 0xFFFFFFu;
-            int32_t u = 32767 - (int32_t)(fr >> 9), g = 32767 - mul15(mul15(u, u), lfx_pump * 258);
-            if ((fr >> 16) < 5u) g = 32767 - (32767 - g) * (int32_t)(fr >> 8) / 1280;   /* (a 2 % slope in, no click) */
+        if (lfx_pump || cp_pump) {              /* PUMP (FX LIVE, the compressor's): the dip on the tempo */
+            uint32_t pos = pb + pinc * i;
+            int32_t g = 32767;
+            if (lfx_pump) g = pump_gain(pos, lfx_prate, lfx_pump);
+            if (cp_pump) g = mul15(g, pump_gain(pos, (uint32_t)P[CP_PRATE], cp_pump));
             L = mul15(L, g); R = mul15(R, g);
         }
         L = mul15(L, fx.gain);

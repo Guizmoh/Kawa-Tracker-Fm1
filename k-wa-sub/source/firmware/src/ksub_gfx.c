@@ -63,7 +63,14 @@ static const ks_font_t *const FAMS[4][5] = {{&F_XS, &F_S, &F_M, &F_B, &F_L}, {&F
                                            {&F_HXS, &F_HS, &F_HM, &F_HB, &F_HL}, {&F_PXS, &F_PS, &F_PM, &F_PB, &F_PL}};
 static uint8_t g_bold;                          /* (HYPER is light: drawn twice, a pixel apart) */
 static const ks_font_t *tf[5] = {&F_XS, &F_S, &F_M, &F_B, &F_L};
-static void font_set(uint32_t f) { uint32_t i; for (i = 0; i < 5u; i++) tf[i] = FAMS[f & 3u][i]; g_bold = (f & 3u) == 2u; }
+static const ks_font_t *const ZOOM[3][2] = {{&F_FZS, &F_FZM}, {&F_GZS, &F_GZM}, {&F_HZS, &F_HZM}};   /* LOUPE: S and M bigger */
+static void font_set(uint32_t f, uint32_t zoom)
+{
+    uint32_t i;
+    for (i = 0; i < 5u; i++) tf[i] = FAMS[f & 3u][i];
+    if (zoom && (f & 3u) < 3u) { tf[1] = ZOOM[f & 3u][0]; tf[2] = ZOOM[f & 3u][1]; }
+    g_bold = (f & 3u) == 2u;
+}
 #define T_XS tf[0]
 #define T_S tf[1]
 #define T_M tf[2]
@@ -200,6 +207,13 @@ static void g_text_r(const ks_font_t *f, int32_t xr, int32_t y, const char *s, u
 static void g_text_c(const ks_font_t *f, int32_t xc, int32_t y, const char *s, uint16_t c) { g_text(f, xc - g_text_w(f, s) / 2, y, s, c); }
 
 static char *str_cat(char *p, const char *s) { while (*s) *p++ = *s++; *p = 0; return p; }
+static const ks_font_t *g_fit(const ks_font_t *f, const char *t, int32_t w)   /* f, or the next size down that fits w */
+{
+    int32_t i;
+    for (i = 4; i > 0 && tf[i] != f; i--) {}
+    while (i > 0 && g_text_w(tf[i], t) > w) i--;
+    return tf[i];
+}
 static char *fmt_u(char *p, uint32_t v, uint32_t digits)
 {
     char t[12];

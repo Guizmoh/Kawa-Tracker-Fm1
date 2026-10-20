@@ -88,6 +88,15 @@ int main(void)
             play(low, 1, 30);
         }
         lfx_flt = 0; lfx_pump = 0;
+        for (j = 0; j < 4u; j++) {              /* every delay and reverb type, the compressor hard with its pump, the phaser */
+            load_preset(0, j);
+            patch[DL_ON] = patch[RV_ON] = patch[CP_ON] = patch[PH_ON] = patch[CH_ON] = patch[DR_ON] = 1;
+            patch[DL_TYPE] = patch[RV_TYPE] = (int8_t)j; patch[DL_FB] = 127; patch[RV_SIZE] = 127; patch[RV_DAMP] = (int8_t)(j * 40);
+            patch[CP_AMT] = 127; patch[CP_ATK] = (int8_t)(j * 40); patch[CP_REL] = 127; patch[CP_PUMP] = 127; patch[CP_PRATE] = (int8_t)j;
+            patch[PH_FB] = 127; patch[PH_DEP] = 127; patch[PH_RATE] = 127; patch[PH_MIX] = 127; patch[MS_VOL] = 127;
+            play(chord, 4, 80);
+            play(low, 1, 120);
+        }
         for (j = 0; j < 4u; j++) mc_val[j] = 0;
         perf_defaults();
         ev_push(EV_SEQ, 1, 1); blocks(400); ev_push(EV_SEQ, 0, 0); blocks(20);

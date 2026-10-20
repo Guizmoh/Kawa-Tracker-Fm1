@@ -19,9 +19,13 @@ enum {
     DL_ON, DL_TIME, DL_FB, DL_TONE, DL_MIX, RV_ON, RV_SIZE, RV_DAMP, RV_MIX, MS_GLUE, MS_SUB, MS_VOL,
     V_MODE, V_GLIDE, V_BEND, V_VEL, P_STYLE,
     ST_ON, ST_PAT, ST_RATE, ST_GATE, ST_DST, ST_DEP, ST_SMO,     /* the STEP effect: 16 steps on the tempo */
+    CP_ON, CP_AMT, CP_ATK, CP_REL, CP_PUMP, CP_PRATE,            /* the compressor and its PUMP (from 111: the store's 2nd sector) */
+    RV_TYPE, DL_TYPE,                                            /* ROOM HALL PLATE SPRING; PING-PONG TAPE DIGITAL DUB */
+    PH_ON, PH_RATE, PH_DEP, PH_FB, PH_MIX,                       /* the phaser */
     NP
 };
-#define NP_MAX 112u                             /* room in a stored patch */
+#define NP_MAX 128u                             /* a patch in memory */
+#define NP_STORE 112u                           /* ... in a user slot (sector 1); the rest beside SEQ BASS (sector 2) */
 #define OSC_B (B_ENG - A_ENG)
 #define LFO_2 (L2_SHP - L1_SHP)
 #define NENG 8
@@ -31,14 +35,15 @@ enum { D_OFF, D_CUT, D_RES, D_PITCH, D_AP1, D_AP2, D_BP1, D_BP2, D_ALVL, D_BLVL,
        D_WOB, D_AP3, D_BP3, D_APIT, D_BPIT, D_NCOL, D_FENV, D_L2DEP,
        D_L1RATE, D_L2RATE, D_GATE, D_DRAMT, D_DRMIX, D_CRBITS, D_CRRATE, D_CRMIX, D_CHRATE, D_CHDEP, D_CHMIX,   /* global: */
        D_DLFB, D_DLTONE, D_DLMIX, D_RVSIZE, D_RVDAMP, D_RVMIX, D_GLUE, D_SUBB, D_VOL,   /* once a block, not a voice */
+       D_CPAMT, D_PHRATE, D_PHDEP, D_PHMIX,
        ND };   /* (stored in patches: append only) */
 #define IS_PITCH(d) ((d) == D_PITCH || (d) == D_APIT || (d) == D_BPIT)
 /* the order DEST steps through: the oscillators' EDIT rows together (ksub_ui.c skips an oscillator that is off) */
 static const uint8_t DST_ORDER[ND] = {D_OFF, D_CUT, D_RES, D_DRV, D_DRAMT, D_FENV, D_PITCH, D_ALVL, D_AP1, D_AP2, D_AP3, D_APIT, D_BLVL,
                                       D_BP1, D_BP2, D_BP3, D_BPIT, D_XMOD, D_SUB, D_NOISE, D_NCOL, D_AMP, D_WOB, D_L1RATE,
                                       D_L2RATE, D_L2DEP, D_GATE, D_DRMIX, D_CRBITS, D_CRRATE, D_CRMIX, D_CHRATE,
-                                      D_CHDEP, D_CHMIX, D_DLFB, D_DLTONE, D_DLMIX, D_RVSIZE, D_RVDAMP, D_RVMIX, D_GLUE, D_SUBB,
-                                      D_VOL};
+                                      D_CHDEP, D_CHMIX, D_PHRATE, D_PHDEP, D_PHMIX, D_DLFB, D_DLTONE, D_DLMIX, D_RVSIZE, D_RVDAMP,
+                                      D_RVMIX, D_CPAMT, D_GLUE, D_SUBB, D_VOL};
 /* the parameter each global destination moves */
 #define D_G0 D_L1RATE
 
@@ -77,7 +82,7 @@ static const char *const L_DST[ND] = {"OFF", "CUTOFF", "RESO", "PITCH", "A SHAPE
                                       "WOB RATE", "LFO2 RATE", "STEP GATE", "SAT AMOUNT", "SAT MIX", "CRUSH BITS",
                                       "CRUSH RATE", "CRUSH MIX", "CHORUS RATE", "CHORUS DEPTH", "CHORUS MIX", "DELAY FDBK",
                                       "DELAY TONE", "DELAY MIX", "VERB SIZE", "VERB DAMP", "VERB MIX", "GLUE", "SUB BOOST",
-                                      "VOLUME"};
+                                      "VOLUME", "COMP AMOUNT", "PHASER RATE", "PHASER DEPTH", "PHASER MIX"};
 static const char *const L_SRC[NSRC] = {"OFF", "LFO 1", "LFO 2", "FILT ENV", "MOD ENV", "VELOCITY", "MOD WHEEL",
                                         "PRESSURE", "NOTE", "RANDOM", "STEP"};
 /* the STEP patterns: 16 steps, a level 0..F each ("RANDOM": a new one every bar) */
@@ -92,6 +97,9 @@ static const uint8_t STEP_PB[6] = {1, 2, 3, 4, 6, 8};   /* steps a beat */
 static const char *const L_TRIG[] = {"FREE", "NOTE"};
 static const char *const L_ONOFF[] = {"OFF", "ON"};
 static const char *const L_DRT[] = {"SOFT", "TUBE", "HARD", "FOLD"};
+static const char *const L_PRATE[] = {"1/4", "1/8", "1/2", "1 BAR"};
+static const char *const L_RVT[] = {"ROOM", "HALL", "PLATE", "SPRING"};
+static const char *const L_DLT[] = {"PING-PONG", "TAPE", "DIGITAL", "DUB"};
 static const char *const L_VM[] = {"MONO", "LEGATO", "POLY"};
 static const char *const L_STYLE[] = {"DNB", "DUB", "DUBSTEP", "TECHNO", "JUNGLE", "UK GARAGE", "TRAP", "HOUSE", "NEUROFUNK",
                                       "DUB TECHNO", "BREAKS", "MINIMAL"};   /* the music a preset is for */
@@ -175,6 +183,13 @@ static const pdesc_t PD[NP] = {
     {"RATE", "RATE", 0, 5, 3, FM_LIST, L_SRATE}, {"GATE", "GATE", 0, 127, 100, FM_PCT, 0},
     {"DEST", "DEST", 0, ND - 1, D_OFF, FM_DEST, L_DST}, {"DEPTH", "DEPTH", -64, 63, 0, FM_BIP, 0},
     {"SMOOTH", "SMOOTH", 0, 127, 10, FM_PCT, 0},
+    {"EFFECT", "ON", 0, 1, 0, FM_LIST, L_ONOFF}, {"AMOUNT", "AMT", 0, 127, 50, FM_PCT, 0},
+    {"ATTACK", "ATK", 0, 127, 20, FM_PCT, 0}, {"RELEASE", "REL", 0, 127, 50, FM_PCT, 0},
+    {"PUMP", "PUMP", 0, 127, 0, FM_PCT, 0}, {"PUMP RATE", "P.RATE", 0, 3, 0, FM_LIST, L_PRATE},
+    {"TYPE", "TYPE", 0, 3, 1, FM_LIST, L_RVT}, {"TYPE", "TYPE", 0, 3, 0, FM_LIST, L_DLT},
+    {"EFFECT", "ON", 0, 1, 0, FM_LIST, L_ONOFF}, {"RATE", "RATE", 0, 127, 40, FM_LFOHZ, 0},
+    {"DEPTH", "DEPTH", 0, 127, 80, FM_PCT, 0}, {"FEEDBACK", "FDBK", 0, 127, 50, FM_PCT, 0},
+    {"MIX", "MIX", 0, 127, 64, FM_PCT, 0},
 };
 
 /* ---- the factory presets: the defaults, then (parameter, value) pairs, -1 ends */
@@ -194,8 +209,13 @@ static const preset_t FACTORY[] = {
     PR("NIGHT BUS", P_STYLE, 3, A_ENG, E_WAVE, A_P1, 30, A_P2, 16, B_ENG, E_ANALOG, B_P1, 42, B_LVL, 50, B_OCT, -1,
        F_CUT, 60, F_RES, 50, F_ENV, 40, FE_D, 55, FE_S, 0, AE_D, 60, AE_S, 70, L2_DEP, 20, L2_DST, D_AP1,
        L2_SYNC, 1, L2_DIV, 2, CH_ON, 1, DL_ON, 1, DL_TIME, 8, DL_MIX, 25),
+#if KS_B   /* (version B: on its four engines) */
+    PR("CONCRETE", P_STYLE, 3, A_ENG, E_ANALOG, A_P1, 0, A_P2, 64, S_LVL, 60, F_CUT, 80, F_RES, 30, AE_D, 45, AE_S, 40,
+       ME_AMT, 34, ME_DST, D_DRAMT, ME_D, 45, DR_ON, 1, DR_TYPE, 3, DR_AMT, 70, DR_MIX, 127, MS_GLUE, 60, CP_ON, 1, CP_AMT, 40),
+#else
     PR("CONCRETE", P_STYLE, 3, A_ENG, E_FOLD, A_P1, 40, A_P2, 70, A_P3, 30, S_LVL, 60, F_CUT, 80, F_RES, 30,
        AE_D, 45, AE_S, 40, ME_AMT, 30, ME_DST, D_AP1, ME_D, 45, DR_ON, 1, DR_TYPE, 2, DR_AMT, 50, MS_GLUE, 60),
+#endif
     PR("REESE CLASSIC", P_STYLE, 0, A_ENG, E_SUPER, A_P1, 40, A_P2, 80, A_P3, 0, A_LVL, 100, S_LVL, 70, F_CUT, 75,
        F_RES, 25, L2_DEP, 18, L2_DST, D_AP1, L2_SYNC, 0, L2_RATE, 30, L2_SHP, 1, CH_ON, 1, CH_MIX, 40, X_DRIFT, 30),
     PR("WIDE REESE", P_STYLE, 8, A_ENG, E_SUPER, A_P1, 70, A_P2, 100, A_P3, 127, B_ENG, E_SUPER, B_P1, 50, B_P3, 0,
@@ -204,13 +224,26 @@ static const preset_t FACTORY[] = {
     PR("WOBBLE 01", P_STYLE, 2, A_ENG, E_ANALOG, A_P1, 85, B_ENG, E_ANALOG, B_P1, 127, B_LVL, 70, B_FINE, -10,
        S_LVL, 90, F_CUT, 40, F_RES, 70, F_DRV, 50, L1_SHP, 0, L1_DIV, 9, L1_DEP, 45, L1_DST, D_CUT, L1_TRIG, 1,
        DR_ON, 1, DR_AMT, 50, DR_MIX, 80, M1_SRC, SR_WHEEL, M1_DST, D_WOB, M1_AMT, 40),
+#if KS_B   /* (version B: on its four engines) */
+    PR("YOI TALKER", P_STYLE, 2, A_ENG, E_WAVE, A_P1, 10, A_P2, 56, A_P3, 20, B_ENG, E_ANALOG, B_P1, 85, B_LVL, 60,
+       S_LVL, 80, F_TYPE, FT_VOWEL, F_CUT, 20, F_RES, 80, L1_SHP, 1, L1_DIV, 9, L1_DEP, 50, L1_DST, D_CUT,
+       L1_TRIG, 1, L2_SHP, 1, L2_DIV, 9, L2_DEP, 50, L2_DST, D_AP1, L2_TRIG, 1, DR_ON, 1, DR_AMT, 45),
+#else
     PR("YOI TALKER", P_STYLE, 2, A_ENG, E_VOCAL, A_P1, 10, A_P2, 64, A_P3, 40, B_ENG, E_ANALOG, B_P1, 85, B_LVL, 60,
        S_LVL, 80, F_TYPE, FT_VOWEL, F_CUT, 20, F_RES, 80, L1_SHP, 1, L1_DIV, 9, L1_DEP, 50, L1_DST, D_CUT,
        L1_TRIG, 1, L2_SHP, 1, L2_DIV, 9, L2_DEP, 40, L2_DST, D_AP1, L2_TRIG, 1, DR_ON, 1, DR_AMT, 45),
+#endif
+#if KS_B   /* (version B: on its four engines) */
+    PR("NEURO GROWL", P_STYLE, 8, A_ENG, E_FM, A_P1, 60, A_P2, 48, A_P3, 50, B_ENG, E_ANALOG, B_P1, 0, B_LVL, 60,
+       X_MODE, 2, X_AMT, 34, S_LVL, 80, F_TYPE, FT_COMB, F_CUT, 70, F_RES, 75, F_KEY, 127, L1_SHP, 6, L1_DIV, 11,
+       L1_DEP, 30, L1_DST, D_AP1, L1_TRIG, 1, M1_SRC, SR_LFO1, M1_DST, D_DRAMT, M1_AMT, 25, DR_ON, 1, DR_TYPE, 3,
+       DR_AMT, 55, MS_GLUE, 70, CP_ON, 1, CP_AMT, 50),
+#else
     PR("NEURO GROWL", P_STYLE, 8, A_ENG, E_FM, A_P1, 60, A_P2, 48, A_P3, 50, B_ENG, E_FOLD, B_P1, 50, B_LVL, 60,
        X_MODE, 2, X_AMT, 30, S_LVL, 80, F_TYPE, FT_COMB, F_CUT, 70, F_RES, 75, F_KEY, 127, L1_SHP, 6, L1_DIV, 11,
        L1_DEP, 30, L1_DST, D_AP1, L1_TRIG, 1, M1_SRC, SR_LFO1, M1_DST, D_CUT, M1_AMT, 25, DR_ON, 1, DR_TYPE, 3,
        DR_AMT, 40, MS_GLUE, 70),
+#endif
     PR("METAL FM", P_STYLE, 2, A_ENG, E_FM, A_P1, 80, A_P2, 120, A_P3, 30, S_LVL, 90, F_CUT, 85, F_RES, 40,
        L1_SHP, 4, L1_DIV, 10, L1_DEP, 35, L1_DST, D_AP1, L1_TRIG, 1, L1_SMO, 40, DR_ON, 1, DR_TYPE, 2, DR_AMT, 35),
     PR("808 DROP", P_STYLE, 6, A_ENG, E_ANALOG, A_P1, 0, A_P3, 60, A_LVL, 120, F_CUT, 127, F_RES, 0, AE_D, 85,
@@ -224,10 +257,21 @@ static const preset_t FACTORY[] = {
     PR("ACID LINE", P_STYLE, 3, A_ENG, E_ANALOG, A_P1, 85, S_LVL, 40, F_TYPE, FT_LP24, F_CUT, 35, F_RES, 100,
        F_ENV, 50, FE_D, 45, FE_S, 0, AE_D, 50, AE_S, 80, V_MODE, VM_LEGATO, V_GLIDE, 25, DR_ON, 1, DR_TYPE, 1,
        DR_AMT, 50, DL_ON, 1, DL_TIME, 10, DL_MIX, 20),
+#if KS_B   /* (version B: on its four engines) */
+    PR("PHASE HORN", P_STYLE, 2, A_ENG, E_FM, A_P1, 55, A_P2, 24, A_P3, 30, S_LVL, 80, F_CUT, 95, F_RES, 20,
+       L1_DIV, 10, L1_DEP, 40, L1_DST, D_AP1, L1_TRIG, 1, DR_ON, 1, DR_AMT, 40, PH_ON, 1, PH_RATE, 25, PH_MIX, 50),
+#else
     PR("PHASE HORN", P_STYLE, 2, A_ENG, E_PHASE, A_P1, 70, A_P2, 75, A_P3, 30, S_LVL, 80, F_CUT, 95, F_RES, 20,
        L1_DIV, 10, L1_DEP, 40, L1_DST, D_AP1, L1_TRIG, 1, DR_ON, 1, DR_AMT, 40),
+#endif
+#if KS_B   /* (version B: on its four engines) */
+    PR("SYNC RIPPER", P_STYLE, 8, A_ENG, E_ANALOG, A_P1, 85, A_LVL, 0, B_ENG, E_ANALOG, B_P1, 95, B_P2, 64, B_LVL, 110,
+       X_MODE, 3, X_AMT, 40, S_LVL, 80, F_CUT, 100, F_RES, 25, ME_AMT, 40, ME_DST, D_XMOD, ME_D, 60, L1_DIV, 11,
+       L1_DEP, 30, L1_DST, D_XMOD, DR_ON, 1, DR_TYPE, 2, DR_AMT, 45),
+#else
     PR("SYNC RIPPER", P_STYLE, 8, A_ENG, E_SYNC, A_P1, 40, A_P2, 20, A_P3, 30, S_LVL, 80, F_CUT, 100, F_RES, 25,
        ME_AMT, 40, ME_DST, D_AP1, ME_D, 60, L1_DIV, 11, L1_DEP, 30, L1_DST, D_AP1, DR_ON, 1, DR_TYPE, 2, DR_AMT, 45),
+#endif
     PR("HOLLOW TUBE", P_STYLE, 2, A_ENG, E_WAVE, A_P1, 70, A_P2, 32, A_P3, 30, S_LVL, 90, F_TYPE, FT_NOTCH, F_CUT, 50,
        F_RES, 60, L1_SHP, 0, L1_DIV, 10, L1_DEP, 40, L1_DST, D_CUT, L1_TRIG, 1),
     PR("WUB MACHINE", P_STYLE, 2, A_ENG, E_SUPER, A_P1, 30, A_P3, 64, B_ENG, E_FM, B_P1, 50, B_P2, 16, B_LVL, 60,
@@ -253,14 +297,26 @@ static const preset_t FACTORY[] = {
     PR("RIDDIM SQUARE", P_STYLE, 2, A_ENG, E_ANALOG, A_P1, 127, A_P2, 40, B_ENG, E_ANALOG, B_P1, 127, B_OCT, -1, B_LVL, 60,
        S_LVL, 80, F_CUT, 35, F_RES, 50, L1_SHP, 4, L1_DIV, 10, L1_DEP, 50, L1_DST, D_CUT, L1_TRIG, 1, DR_ON, 1,
        DR_TYPE, 2, DR_AMT, 55),
+#if KS_B   /* (version B: on its four engines) */
+    PR("TEAROUT", P_STYLE, 2, A_ENG, E_FM, A_P1, 90, A_P2, 64, A_P3, 70, B_ENG, E_ANALOG, B_P1, 0, B_LVL, 50, X_MODE, 2,
+       X_AMT, 55, S_LVL, 80, F_TYPE, FT_COMB, F_CUT, 80, F_RES, 80, F_KEY, 127, L1_SHP, 6, L1_DIV, 11, L1_DEP, 40,
+       L1_DST, D_AP1, L1_TRIG, 1, DR_ON, 1, DR_TYPE, 3, DR_AMT, 65, MS_GLUE, 90, CP_ON, 1, CP_AMT, 60),
+#else
     PR("TEAROUT", P_STYLE, 2, A_ENG, E_FM, A_P1, 90, A_P2, 64, A_P3, 70, B_ENG, E_FOLD, B_P1, 60, B_LVL, 50, X_MODE, 2,
        X_AMT, 50, S_LVL, 80, F_TYPE, FT_COMB, F_CUT, 80, F_RES, 80, F_KEY, 127, L1_SHP, 6, L1_DIV, 11, L1_DEP, 40,
        L1_DST, D_AP1, L1_TRIG, 1, DR_ON, 1, DR_TYPE, 3, DR_AMT, 50, MS_GLUE, 90),
+#endif
     PR("BROSTEP SAW", P_STYLE, 2, A_ENG, E_SUPER, A_P1, 60, A_P3, 127, S_LVL, 85, F_CUT, 30, F_RES, 70, F_DRV, 60,
        L1_DIV, 9, L1_DEP, 55, L1_DST, D_CUT, L1_TRIG, 1, DR_ON, 1, DR_AMT, 60),
+#if KS_B   /* (version B: on its four engines) */
+    PR("NEURO STAB", P_STYLE, 8, A_ENG, E_ANALOG, A_P1, 85, A_LVL, 0, B_ENG, E_ANALOG, B_P1, 110, B_LVL, 100, X_MODE, 3,
+       X_AMT, 60, S_LVL, 70, F_CUT, 85, F_RES, 45, ME_AMT, 50, ME_DST, D_XMOD, ME_D, 40, AE_D, 50, AE_S, 30, DR_ON, 1,
+       DR_TYPE, 2, DR_AMT, 50),
+#else
     PR("NEURO STAB", P_STYLE, 8, A_ENG, E_SYNC, A_P1, 70, A_P2, 40, B_ENG, E_FM, B_P1, 50, B_LVL, 60, X_MODE, 1,
        S_LVL, 70, F_CUT, 85, F_RES, 45, ME_AMT, 50, ME_DST, D_AP1, ME_D, 40, AE_D, 50, AE_S, 30, DR_ON, 1, DR_TYPE, 2,
        DR_AMT, 50),
+#endif
     PR("SPEED BASS", P_STYLE, 5, A_ENG, E_ANALOG, A_P1, 100, S_LVL, 60, F_TYPE, FT_LP12, F_CUT, 50, F_RES, 50, F_ENV, 45,
        FE_D, 40, FE_S, 10, AE_D, 55, AE_S, 70, V_MODE, VM_LEGATO, V_GLIDE, 22),
     PR("UKG ORGAN", P_STYLE, 5, MS_VOL, 120, A_LVL, 120, A_ENG, E_WAVE, A_P1, 40, A_P2, 16, B_ENG, E_ANALOG, B_P1, 0, B_OCT, 1, B_LVL, 50,
@@ -281,11 +337,43 @@ static const preset_t FACTORY[] = {
        DL_ON, 1, DL_TIME, 6, DL_FB, 60, DL_MIX, 25, MS_SUB, 70),
     PR("BREAKS HOOVER", P_STYLE, 10, A_ENG, E_SUPER, A_P1, 100, A_P2, 120, A_P3, 127, ME_AMT, -25, ME_DST, D_PITCH,
        ME_A, 30, ME_D, 60, F_CUT, 90, S_LVL, 60, V_GLIDE, 35, CH_ON, 1, CH_MIX, 70),
+#if KS_B   /* (version B: on its four engines) */
+    PR("MINIMAL CLICK", P_STYLE, 11, MS_VOL, 120, A_LVL, 120, A_ENG, E_FM, A_P1, 45, A_P2, 8, S_LVL, 70, AE_D, 35, AE_S, 0, AE_R, 20,
+       F_CUT, 70, F_ENV, 30, FE_D, 25, FE_S, 0, ME_AMT, -40, ME_DST, D_AP1, ME_D, 20, DL_ON, 1, DL_TIME, 10, DL_MIX, 20),
+#else
     PR("MINIMAL CLICK", P_STYLE, 11, MS_VOL, 120, A_LVL, 120, A_ENG, E_PHASE, A_P1, 60, A_P2, 0, S_LVL, 70, AE_D, 35, AE_S, 0, AE_R, 20, F_CUT, 70,
        F_ENV, 30, FE_D, 25, FE_S, 0, DL_ON, 1, DL_TIME, 10, DL_MIX, 20),
+#endif
+#if KS_B   /* (version B: on its four engines) */
+    PR("YOI RIDDIM", P_STYLE, 2, A_ENG, E_WAVE, A_P1, 64, A_P2, 56, S_LVL, 80, F_TYPE, FT_VOWEL, F_CUT, 40, F_RES, 90,
+       L1_SHP, 7, L1_DIV, 10, L1_DEP, 60, L1_DST, D_CUT, L1_TRIG, 1, L2_DIV, 10, L2_DEP, 40, L2_DST, D_AP1, L2_TRIG, 1,
+       DR_ON, 1, DR_AMT, 45),
+#else
     PR("YOI RIDDIM", P_STYLE, 2, A_ENG, E_VOCAL, A_P1, 64, A_P2, 50, S_LVL, 80, F_TYPE, FT_VOWEL, F_CUT, 40, F_RES, 90,
        L1_SHP, 7, L1_DIV, 10, L1_DEP, 60, L1_DST, D_CUT, L1_TRIG, 1, DR_ON, 1, DR_AMT, 45),
+#endif
     PR("INIT", P_STYLE, 0),
+    /* (after INIT: the slots before keep their numbers) */
+    PR("SYNC SWEEP", P_STYLE, 2, A_ENG, E_ANALOG, A_P1, 85, A_LVL, 0, B_ENG, E_ANALOG, B_P1, 85, B_LVL, 110, X_MODE, 3,
+       X_AMT, 30, S_LVL, 90, F_CUT, 95, F_RES, 20, L1_SHP, 0, L1_DIV, 9, L1_DEP, 45, L1_DST, D_XMOD, L1_TRIG, 1,
+       DR_ON, 1, DR_TYPE, 1, DR_AMT, 40, CP_ON, 1, CP_AMT, 50),
+    PR("PUMP HOUSE", MS_VOL, 127, P_STYLE, 7, A_ENG, E_ANALOG, A_P1, 100, A_P2, 60, S_LVL, 80, F_CUT, 60, F_RES, 35, F_ENV, 35, FE_D, 40,
+       FE_S, 10, AE_D, 60, AE_S, 60, AE_R, 25, CP_ON, 1, CP_AMT, 45, CP_PUMP, 90, RV_ON, 1, RV_TYPE, 0, RV_MIX, 15),
+    PR("PHASE DUB", P_STYLE, 1, A_ENG, E_ANALOG, A_P1, 42, S_LVL, 110, F_CUT, 55, PH_ON, 1, PH_RATE, 30, PH_DEP, 90,
+       PH_FB, 70, PH_MIX, 80, DL_ON, 1, DL_TYPE, 1, DL_TIME, 7, DL_FB, 80, DL_MIX, 35, RV_ON, 1, RV_TYPE, 3, RV_MIX, 30,
+       V_MODE, VM_LEGATO, V_GLIDE, 30),
+    PR("TAPE TECHNO", MS_VOL, 127, P_STYLE, 3, A_ENG, E_ANALOG, A_P1, 85, N_LVL, 20, S_LVL, 90, F_CUT, 45, F_RES, 45, F_ENV, 30, FE_D, 45,
+       FE_S, 0, AE_D, 55, AE_S, 50, DL_ON, 1, DL_TYPE, 1, DL_TIME, 8, DL_FB, 75, DL_MIX, 30, RV_ON, 1, RV_SIZE, 100,
+       RV_MIX, 25, CP_ON, 1, CP_AMT, 60, CP_PUMP, 50),
+    PR("REESE PHASER", P_STYLE, 0, A_ENG, E_SUPER, A_P1, 50, A_P2, 90, A_P3, 64, S_LVL, 80, F_CUT, 70, F_RES, 25, PH_ON, 1,
+       PH_RATE, 20, PH_DEP, 100, PH_FB, 60, PH_MIX, 70, X_DRIFT, 25, CP_ON, 1, CP_AMT, 40),
+    PR("FM 808", P_STYLE, 6, A_ENG, E_FM, A_P1, 30, A_P2, 8, A_LVL, 120, S_LVL, 60, AE_D, 100, AE_S, 30, AE_R, 60, ME_AMT, 30,
+       ME_DST, D_PITCH, ME_D, 25, DR_ON, 1, DR_TYPE, 0, DR_AMT, 50, CP_ON, 1, CP_AMT, 60, F_CUT, 127, F_RES, 0),
+    PR("WAVE MORPH", MS_VOL, 110, P_STYLE, 9, A_ENG, E_WAVE, A_P1, 0, A_P2, 32, S_LVL, 85, F_CUT, 65, F_RES, 30, L2_SHP, 1, L2_SYNC, 1,
+       L2_DIV, 1, L2_DEP, 60, L2_DST, D_AP1, DL_ON, 1, DL_TYPE, 3, DL_TIME, 7, DL_FB, 85, DL_MIX, 35, RV_ON, 1, RV_TYPE, 2,
+       RV_MIX, 25),
+    PR("PLATE STAB", MS_VOL, 127, P_STYLE, 8, A_ENG, E_FM, A_P1, 90, A_P2, 24, A_P3, 60, S_LVL, 70, F_CUT, 90, F_RES, 40, AE_D, 45, AE_S, 20,
+       AE_R, 30, ME_AMT, -45, ME_DST, D_AP1, ME_D, 35, RV_ON, 1, RV_TYPE, 2, RV_MIX, 30, CP_ON, 1, CP_AMT, 55),
 };
 #define NFACTORY (sizeof FACTORY / sizeof FACTORY[0])
 

@@ -14,7 +14,7 @@
 enum { PG_PLAY, PG_BASS, PG_ENV, PG_FILT, PG_LFO, PG_FX, PG_PRE, PG_SYS, NPAGE };
 static const uint8_t PAGE_BTN[NPAGE] = {BTN_HOME, BTN_EDIT, BTN_ENV, BTN_SEQ, BTN_LFO, BTN_FX, BTN_ARP, BTN_GLO};
 enum { LY_PLAY, LY_LIST, LY_BOX, LY_STEP, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
-enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_ACCEL, G_C3COL, G_UI, G_ASK,
+enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_ACCEL, G_C3COL, G_UI, G_ASK, G_ZOOM,
        G_SQ_STEP, G_SQ_NOTE, G_SQ_TYPE, G_SQ_PAT, G_SQ_LEN, G_SQ_RATE, G_SQ_SWING,   /* SEQ BASS */
        G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE,                          /* ARP */
        G_LV_FLT, G_LV_PUMP, G_LV_STUT, G_LV_TAPE, G_LV_PRATE, G_LV_FRES,             /* SEL: FX LIVE */
@@ -24,7 +24,7 @@ enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU
 typedef struct {
     uint8_t lay;
     const char *cat;
-    uint8_t n, it[18];                          /* the rows, in the order shown: K1..K4 are the first four */
+    uint8_t n, it[20];                          /* the rows, in the order shown: K1..K4 are the first four */
     const char *tag;
 } view_t;
 #define OSCV(L, X) {LY_LIST, "OSCILLATOR " L, 8, {X##_P1, X##_P2, X##_P3, X##_LVL, X##_ENG, X##_OCT, X##_SEMI, X##_FINE}, "EDIT"}
@@ -34,7 +34,7 @@ static const view_t VIEWS[] = {
     {LY_PLAY, "LIVE MIX", 4, {S_LVL, DR_AMT, DL_MIX, MS_VOL}, "HOME"},
     OSCV("A", A), OSCV("B", B),
     {LY_LIST, "SUB + NOISE", 6, {S_LVL, S_OCT, S_WAVE, N_LVL, N_COL, S_ROUTE}, "EDIT"},
-    {LY_LIST, "COMBINE A + B", 6, {X_AMT, X_MODE, A_LVL, B_LVL, X_DRIFT, X_RESET}, "EDIT"},
+    {LY_LIST, "COMBINE A + B", 8, {X_AMT, X_MODE, A_LVL, B_LVL, V_GLIDE, V_MODE, X_DRIFT, X_RESET}, "EDIT"},
     {LY_BOX, "AMP ENVELOPE", 4, {AE_A, AE_D, AE_S, AE_R}, "ENV"},
     {LY_BOX, "FILTER ENVELOPE", 4, {FE_A, FE_D, FE_S, FE_R}, "ENV"},
     {LY_BOX, "MOD ENVELOPE", 4, {ME_A, ME_D, ME_AMT, ME_DST}, "ENV"},
@@ -45,24 +45,27 @@ static const view_t VIEWS[] = {
     {LY_LFO, "LFO 2 \xB7 MOTION", 9, {I_L2RATE, L2_DEP, L2_SHP, L2_DST, G_GRID, L2_SYNC, L2_TRIG, L2_PH, L2_SMO}, "LFO"},
     {LY_STEP, "STEP FX", 7, {ST_PAT, ST_RATE, ST_GATE, ST_DEP, ST_ON, ST_DST, ST_SMO}, "LFO"},
     {LY_LIST, "MOD MATRIX", 12, {M1_AMT, M2_AMT, M3_AMT, M4_AMT, M1_SRC, M1_DST, M2_SRC, M2_DST, M3_SRC, M3_DST, M4_SRC, M4_DST}, "LFO"},
-    FXV(DR_AMT, DR_MIX, DR_TYPE, DR_ON), FXV(CR_BITS, CR_RATE, CR_MIX, CR_ON), FXV(CH_RATE, CH_DEP, CH_MIX, CH_ON),
-    {LY_LIST, "FX RACK", 5, {DL_TIME, DL_FB, DL_MIX, DL_TONE, DL_ON}, "FX"},
-    FXV(RV_SIZE, RV_MIX, RV_DAMP, RV_ON),
+    FXV(DR_AMT, DR_MIX, DR_TYPE, DR_ON),
+    {LY_LIST, "FX RACK", 6, {CP_AMT, CP_PUMP, CP_ATK, CP_REL, CP_PRATE, CP_ON}, "FX"},
+    FXV(CR_BITS, CR_RATE, CR_MIX, CR_ON), FXV(CH_RATE, CH_DEP, CH_MIX, CH_ON),
+    {LY_LIST, "FX RACK", 5, {PH_RATE, PH_DEP, PH_FB, PH_MIX, PH_ON}, "FX"},
+    {LY_LIST, "FX RACK", 6, {DL_TIME, DL_FB, DL_MIX, DL_TYPE, DL_TONE, DL_ON}, "FX"},
+    {LY_LIST, "FX RACK", 5, {RV_SIZE, RV_MIX, RV_TYPE, RV_DAMP, RV_ON}, "FX"},
     {LY_LIST, "FX RACK", 3, {MS_VOL, MS_GLUE, MS_SUB}, "FX"},
     {LY_PRESET, "PRESET BANK A", 0, {0}, "PRESET"},
     {LY_PRESET, "PRESET BANK B", 0, {0}, "PRESET"},
     {LY_SAVE, "SAVE PATCH", 0, {0}, "PRESET"},
     {LY_LIST, "ARPEGGIATOR", 5, {G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE}, "ARP"},
-    {LY_SYS, "GLOBAL SETUP", 18, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_UI, G_ASK, G_THEME, G_PAL, G_FONT, G_C3COL, G_GRID, G_BROWSE,
+    {LY_SYS, "GLOBAL SETUP", 19, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_UI, G_ASK, G_THEME, G_PAL, G_FONT, G_ZOOM, G_C3COL, G_GRID, G_BROWSE,
                                   G_MIDICH, V_BEND, V_VEL, G_CLOCK, G_CORES, G_CPU}, "SYSTEM"},
 };
 /* what K1..K4 turn: the first four rows (the preset lists and SAVE have their own) */
 static uint32_t vknob(const view_t *v, uint32_t i) { return v->lay == LY_PRESET || v->lay == LY_SAVE || i >= v->n ? I_NONE : v->it[i]; }
-static const uint8_t FX_ON[5] = {DR_ON, CR_ON, CH_ON, DL_ON, RV_ON};
-static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 12, 16, 22, 26, 27};   /* each page's first view */
+static const uint8_t FX_ON[7] = {DR_ON, CP_ON, CR_ON, CH_ON, PH_ON, DL_ON, RV_ON};   /* the FX page's views, in order */
+static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 12, 16, 24, 28, 29};   /* each page's first view */
 #define V_SEQ 11u                               /* SEQ BASS (the SEQ button's third view), ARP (the ARP button's last) */
-#define V_ARP 25u
-static const char *const FX_TITLE[6] = {"SATURATION", "BITCRUSH", "CHORUS", "DUB DELAY", "REVERB", "MASTER"};
+#define V_ARP 27u
+static const char *const FX_TITLE[8] = {"SATURATION", "COMPRESSOR", "BITCRUSH", "CHORUS", "PHASER", "DELAY", "REVERB", "MASTER"};
 static const char *const FT_TITLE[NFT] = {"DARK EDGE", "SOFT EDGE", "BAND RAZOR", "THIN AIR", "HOLLOW", "TALK BOX", "METAL COMB"};
 static const char *const FT_SUB[NFT] = {"LOW PASS \xB7 24 dB", "LOW PASS \xB7 12 dB", "BAND PASS \xB7 12 dB", "HIGH PASS \xB7 24 dB",
                                         "NOTCH \xB7 12 dB", "FORMANT \xB7 A E I O U", "COMB \xB7 TUNED BY CUTOFF"};
@@ -72,10 +75,18 @@ static const char *const FT_SUB[NFT] = {"LOW PASS \xB7 24 dB", "LOW PASS \xB7 12
 typedef struct {
     uint8_t magic, sum;
     char name[14];
-    int8_t p[NP_MAX];
+    int8_t p[NP_STORE];
 } upatch_t;                                     /* 128 B: 32 of them fill one 4 KiB sector of the store */
 #define UP_MAGIC 0xB5u
 static upatch_t ustore[NUSER];
+#define UX_MAGIC 0x58u
+#define UX_AT 0x400u                            /* (in the 2nd sector, after SEQ BASS / ARP / MACROS) */
+static struct {                                 /* the user slots' settings past NP_STORE (compressor, phaser, types) */
+    uint8_t magic, sum;
+    int8_t p[NUSER][NP_MAX - NP_STORE];
+} uext;
+typedef char perf_fits_before_uext[sizeof perf <= UX_AT ? 1 : -1];   /* (the 2nd sector: SEQ/ARP/MACROS, then the slots' rest) */
+static uint8_t ux_sum(void) { const uint8_t *b = (const uint8_t *)uext.p; uint32_t i, x = 0x77; for (i = 0; i < sizeof uext.p; i++) x = (x * 7u + b[i]) & 0xFFu; return (uint8_t)x; }
 static struct {
     uint8_t ver, midich, clock, oct;            /* midich 0: omni; clock 0 internal, 1 MIDI */
     uint16_t bpm10;
@@ -86,7 +97,8 @@ static struct {
     uint8_t accel;                              /* the knobs' acceleration: 0 OFF, 1 ON, 2 FAST (appended: older saves load) */
     uint8_t c3col;                              /* SHIFT's three columns: 0 the theme's colour, 1 green / yellow / orange */
     uint8_t ui, ask;                            /* UI MODE: 0 CLASSIC, 1 SHIFT; ask which at each start */
-} set = {6, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0, 0, {0}, 1, 0, KS_B, 1};
+    uint8_t zoom;                               /* LOUPE: the rows' and values' type as big as they fit */
+} set = {6, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0, 0, {0}, 1, 0, KS_B, 1, 0};
 static char pname[14];
 static uint8_t page, vcur[NPAGE], cursor[sizeof VIEWS / sizeof VIEWS[0]], pre_cur[2], save_slot, save_pos, hold;
 static uint8_t key_note[27], latched[128], phys[128];
@@ -117,17 +129,18 @@ static uint32_t dual_ms;
 #if defined(KAWA_WASM)
 static uint8_t w_store[8192];
 static uint32_t w_store_gen;
-static void store_load(void) { memcpy(ustore, w_store, sizeof ustore); memcpy(&perf, w_store + 4096, sizeof perf); }
+static void store_load(void) { memcpy(ustore, w_store, sizeof ustore); memcpy(&perf, w_store + 4096, sizeof perf); memcpy(&uext, w_store + 4096 + UX_AT, sizeof uext); }
 static int store_save(void) { memcpy(w_store, ustore, sizeof ustore); w_store_gen++; return 0; }
-static int perf_save(void) { memcpy(w_store + 4096, &perf, sizeof perf); w_store_gen++; return 0; }
+static int perf_save(void) { memcpy(w_store + 4096, &perf, sizeof perf); memcpy(w_store + 4096 + UX_AT, &uext, sizeof uext); w_store_gen++; return 0; }
 static int settings_write(void) { return settings_save(&set, sizeof set); }
 #else
 static void store_load(void)
 {
     if (!flash_ok || st_read(STORE_LO, ustore, sizeof ustore)) memset(ustore, 0xFF, sizeof ustore);
     if (!flash_ok || st_read(STORE_LO + 0x1000u, &perf, sizeof perf)) memset(&perf, 0xFF, sizeof perf);
+    if (!flash_ok || st_read(STORE_LO + 0x1000u + UX_AT, &uext, sizeof uext)) memset(&uext, 0xFF, sizeof uext);
 }
-static int perf_save(void)                      /* SEQ BASS and the ARP: the store's second sector */
+static int perf_save(void)                      /* the store's second sector: SEQ BASS, ARP, MACROS, the slots' rest */
 {
     uint32_t took;
     int rc;
@@ -135,6 +148,7 @@ static int perf_save(void)                      /* SEQ BASS and the ARP: the sto
     c1_pause();
     rc = fl_erase4k(STORE_LO + 0x1000u, &took);
     if (!rc) rc = fl_write(STORE_LO + 0x1000u, (const uint8_t *)&perf, sizeof perf);
+    if (!rc) rc = fl_write(STORE_LO + 0x1000u + UX_AT, (const uint8_t *)&uext, sizeof uext);
     c1_resume();
     return rc;
 }
@@ -232,10 +246,17 @@ static uint8_t up_sum(const upatch_t *u)
 {
     uint32_t i, s = 0x5A;
     for (i = 0; i < sizeof u->name; i++) s += (uint8_t)u->name[i];
-    for (i = 0; i < NP_MAX; i++) s = (s * 3u + (uint8_t)u->p[i]) & 0xFFu;
+    for (i = 0; i < NP_STORE; i++) s = (s * 3u + (uint8_t)u->p[i]) & 0xFFu;
     return (uint8_t)s;
 }
 static int up_valid(uint32_t k) { return k < NUSER && ustore[k].magic == UP_MAGIC && ustore[k].sum == up_sum(&ustore[k]); }
+static void user_get(uint32_t k, int8_t *p)     /* a user slot, whole: sector 1, then its rest (or the defaults) */
+{
+    patch_defaults(p);
+    memcpy(p, ustore[k].p, NP_STORE);
+    if (uext.magic == UX_MAGIC && uext.sum == ux_sum()) memcpy(p + NP_STORE, uext.p[k], NP_MAX - NP_STORE);
+    patch_sanitize(p);
+}
 
 /* the engines a patch plays: "SUPER + ANALOG", "FM x FOLD" (ring), "VOCAL < FM" (B cross-modulates A) */
 static char *eng_str(char *p, const int8_t *pp)
@@ -359,9 +380,9 @@ static const col3_t COL3[NPAGE] = {
     [PG_LFO] = {"LFO \xB7 LIVE", {"WOBBLE", "LFO 1", "LFO 2"},
                 {{I_L1RATE, L1_DEP, L1_DST, G_GRID}, {L1_SHP, L1_PH, L1_SMO, L1_TRIG}, {L2_SHP, I_L2RATE, L2_DEP, L2_DST}},
                 {{"RT", "DP", "DST", "GRD"}, {"SHP", "PH", "SMO", "TRG"}, {"SHP", "RT", "DP", "DST"}}},
-    [PG_FX] = {"FX RACK", {"SPACE", "DRIVE", "MASTER"},
-               {{DL_TIME, DL_FB, DL_MIX, RV_MIX}, {DR_TYPE, DR_AMT, DR_MIX, CR_BITS}, {MS_GLUE, MS_SUB, MS_VOL, CR_MIX}},
-               {{"DT", "FB", "DLY", "REV"}, {"TYP", "SAT", "MIX", "BIT"}, {"GLU", "SUB", "VOL", "CRU"}}},
+    [PG_FX] = {"FX RACK", {"SPACE", "DRIVE", "DYNAMICS"},
+               {{DL_TIME, DL_FB, DL_MIX, RV_MIX}, {DR_TYPE, DR_AMT, DR_MIX, CR_BITS}, {CP_AMT, CP_PUMP, PH_MIX, MS_VOL}},
+               {{"DT", "FB", "DLY", "REV"}, {"TYP", "SAT", "MIX", "BIT"}, {"CMP", "PMP", "PHA", "VOL"}}},
 };
 static uint8_t c3_show[NPAGE] = {1, 1, 1, 1, 1, 1, 0, 0}, c3_cur;
 static uint8_t ask_on, ask_sel;                 /* the start's question: CLASSIC or SHIFT */
@@ -382,8 +403,7 @@ static void load_preset(uint32_t bank, uint32_t k)
     undo_push();                                /* (a load can be undone too) */
     undo_id = 0xFFFFu;
     if (bank) {
-        memcpy(p, ustore[k].p, NP_MAX);
-        patch_sanitize(p);
+        user_get(k, p);
         for (i = 0; i < 13u; i++) pname[i] = ustore[k].name[i];
         pname[13] = 0;
     } else
@@ -403,9 +423,12 @@ static void save_user(uint32_t k)
     uint32_t i;
     u->magic = UP_MAGIC;
     for (i = 0; i < 14u; i++) u->name[i] = i < 13u ? pname[i] : 0;
-    memcpy(u->p, patch, NP_MAX);
+    memcpy(u->p, patch, NP_STORE);
     u->sum = up_sum(u);
-    if (store_save()) { toast("SAVE FAILED"); return; }
+    if (uext.magic != UX_MAGIC || uext.sum != ux_sum()) { memset(uext.p, 0, sizeof uext.p); uext.magic = UX_MAGIC; }
+    memcpy(uext.p[k], patch + NP_STORE, NP_MAX - NP_STORE);
+    uext.sum = ux_sum();
+    if (store_save() || perf_save()) { toast("SAVE FAILED"); return; }
     pdirty = 0;
     set.bank = 1;
     set.idx = (uint8_t)k;
@@ -421,7 +444,7 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
     if (item_patch(id)) { *lo = PD[id].lo; *hi = PD[id].hi; return; }
     *lo = 0;
-    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE || id == G_C3COL || id == G_UI || id == G_ASK ? 1 : id == G_ACCEL ? 2 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
+    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE || id == G_C3COL || id == G_UI || id == G_ASK || id == G_ZOOM ? 1 : id == G_ACCEL ? 2 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
     if (id >= G_SQ_STEP && id <= G_AR_GATE) {
         static const int8_t LO[12] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1}, HI[12] = {15, 48, 4, 15, 16, 5, 50, 1, 4, 5, 3, 10};
@@ -453,6 +476,7 @@ static int32_t item_get(uint32_t id)
     case G_C3COL: return set.c3col;
     case G_UI: return set.ui;
     case G_ASK: return set.ask;
+    case G_ZOOM: return set.zoom;
     case G_SQ_STEP: return sq_cur_step;
     case G_SQ_NOTE: return sq_pat()->note[sq_cur_step & 15u];
     case G_SQ_TYPE: return (int32_t)sq_type(sq_pat()->fl[sq_cur_step & 15u]);
@@ -530,13 +554,14 @@ static void item_set(uint32_t id, int32_t v)
     case G_CORES: set.cores = (uint8_t)v; toast("RESTART TO APPLY"); break;
     case G_THEME: set.theme = (uint8_t)v; theme_set(set.theme, set.pal); g_force = 1; break;
     case G_PAL: set.pal = (uint8_t)v; theme_set(set.theme, set.pal); g_force = 1; break;
-    case G_FONT: set.font = (uint8_t)v; font_set(set.font); g_force = 1; break;
+    case G_FONT: set.font = (uint8_t)v; font_set(set.font, set.zoom); g_force = 1; break;
     case G_GRID: set.grid = (uint8_t)v; ks_straight = set.grid; break;
     case G_BROWSE: set.browse = (uint8_t)v; break;
     case G_ACCEL: set.accel = (uint8_t)v; break;
     case G_C3COL: set.c3col = (uint8_t)v; break;
     case G_UI: set.ui = (uint8_t)v; c3_show[page] = (uint8_t)v; vcur[page] = 0; break;
     case G_ASK: set.ask = (uint8_t)v; break;
+    case G_ZOOM: set.zoom = (uint8_t)v; font_set(set.font, set.zoom); g_force = 1; break;
     default: return;
     }
     set_dirty = 1;
@@ -573,6 +598,7 @@ static const char *item_name(uint32_t id)
     case G_C3COL: return "SHIFT COLOURS";
     case G_UI: return "UI MODE";
     case G_ASK: return "ASK AT START";
+    case G_ZOOM: return "LOUPE";
     case G_FW: return "FIRMWARE";
     case G_SQ_STEP: return "STEP";
     case G_SQ_NOTE: return "NOTE";
@@ -608,7 +634,7 @@ static const char *item_sname(uint32_t id)
     if (k) return ENG_P[e][k - 1];
     if (id == I_L1RATE || id == I_L2RATE) return "RATE";
     if (item_patch(id)) return PD[id].sname;
-    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : id == G_ACCEL ? "ACCEL" : id == G_C3COL ? "COLOURS" : id == G_UI ? "UI" : id == G_ASK ? "ASK" : id == G_SQ_TYPE ? "TYPE" : id == G_SQ_PAT ? "PAT" : id == G_SQ_LEN ? "LEN" : id == G_AR_OCT ? "OCT" : item_name(id);
+    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : id == G_ACCEL ? "ACCEL" : id == G_C3COL ? "COLOURS" : id == G_UI ? "UI" : id == G_ASK ? "ASK" : id == G_ZOOM ? "LOUPE" : id == G_SQ_TYPE ? "TYPE" : id == G_SQ_PAT ? "PAT" : id == G_SQ_LEN ? "LEN" : id == G_AR_OCT ? "OCT" : item_name(id);
 }
 static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
 {
@@ -639,6 +665,8 @@ static int dst_on(uint32_t d)                   /* an oscillator that is off is 
     if (d >= D_CHRATE && d <= D_CHMIX) return patch[CH_ON];
     if (d >= D_DLFB && d <= D_DLMIX) return patch[DL_ON];
     if (d >= D_RVSIZE && d <= D_RVMIX) return patch[RV_ON];
+    if (d == D_CPAMT) return patch[CP_ON];
+    if (d >= D_PHRATE && d <= D_PHMIX) return patch[PH_ON];
     return 1;
 }
 static int32_t dst_step(int32_t v, int32_t d)
@@ -691,6 +719,7 @@ static void item_text(uint32_t id, char *b)
         case G_C3COL: str_cat(b, v ? "GREEN YEL ORANGE" : "THEME"); break;
         case G_UI: str_cat(b, v ? "SHIFT (3 COLUMNS)" : "CLASSIC"); break;
         case G_ASK: str_cat(b, v ? "YES" : "NO"); break;
+        case G_ZOOM: str_cat(b, v ? "ON (BIG TYPE)" : "OFF"); break;
         case G_FONT: { static const char *const FN[4] = {"SANS", "MONO", "HYPER", "PIXEL"}; str_cat(b, FN[v & 3]); break; }
         case G_CPU:                             /* each core's share of a block, and the governor's step */
             b = str_cat(b, "C0 "); b = fmt_u(b, ks_load[0], 0); b = str_cat(b, "%");
@@ -874,17 +903,32 @@ static void key_up(uint32_t n)
 
 static uint32_t rate_like(uint32_t id) { return id == I_L1RATE || id == I_L2RATE ? rate_id(id) : id; }
 static uint32_t turn_id = I_NONE;
+static uint32_t fx_on_of(uint32_t id)           /* the ON of the effect this setting belongs to (0: none) */
+{
+    if (id > DR_ON && id <= DR_MIX) return DR_ON;
+    if (id > CR_ON && id <= CR_MIX) return CR_ON;
+    if (id > CH_ON && id <= CH_MIX) return CH_ON;
+    if ((id > DL_ON && id <= DL_MIX) || id == DL_TYPE) return DL_ON;
+    if ((id > RV_ON && id <= RV_MIX) || id == RV_TYPE) return RV_ON;
+    if (id > ST_ON && id <= ST_SMO) return ST_ON;
+    if (id > CP_ON && id <= CP_PRATE) return CP_ON;
+    if (id > PH_ON && id <= PH_MIX) return PH_ON;
+    return 0;
+}
 static void edit_item(uint32_t id, int32_t d)
 {
     int32_t lo, hi, v = item_get(id), step = 1;
     uint32_t k;
     if (id == I_NONE || id == G_CPU || id == G_FW) return;
-    for (k = 5; k-- > 0;)                       /* an effect (or STEP) that is off comes on when its setting goes up */
-        if (id > FX_ON[k] && id < MS_GLUE) {
-            if (!patch[FX_ON[k]] && d > 0) { patch[FX_ON[k]] = 1; toast(k == 0 ? "SATURATION ON" : k == 1 ? "CRUSH ON" : k == 2 ? "CHORUS ON" : k == 3 ? "DELAY ON" : "REVERB ON"); }
-            break;
-        }
-    if (id > ST_ON && id <= ST_SMO && !patch[ST_ON] && d > 0) { patch[ST_ON] = 1; toast("STEP FX ON"); }
+    k = fx_on_of(id);                           /* an effect (or STEP) that is off comes on when its setting goes up */
+    if (k && !patch[k] && d > 0) {
+        char t[24];
+        uint32_t f;
+        patch[k] = 1;
+        for (f = 0; f < 7u && FX_ON[f] != k; f++) {}
+        str_cat(str_cat(t, f < 7u ? FX_TITLE[f] : "STEP FX"), " ON");
+        toast(t);
+    }
     if (item_patch(id) && PD[id].fmt == FM_DEST) { item_set(id, dst_step(v, d)); dpop_id = (uint8_t)id; dpop_ms = fm1_ms | 1u; return; }
     if (set.grid && (rate_like(id) == L1_DIV || rate_like(id) == L2_DIV)) {   /* STRAIGHT: from round to round */
         int32_t i, at = 0;
@@ -1176,7 +1220,7 @@ static void compare(int on)
         char nm[14];
         if (!pdirty) { toast("UNCHANGED"); return; }
         memcpy(cmp_buf, patch, NP_MAX);
-        if (set.bank) { memcpy(p, ustore[set.idx].p, NP_MAX); patch_sanitize(p); }
+        if (set.bank) user_get(set.idx, p);
         else preset_factory(set.idx, p, nm);
         memcpy(patch, p, NP_MAX);
         cmp_on = 1;
@@ -1334,17 +1378,18 @@ static void app_init(void)
     uint32_t i;
     int ok;
     {                                           /* (a save from before a field was added: the fields it has, the rest as is) */
-        const uint32_t LEN[3] = {sizeof set, (uint32_t)((uint8_t *)&set.ui - (uint8_t *)&set), (uint32_t)((uint8_t *)&set.accel - (uint8_t *)&set)};
-        for (ok = 0, i = 0; i < 3u && !ok; i++) ok = !settings_load(&set, LEN[i]) && set.ver == 6u;
+        const uint32_t LEN[4] = {sizeof set, (uint32_t)((uint8_t *)&set.zoom - (uint8_t *)&set), (uint32_t)((uint8_t *)&set.ui - (uint8_t *)&set),
+                                 (uint32_t)((uint8_t *)&set.accel - (uint8_t *)&set)};
+        for (ok = 0, i = 0; i < 4u && !ok; i++) ok = !settings_load(&set, LEN[i]) && set.ver == 6u;
     }
     if (!ok) {
         set.theme = set.pal = set.font = set.grid = set.browse = 0;
         memset(set.fav, 0, sizeof set.fav);
-        set.ver = 6; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1; set.accel = 1; set.c3col = 0; set.ui = KS_B; set.ask = 1;
+        set.ver = 6; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1; set.accel = 1; set.c3col = 0; set.ui = KS_B; set.ask = 1; set.zoom = 0;
     }
     set.cores = set.cores ? 1u : 0u;
     theme_set(set.theme, set.pal);
-    font_set(set.font);
+    font_set(set.font, set.zoom);
     set.grid = set.grid ? 1u : 0u;
     ks_straight = set.grid;
     set.bpm10 = (uint16_t)clampi(set.bpm10, 600, 2400);
