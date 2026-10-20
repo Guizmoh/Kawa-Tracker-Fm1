@@ -165,3 +165,22 @@ The language, theme, octave, clock, font and the metronome (its mode and its vol
 sector `0xFC000`: 7 bytes (`set` in `kawa_ui.c`, with the length and a CRC-32 in front). The settings of 0.4 (5
 bytes) and of 0.2 (4 bytes) still load, and what they lack takes its default (font DOUCE, metronome off, volume
 MED). Flash is only erased when nothing plays, because an erase stalls the sound.
+
+## All the checks, in one place
+
+From this `source/` folder (none of them needs an FM-1):
+
+```sh
+sh tests/run_features_test.sh      # 0.3's features through the audio interrupt (UBSan)
+sh tests/run_format_test.sh        # projects saved by 0.2 and 0.3 load as they were
+sh tests/run_kits_test.sh          # the drum kits; python3 tests/breaks_check.py: the breaks
+sh tests/run_ui_test.sh            # the panel: pages, SELECT, protected sounds, undo, SENDS, holds, tools, metronome, 64 steps
+sh tests/run_stress_test.sh        # every sound and effect at the ends of the knobs (about 18 minutes of sound)
+AC79_SDK=~/fw-AC79_AIoT_SDK sh tests/run_loader_tests.sh    # the install path on the package in build/ (after ./build.sh)
+node tests/webinstall_test.js      # the web installer (Install button) against a simulated FM-1
+node tests/websamples_test.js      # the web sample importer, byte for byte against install/kawa_samples.py
+NODE_PATH=$(npm root -g) node tests/webinstall_ui_test.js    # the same pages in a real Chromium (Playwright)
+NODE_PATH=$(npm root -g) node tests/websamples_ui_test.js
+sh tests/release_check.sh          # install/SHA256SUMS and the package at the top of the repository agree
+python3 tests/manual_shots.py      # regenerates the manual's screens (../manual/img/)
+```
