@@ -1231,7 +1231,8 @@ static void draw_ask(void)
         {"SHIFT", "12 SETTINGS A PAGE, 3 COLUMNS", "KNOBS: LEFT  HOLD OCT-: MIDDLE", "HOLD OCT+: RIGHT  TAP: OCTAVE"}};
     uint32_t k;
     g_text_c(T_M, 120, 4, "K-WA SUB", K_LIME);
-    g_text_c(T_XS, 120, 22, "HOW DO YOU WANT TO PLAY?", K_GREY);
+    if (rst_bad) { char t[40]; str_cat(str_cat(t, "LAST STOP: "), rst_why); g_text_c(T_XS, 120, 22, t, K_ORANGE); }
+    else g_text_c(T_XS, 120, 22, "HOW DO YOU WANT TO PLAY?", K_GREY);
     for (k = 0; k < 2u; k++) {
         int32_t y = 36 + (int32_t)k * 84;
         int on = k == ask_sel;
@@ -1366,6 +1367,7 @@ static void draw_all(void)
         eng_str(p, patch);
         g_text_c(T_XS, 120, 134, b, K_CYAN);
         g_text_c(T_S, 120, 170, dual_on ? "TWO CORES \xB7 VOICES ON CORE 1" : KS_DUAL && set.cores ? "ONE CORE (CORE 1 OFF)" : "ONE CORE", dual_on ? K_LIME : K_ORANGE);
+        if (rst_bad) { str_cat(str_cat(b, "LAST STOP: "), rst_why); g_text_c(T_XS, 120, 186, b, K_ORANGE); }
         g_text_c(T_XS, 120, 200, "ANY BUTTON TO START", K_GREY);
     }
     if (toast_ms && g_vis(196, 22)) {

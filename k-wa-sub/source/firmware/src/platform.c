@@ -311,10 +311,13 @@ static void platform_poll(void)
     }
 }
 
+static uint32_t fm1_crash_mark[2] __attribute__((section(".noinit")));   /* a crash (and where): the next start says so */
 static void fm1_fault(const fm1_crash_t *c)
 {
     char b[12];
     uint32_t i, t0, v[3] = {c->vec, c->pc, c->rets};
+    fm1_crash_mark[0] = 0xC4A54ED0u;
+    fm1_crash_mark[1] = c->pc;
     app_flash_busy();
     fm1_audio_stop();
     lcd_fill(0, 0, 240, 240, RGB(160, 0, 0));

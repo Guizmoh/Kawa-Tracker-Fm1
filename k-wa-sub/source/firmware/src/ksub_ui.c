@@ -20,6 +20,7 @@ enum { I_L1RATE = 200, I_L2RATE, I_ABMIX, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_COR
        G_LV_FLT, G_LV_PUMP, G_LV_STUT, G_LV_TAPE, G_LV_PRATE, G_LV_FRES,             /* SEL: FX LIVE */
        G_MC1, G_MC2, G_MC3, G_MC4, G_MC_DST, G_MC_AMT,                               /* SEL: MACROS */
        G_EQ_F, G_EQ_G, G_EQ_T, G_EQ_Q,                                               /* FX held: the EQ (the band eq_cur) */
+       G_RST,                                                                        /* SYSTEM: why the last stop */
        I_NONE = 255 };
 
 typedef struct {
@@ -58,8 +59,8 @@ static const view_t VIEWS[] = {
     {LY_PRESET, "PRESET BANK B", 0, {0}, "PRESET"},
     {LY_SAVE, "SAVE PATCH", 0, {0}, "PRESET"},
     {LY_LIST, "ARPEGGIATOR", 5, {G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE}, "ARP"},
-    {LY_SYS, "GLOBAL SETUP", 17, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_UI, G_ASK, G_THEME, G_PAL, G_FONT, G_ZOOM, G_C3COL, G_GRID, G_BROWSE,
-                                  V_BEND, V_VEL, G_CORES, G_CPU}, "SYSTEM"},
+    {LY_SYS, "GLOBAL SETUP", 18, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_UI, G_ASK, G_THEME, G_PAL, G_FONT, G_ZOOM, G_C3COL, G_GRID, G_BROWSE,
+                                  V_BEND, V_VEL, G_CORES, G_CPU, G_RST}, "SYSTEM"},
     {LY_SYS, "MIDI", 7, {G_MLEARN, G_MMAP, G_MIDICH, G_CLOCK, G_MSTART, G_MPROG, G_MCLK}, "SYSTEM"},
 };
 /* what K1..K4 turn: the first four rows (the preset lists and SAVE have their own) */
@@ -88,7 +89,7 @@ static struct {                                 /* the user slots' settings past
     uint8_t magic, sum;
     int8_t p[NUSER][NP_MAX - NP_STORE];
 } uext;
-typedef char ids_fit[G_EQ_Q < I_NONE ? 1 : -1];
+typedef char ids_fit[G_RST < I_NONE ? 1 : -1];
 typedef char perf_fits_before_uext[sizeof perf <= UX_AT ? 1 : -1];   /* (the 2nd sector: SEQ/ARP/MACROS, then the slots' rest) */
 static uint8_t ux_sum(void) { const uint8_t *b = (const uint8_t *)uext.p; uint32_t i, x = 0x77; for (i = 0; i < sizeof uext.p; i++) x = (x * 7u + b[i]) & 0xFFu; return (uint8_t)x; }
 static void ux_migrate(void)                    /* a store saved with 16 a slot: spread out, the new ones at 0 */
@@ -308,6 +309,27 @@ static void eq_update(void)                     /* the coefficients to the audio
         }
         eq_curve[x] = (int16_t)clampi(db, -24 * 16, 24 * 16);
     }
+}
+/* ---- why it stopped last time (the reset's source, a crash's mark): on the start screens and in SYSTEM */
+static char rst_why[28];
+static uint8_t rst_bad;                         /* a stop that was not asked for */
+static void rst_read(void)
+{
+#if defined(KAWA_WASM)
+    str_cat(rst_why, "-");
+#else
+    uint8_t r = fm1_boot.p3_rst;
+    const char *t = r & 4u ? "WATCHDOG (TOO BUSY)" : r & 2u ? "LOW VOLTAGE (POWER)" : r & 0x20u ? "1.2 V LOW (POWER)" : r & 0x10u ? "LONG PRESS" : 0;
+    if (fm1_crash_mark[0] == 0xC4A54ED0u) { t = "CRASH"; fm1_crash_mark[0] = 0; }
+    rst_bad = t && !(r & 0x10u);
+    str_cat(rst_why, t ? t : r & 1u ? "POWER OFF" : "RESTART");
+    if (t && t[0] == 'C') {                     /* CRASH: the address, to look up in the map */
+        char *p = rst_why + 5; uint32_t pc = fm1_crash_mark[1]; int i;
+        *p++ = ' ';
+        for (i = 28; i >= 0; i -= 4) *p++ = "0123456789ABCDEF"[(pc >> i) & 15u];
+        *p = 0;
+    }
+#endif
 }
 static uint8_t ml_state, ml_id;                 /* MIDI LEARN: 1 waits for a setting, 2 for a CC; the setting */
 static uint32_t cc_count(void) { uint32_t k, n = 0; if (perf.cc_magic == 0x43u) for (k = 0; k < 16u; k++) n += perf.cc_num[k] != 0xFFu; return n; }
@@ -743,6 +765,7 @@ static const char *item_name(uint32_t id)
     case G_UI: return "UI MODE";
     case G_ASK: return "ASK AT START";
     case G_ZOOM: return "LOUPE";
+    case G_RST: return "LAST STOP";
     case G_MLEARN: return "MIDI LEARN";
     case G_MMAP: return "CC MAP";
     case G_MSTART: return "START / STOP";
@@ -874,6 +897,7 @@ static void item_text(uint32_t id, char *b)
         case G_UI: str_cat(b, v ? "SHIFT (3 COLUMNS)" : "CLASSIC"); break;
         case G_ASK: str_cat(b, v ? "YES" : "NO"); break;
         case G_ZOOM: str_cat(b, v ? "ON (BIG TYPE)" : "OFF"); break;
+        case G_RST: str_cat(b, rst_why); break;
         case G_MLEARN: str_cat(b, ml_state == 1u ? "TURN A KNOB" : ml_state == 2u ? "SEND A CC" : "OFF"); break;
         case G_MMAP: if (v) { b = fmt_u(b, (uint32_t)v, 0); str_cat(b, v > 1 ? " CCS \xB7 LEFT: CLEAR" : " CC \xB7 LEFT: CLEAR"); } else str_cat(b, "EMPTY"); break;
         case G_MSTART: str_cat(b, v ? "PLAYS THE SEQ" : "IGNORED"); break;
@@ -1087,7 +1111,7 @@ static void edit_item(uint32_t id, int32_t d)
 {
     int32_t lo, hi, v = item_get(id), step = 1;
     uint32_t k;
-    if (id == I_NONE || id == G_CPU || id == G_FW) return;
+    if (id == I_NONE || id == G_CPU || id == G_FW || id == G_RST) return;
     if (ml_state == 1u && id != G_MLEARN && id != G_MMAP) { ml_id = (uint8_t)id; ml_state = 2; toast("LEARN: SEND A CC"); }
     k = fx_on_of(id);                           /* an effect (or STEP) that is off comes on when its setting goes up */
     if (k && !patch[k] && d > 0) {
@@ -1658,6 +1682,7 @@ static void app_init(void)
 #endif
     booted = 1;
     splash_until = fm1_ms + 2200u;            /* the start screen: the last patch, the cores */
+    rst_read();
     if (set.ask) { ask_on = 1; ask_sel = set.ui; ask_ms = fm1_ms; }   /* ... and the question: CLASSIC or SHIFT */
     g_force = 1;
 }

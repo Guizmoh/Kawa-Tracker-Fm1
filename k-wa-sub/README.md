@@ -282,15 +282,15 @@ sauf s'ils ont été appris pour autre chose.
 
 ## Installer sur le FM-1
 
-Le paquet est [`install/k-wa-sub-0.8.fwsc`](install/k-wa-sub-0.8.fwsc) (identité `FM-1_978` ; les anciens dans `install/older/`). Il s'installe exactement
+Le paquet est [`install/k-wa-sub-0.9.9-5.fwsc`](install/k-wa-sub-0.9.9-5.fwsc) (identité `FM-1_979` ; les anciens dans `install/older/`). Il s'installe exactement
 comme KAWA, avec le même chargeur de mise à jour, et fonctionne depuis le firmware d'origine comme depuis KAWA :
 
 - **Installateur rapide** : ouvrir [`installer.html`](installer.html) dans Chrome ou Edge (un seul fichier, hors ligne,
   le firmware est dedans), cliquer sur « Installer K-WA SUB », confirmer. Il accepte aussi un autre .fwsc (KAWA...).
 - **Dans le navigateur** (Chrome ou Edge, Web MIDI) : la page d'installation de KAWA ([`../index.html`](../index.html)),
-  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.8.fwsc`.
+  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.9.9-5.fwsc`.
 - **Avec Python 3** : `INSTALL-Linux.sh`, `INSTALL-Mac.command` ou `INSTALL-Windows.bat` dans ce dossier (ou
-  `python3 install/fm1_install.py install/k-wa-sub-0.8.fwsc`).
+  `python3 install/fm1_install.py install/k-wa-sub-0.9.9-5.fwsc`).
 
 Un câble USB **de données**, aucun autre logiciel MIDI ouvert, rien à débrancher avant la fin. Pour revenir à KAWA :
 installer `kawa-0.5.fwsc` de la même façon. Pour le firmware officiel : M-UPGRADE, comme décrit pour KAWA. En cas de
@@ -325,8 +325,22 @@ utilisée par chaque cœur.
 2. il reste 2 voix et 3 dents de scie par SUPER ;
 3. il reste 1 voix et 2 dents de scie.
 
-Après 2 s sous 45 %, on remonte d'un cran. Un bloc ne dépasse jamais son temps : la fin reste silencieuse, et le
-chien de garde ne voit jamais l'audio bloqué. `CPU LOAD` affiche `· -1`, `-2` ou `-3` quand le son est allégé.
+Un bloc au-dessus de 92 % allège tout de suite d'un cran. Après 2 s sous 45 %, on remonte d'un cran. `CPU LOAD`
+affiche `· -1`, `-2` ou `-3` quand le son est allégé.
+
+**Budget d'un bloc** (0.9.9-5) : le temps des effets (EQ, compresseur, delay, reverb...) est mesuré à chaque bloc, et
+les voix reçoivent seulement ce qui reste sur 80 % du bloc (au moins un quart). L'attente du cœur 1 est limitée à
+un demi-bloc. Avant, seules les voix étaient limitées : avec beaucoup d'effets, l'interruption audio pouvait prendre
+tout le temps, la boucle principale ne nourrissait plus le chien de garde (~8 s) et **le FM-1 redémarrait / semblait
+s'éteindre**. Aucune fonction n'a été retirée : la mémoire n'est pas en cause (RAM 52 Ko sur 96, flash 479 Ko sur 582).
+
+**LAST STOP** : si le dernier arrêt n'était pas normal, l'écran de démarrage et la question CLASSIC / SHIFT
+l'affichent en orange, et `SYSTEM › LAST STOP` le garde :
+- `WATCHDOG (TOO BUSY)` : le processeur était surchargé (le budget ci-dessus doit l'éviter) ;
+- `LOW VOLTAGE (POWER)` / `1.2V LOW (POWER)` : l'alimentation a chuté (batterie faible, câble ou port USB trop faible) ;
+- `LONG PRESS` : bouton d'alimentation maintenu ;
+- `CRASH` + adresse : une erreur du programme (à me transmettre) ;
+- `POWER OFF` / `RESTART` : arrêt normal.
 
 **Pas encore essayé sur un vrai FM-1.** Au premier essai, regarde la page SYSTEM : `AUDIO CORES`, `CPU LOAD` en
 jouant un preset lourd (WIDE REESE en POLY, accords), et dis-moi ce qui s'affiche.

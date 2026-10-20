@@ -1320,7 +1320,7 @@ static void governor(uint32_t pct)
     static uint8_t hist;
     static uint32_t calm;
     hist = (uint8_t)(hist << 1 | (pct > 70u));
-    if ((hist & 3u) == 3u && ks_shed < 3u) { ks_shed++; hist = 0; calm = 0; }
+    if (((hist & 3u) == 3u || pct > 92u) && ks_shed < 3u) { ks_shed++; hist = 0; calm = 0; }   /* (past 92 %: at once) */
     if (pct < 45u) { if (++calm > 344u && ks_shed) { ks_shed--; calm = 0; } }   /* 344 blocks: 2 s */
     else calm = 0;
 }
@@ -1370,11 +1370,11 @@ static void fm1_cpu1_stop(void) {}
 
 static void app_audio(int32_t *out, uint32_t n)
 {
-    static uint32_t hist, cut0, warm;
-    uint32_t t0 = fm1_ticks(), l1 = 0;
+    static uint32_t hist, cut0, warm, fx_t;     /* fx_t: what the effects took last block (the voices get the rest) */
+    uint32_t t0 = fm1_ticks(), l1 = 0, t1, room = BLOCK_TICKS * 8u / 10u > fx_t + BLOCK_TICKS / 4u ? BLOCK_TICKS * 8u / 10u - fx_t : BLOCK_TICKS / 4u;
     if (dual_on && !c1_park_req) {              /* core 1 did this block's voices during the last one */
         uint32_t cur = c1_req, bad, k, nb = 0;
-        while (c1_done != cur && fm1_ticks() - t0 < BLOCK_TICKS / 2u) { KS_SYNC(); }
+        while (c1_done != cur && fm1_ticks() - t0 < (room < BLOCK_TICKS / 2u ? room : BLOCK_TICKS / 2u)) { KS_SYNC(); }   /* (never past what the effects leave) */
         t0 = fm1_ticks();
         bad = c1_done != cur || c1_cut != cut0; /* (late, or a block it cut short) */
         cut0 = c1_cut;
@@ -1384,7 +1384,9 @@ static void app_audio(int32_t *out, uint32_t n)
         if (c1_done == cur && nb < 6u) {        /* (6 bad blocks in the last 32: core 1 does not keep up) */
             c1_req = cur + 1u;                  /* core 1 starts the next block now */
             KS_SYNC();
+            t1 = fm1_ticks();
             fx_render(vbus[cur & 1u], out, n);
+            fx_t = fm1_ticks() - t1;
         } else if (nb < 6u) {
             ks_late++;                          /* (core 1 late: a silent block, it goes on) */
             fx_render(vzero, out, n);
@@ -1393,15 +1395,17 @@ static void app_audio(int32_t *out, uint32_t n)
             fm1_cpu1_stop();
             dual_on = 0;
             c1_failed = 1;
-            voices_render(vbus[0], n, t0, BLOCK_TICKS * 4u / 10u);
+            voices_render(vbus[0], n, t0, room / 2u);
             fx_render(vbus[0], out, n);
         }
         l1 = ks_load[1];
     } else if (dual_on)
         fx_render(vzero, out, n);               /* core 1 waits for the flash: silence, as on core 0 */
-    else {
-        voices_render(vbus[0], n, t0, BLOCK_TICKS * 7u / 10u);
+    else {                                      /* one core: the voices up to what the effects leave of 80 % */
+        voices_render(vbus[0], n, t0, room);
+        t1 = fm1_ticks();
         fx_render(vbus[0], out, n);
+        fx_t = fm1_ticks() - t1;
     }
     ks_load[0] = (fm1_ticks() - t0) / BLOCK_TICKS100;
     governor(ks_load[0] > l1 ? ks_load[0] : l1);
