@@ -146,6 +146,8 @@ Las 27 teclas (16 blancas, 11 negras) tocan notas en la pista actual.
 
 ## Instalar
 
+El firmware que hay que instalar es el archivo [`kawa-0.5.fwsc`](kawa-0.5.fwsc), arriba en esta página (el mismo archivo está en `install/`).
+
 La [página de inicio](index.html) del proyecto tiene además un botón **Install**: instala KAWA directamente
 desde Chrome o Edge (Web MIDI). Al lado, el [importador de samples](samples.html) envía tus propios sonidos a
 KAWA del mismo modo (ver [Tus samples en el FM-1](#tus-samples-en-el-fm-1)). La otra forma son los

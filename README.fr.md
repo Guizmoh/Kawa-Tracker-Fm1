@@ -148,6 +148,8 @@ Les 27 touches (16 blanches, 11 noires) jouent des notes sur la piste en cours.
 
 ## Installer
 
+Le firmware à installer est le fichier [`kawa-0.5.fwsc`](kawa-0.5.fwsc) tout en haut de cette page (le même fichier est dans `install/`).
+
 La [page d'accueil](index.html) du projet a aussi un bouton **Install** : il installe KAWA directement depuis
 Chrome ou Edge (Web MIDI). À côté, l'[importateur de samples](samples.html) envoie tes propres sons à KAWA de
 la même manière (voir [Tes samples sur le FM-1](#tes-samples-sur-le-fm-1)). L'autre façon, ce sont les

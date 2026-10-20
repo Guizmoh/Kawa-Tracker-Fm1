@@ -140,6 +140,8 @@ The 27 keys (16 white, 11 black) play notes on the current track.
 
 ## Install
 
+The firmware to install is the file [`kawa-0.5.fwsc`](kawa-0.5.fwsc) at the top of this page (the same file is in `install/`).
+
 The project's [home page](index.html) also has an **Install** button: it installs KAWA straight from Chrome or
 Edge (Web MIDI). Next to it, the [sample importer](samples.html) sends your own sounds to KAWA the same way
 (see [Your samples on the FM-1](#your-samples-on-the-fm-1)). The other way is the launchers below, which need a USB data cable and Python 3
