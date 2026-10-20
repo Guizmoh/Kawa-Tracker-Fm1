@@ -743,6 +743,37 @@ static void draw_all(void)
     case TH_RACK: th_rack(v, vi); break;
     default: th_classic(v, vi); break;
     }
+    if (dpop_ms && g_vis(22, 200)) {            /* the destination list: the ones before and after, the group of each */
+        static const char *const GR[] = {"", "FILTER", "FILTER", "PITCH", "OSC A", "OSC A", "OSC B", "OSC B", "OSC A", "OSC B",
+                                         "MIX", "FILTER", "AMP", "MIX", "MIX", "MOD", "OSC A", "OSC B", "OSC A", "OSC B", "MIX",
+                                         "FILTER", "MOD", "MOD", "MOD", "STEP", "SAT", "SAT", "CRUSH", "CRUSH", "CRUSH", "CHORUS",
+                                         "CHORUS", "CHORUS", "DELAY", "DELAY", "DELAY", "REVERB", "REVERB", "REVERB", "MASTER",
+                                         "MASTER", "MASTER"};
+        uint8_t ls[ND];
+        int32_t n = 0, at = 0, i, cur = patch[dpop_id], y;
+        char hd[24], pos[12], *p;
+        for (i = 0; i < ND; i++)
+            if (dst_on(DST_ORDER[i]) || DST_ORDER[i] == cur) { if (DST_ORDER[i] == cur) at = n; ls[n++] = DST_ORDER[i]; }
+        g_box(18, 22, 204, 198, K_PANEL, K_LIME);
+        p = str_cat(hd, dpop_id == ME_DST ? "MOD ENV" : dpop_id == ST_DST ? "STEP" : dpop_id == L2_DST ? "LFO 2" :
+                        dpop_id == L1_DST ? "LFO 1" : "MATRIX");
+        str_cat(p, " \xB7 DEST");
+        g_text(T_XS, 26, 27, hd, K_LIME);
+        p = fmt_u(pos, (uint32_t)at + 1u, 0);
+        p = str_cat(p, "/");
+        fmt_u(p, (uint32_t)n, 0);
+        g_text_r(T_XS, 214, 27, pos, K_GREY);
+        for (i = -5; i <= 5; i++) {
+            int32_t k = at + i;
+            y = 112 + i * 16;
+            if (k < 0 || k >= n) continue;
+            if (!i) g_box(22, y - 2, 196, 16, K_LIME, K_LIME);
+            g_text(T_S, 30, y + 1, dst_name(ls[k]), !i ? K_INK : (i == -1 || i == 1) ? K_WHITE : K_GREY);
+            g_text_r(T_XS, 212, y + 2, GR[ls[k] < sizeof GR / sizeof GR[0] ? ls[k] : 0], !i ? K_INK : K_MOD);
+        }
+        if (at > 5) g_text_c(T_XS, 120, 38, "\x5E", K_GREY);
+        if (n - at > 6) g_text_c(T_XS, 120, 206, "v", K_GREY);
+    }
     if (pend_on && g_vis(126, 90)) {            /* the question */
         char q[32], e[32], *p;
         int8_t pp[NP_MAX];

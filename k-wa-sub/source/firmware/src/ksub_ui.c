@@ -145,6 +145,8 @@ static char *eng_str(char *p, const int8_t *pp)
     if (!a && !b) p = str_cat(p, "SUB");
     return p;
 }
+static uint8_t dpop_id;                         /* the destination list on screen (for this parameter) */
+static uint32_t dpop_ms;
 static uint8_t pdirty;                          /* the sound changed since it was loaded or saved */
 static uint8_t pend_on, pend_bank, pend_k;      /* a load waiting for SEL (the sound changed) */
 static uint32_t pend_ms;
@@ -262,6 +264,7 @@ static void item_set(uint32_t id, int32_t v)
     if (item_patch(id)) {
         if (patch[id] != v) undo_mark(id);
         patch[id] = (int8_t)v;
+        if (PD[id].fmt == FM_DEST && (v == D_DRAMT || v == D_DRMIX) && !patch[DR_ON]) { patch[DR_ON] = 1; toast("SATURATION ON"); }
         if (id < N_LVL || id == S_LVL || id == S_WAVE || id == S_OCT) prev_dirty = 1;
         return;
     }
@@ -344,7 +347,6 @@ static int dst_on(uint32_t d)                   /* an oscillator that is off is 
     if (d == D_ALVL || d == D_AP1 || d == D_AP2 || d == D_AP3 || d == D_APIT) return patch[A_LVL] || patch[X_MODE] == 1;
     if (d == D_BLVL || d == D_BP1 || d == D_BP2 || d == D_BP3 || d == D_BPIT) return patch[B_LVL] || patch[X_MODE];
     if (d == D_GATE) return patch[ST_ON];       /* an effect that is off is not offered either */
-    if (d == D_DRAMT || d == D_DRMIX) return patch[DR_ON];
     if (d >= D_CRBITS && d <= D_CRMIX) return patch[CR_ON];
     if (d >= D_CHRATE && d <= D_CHMIX) return patch[CH_ON];
     if (d >= D_DLFB && d <= D_DLMIX) return patch[DL_ON];
@@ -548,7 +550,7 @@ static void edit_item(uint32_t id, int32_t d)
 {
     int32_t lo, hi, v = item_get(id), step = 1;
     if (id == I_NONE || id == G_CPU || id == G_FW) return;
-    if (item_patch(id) && PD[id].fmt == FM_DEST) { item_set(id, dst_step(v, d)); return; }
+    if (item_patch(id) && PD[id].fmt == FM_DEST) { item_set(id, dst_step(v, d)); dpop_id = (uint8_t)id; dpop_ms = fm1_ms | 1u; return; }
     if (set.grid && (rate_like(id) == L1_DIV || rate_like(id) == L2_DIV)) {   /* STRAIGHT: from round to round */
         int32_t i, at = 0;
         for (i = 0; i < 9; i++) if (DIV_STRAIGHT[i] == DIV_NEAR[v & 15]) at = i;
@@ -593,6 +595,7 @@ static void name_trim(void) { int32_t i; for (i = 12; i >= 0 && pname[i] == ' ';
 static void on_button(uint32_t b)
 {
     uint32_t i;
+    dpop_ms = 0;                                /* (a button closes the destination list) */
     if (pend_on) {                              /* the question: SEL loads, any other button keeps the sound */
         pend_on = 0;
         if (b == BTN_SEL) { load_preset(pend_bank, pend_k); toast(pname); }
@@ -805,7 +808,8 @@ static void app_step(void)
 {
     ui_input();
     if (toast_ms && (int32_t)(fm1_ms - toast_ms) > 1400) toast_ms = 0;
-    if (pend_on && fm1_ms - pend_ms > 6000u) { pend_on = 0; toast("KEPT"); }   /* (toast_ms can be 1 ms ahead: | 1) */
+    if (pend_on && fm1_ms - pend_ms > 6000u) { pend_on = 0; toast("KEPT"); }
+    if (dpop_ms && (int32_t)(fm1_ms - dpop_ms) > 1500) dpop_ms = 0;   /* (toast_ms can be 1 ms ahead: | 1) */
     if (prev_dirty && fm1_ms - prev_ms > 60u) { prev_dirty = 0; prev_ms = fm1_ms; preview_make(); }
     if (fm1_ms - ui_frame_ms >= 33u) {          /* ~30 frames a second, only what changed is sent */
         ui_frame_ms = fm1_ms;

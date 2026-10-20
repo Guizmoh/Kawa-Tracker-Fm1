@@ -34,9 +34,9 @@ enum { D_OFF, D_CUT, D_RES, D_PITCH, D_AP1, D_AP2, D_BP1, D_BP2, D_ALVL, D_BLVL,
        ND };   /* (stored in patches: append only) */
 #define IS_PITCH(d) ((d) == D_PITCH || (d) == D_APIT || (d) == D_BPIT)
 /* the order DEST steps through: the oscillators' EDIT rows together (ksub_ui.c skips an oscillator that is off) */
-static const uint8_t DST_ORDER[ND] = {D_OFF, D_CUT, D_RES, D_DRV, D_FENV, D_PITCH, D_ALVL, D_AP1, D_AP2, D_AP3, D_APIT, D_BLVL,
+static const uint8_t DST_ORDER[ND] = {D_OFF, D_CUT, D_RES, D_DRV, D_DRAMT, D_FENV, D_PITCH, D_ALVL, D_AP1, D_AP2, D_AP3, D_APIT, D_BLVL,
                                       D_BP1, D_BP2, D_BP3, D_BPIT, D_XMOD, D_SUB, D_NOISE, D_NCOL, D_AMP, D_WOB, D_L1RATE,
-                                      D_L2RATE, D_L2DEP, D_GATE, D_DRAMT, D_DRMIX, D_CRBITS, D_CRRATE, D_CRMIX, D_CHRATE,
+                                      D_L2RATE, D_L2DEP, D_GATE, D_DRMIX, D_CRBITS, D_CRRATE, D_CRMIX, D_CHRATE,
                                       D_CHDEP, D_CHMIX, D_DLFB, D_DLTONE, D_DLMIX, D_RVSIZE, D_RVDAMP, D_RVMIX, D_GLUE, D_SUBB,
                                       D_VOL};
 /* the parameter each global destination moves */
@@ -65,7 +65,7 @@ static const uint8_t DIV_NEAR[16] = {0, 1, 2, 3, 3, 6, 6, 6, 9, 9, 11, 11, 13, 1
 static const char *const L_DST[ND] = {"OFF", "CUTOFF", "RESO", "PITCH", "A SHAPE", "A COLOR", "B SHAPE", "B COLOR",
                                       "A LEVEL", "B LEVEL", "X-MOD", "FILT DRIVE", "AMP", "SUB", "NOISE", "WOB DEPTH",
                                       "A EDGE", "B EDGE", "A PITCH", "B PITCH", "NOISE COLOR", "FILT ENV", "LFO2 DEPTH",
-                                      "WOB RATE", "LFO2 RATE", "STEP GATE", "DRIVE AMT", "DRIVE MIX", "CRUSH BITS",
+                                      "WOB RATE", "LFO2 RATE", "STEP GATE", "SAT AMOUNT", "SAT MIX", "CRUSH BITS",
                                       "CRUSH RATE", "CRUSH MIX", "CHORUS RATE", "CHORUS DEPTH", "CHORUS MIX", "DELAY FDBK",
                                       "DELAY TONE", "DELAY MIX", "VERB SIZE", "VERB DAMP", "VERB MIX", "GLUE", "SUB BOOST",
                                       "VOLUME"};
