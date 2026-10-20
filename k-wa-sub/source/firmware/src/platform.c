@@ -101,6 +101,7 @@ static int st_read(uint32_t off, void *dst, uint32_t n)
 }
 
 static uint8_t recovery_active;
+static void app_flash_busy(void);              /* K-WA SUB: core 1 off the flash (and into reset) before an update */
 #define OTA_IDENTITY (recovery_active ? "FM-1_000" : FELUCCA_ID)
 #include "ota.c"
 static void recovery_poll(void);
@@ -114,17 +115,19 @@ static int ota_in_area(uint32_t off, uint32_t n) { return FL_IN(off, n, OTA_AREA
 static int ota_erase(uint32_t off)
 {
     uint32_t took;
+    app_flash_busy();
     if (!ota_in_area(off, 0x1000u) || (off & 0xFFFu))
         return -8;
     return fl_erase4k(off, &took);
 }
 static int ota_prog(uint32_t off, const void *p, uint32_t n)
 {
+    app_flash_busy();
     if (!ota_in_area(off, n))
         return -8;
     return fl_write(off, p, n);
 }
-static int ota_fread(uint32_t off, void *p, uint32_t n) { return st_read(off, p, n); }
+static int ota_fread(uint32_t off, void *p, uint32_t n) { app_flash_busy(); return st_read(off, p, n); }
 static void ota_show(uint32_t step, int32_t code)
 {
     static const char *const STEP[] = {"", "PACKAGE", "CHECK HEAD", "LOADER", "CONFIRM", "RESTART"};
@@ -138,6 +141,7 @@ static void ota_show(uint32_t step, int32_t code)
 }
 static void ota_commit(const uint8_t *parm)
 {
+    app_flash_busy();
     bootguard_clear(&bootguard);
     usb_detach();
     fm1_delay_ms(30);
@@ -283,10 +287,12 @@ static void platform_poll(void)
     app_poll();
     if (usb.ota_req) {
         usb.ota_req = 0;
+        app_flash_busy();
         if (flash_ok)
             ota_session();                      /* returns only if nothing was committed */
     }
     if (usb.uboot_req) {
+        app_flash_busy();
         fm1_audio_stop();
         lcd_fill(0, 0, 240, 240, C_BLACK);
         draw_text_box(0, 110, 240, &FONT_S, "UBOOT (USB)", C_WHITE, 1);
@@ -309,6 +315,7 @@ static void fm1_fault(const fm1_crash_t *c)
 {
     char b[12];
     uint32_t i, t0, v[3] = {c->vec, c->pc, c->rets};
+    app_flash_busy();
     fm1_audio_stop();
     lcd_fill(0, 0, 240, 240, RGB(160, 0, 0));
     draw_text_box(0, 20, 240, &FONT_S, APP_NAME " CRASH", C_WHITE, 1);

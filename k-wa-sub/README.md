@@ -5,7 +5,8 @@ Un synthétiseur de basses pour le **M-VAVE FM-1** : drum & bass, dub, dubstep, 
 séquenceur, sans pistes, sans samples ni batteries : tout le processeur va au son.
 
 **Essayer sans rien installer :** ouvrez [`emulator/index.html`](emulator/index.html) dans un navigateur
-(un seul fichier, fonctionne hors ligne), cliquez sur « Allumer le son ».
+(un seul fichier, fonctionne hors ligne), cliquez sur « Allumer le son ». **L'installer :** voir
+[Installer sur le FM-1](#installer-sur-le-fm-1).
 
 ## Le son
 
@@ -55,16 +56,51 @@ l'émulateur, leur fonction s'affiche sous chaque potard), `PRESETS` charge le p
 page. `SAVE` ouvre l'enregistrement (emplacement, nom lettre par lettre, style) ; `SAVE` à nouveau écrit.
 `OCT-` / `OCT+` : octave du clavier ; les deux ensemble : tout couper.
 
+## Installer sur le FM-1
+
+Le paquet est [`install/k-wa-sub-0.1.fwsc`](install/k-wa-sub-0.1.fwsc) (identité `FM-1_971`). Il s'installe exactement
+comme KAWA, avec le même chargeur de mise à jour, et fonctionne depuis le firmware d'origine comme depuis KAWA :
+
+- **Dans le navigateur** (Chrome ou Edge, Web MIDI) : la page d'installation de KAWA ([`../index.html`](../index.html)),
+  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.1.fwsc`.
+- **Avec Python 3** : `INSTALL-Linux.sh`, `INSTALL-Mac.command` ou `INSTALL-Windows.bat` dans ce dossier (ou
+  `python3 install/fm1_install.py install/k-wa-sub-0.1.fwsc`).
+
+Un câble USB **de données**, aucun autre logiciel MIDI ouvert, rien à débrancher avant la fin. Pour revenir à KAWA :
+installer `kawa-0.5.fwsc` de la même façon. Pour le firmware officiel : M-UPGRADE, comme décrit pour KAWA. En cas de
+problème : maintenir `OCT-` à l'allumage donne le **secours USB** (l'installateur marche toujours). Les patches
+utilisateur sont rangés à `0x97000` : enregistrer un patch écrase la sauvegarde automatique de KAWA (son
+emplacement 0).
+
 ## Les deux cœurs
 
-Le FM-1 (JieLi AC79) a deux cœurs. K-WA SUB est découpé pour eux (`firmware/src/ksub_dsp.c`) :
+Le FM-1 (JieLi AC79) a deux cœurs, et K-WA SUB les utilise :
 
 - **cœur 1** : les voix (oscillateurs, filtre, enveloppes, LFO, matrice) du bloc suivant ;
-- **cœur 0** : l'interruption audio, les effets du bloc en cours, l'interface et l'USB.
+- **cœur 0** : l'interruption audio, les effets du bloc en cours, l'écran, les boutons, le MIDI et l'USB.
 
-Un bloc de latence (5,8 ms). **Reste à faire sur le matériel** : le démarrage du second cœur
-(`firmware/hal/fm1_cpu1.h`) doit être lu dans le SDK JieLi et essayé sur un vrai FM-1 ; d'ici là il répond « non »
-et tout tourne sur le cœur 0, avec exactement le même son (c'est aussi ce que fait l'émulateur).
+Il y a un bloc de latence (5,8 ms). Le démarrage du cœur 1 reprend la séquence du SDK de JieLi (`EnableOtherCpu` et
+`cpu1_start`, voir `source/firmware/hal/fm1_cpu1.h`), avec des sécurités :
+
+- si le cœur 1 ne répond pas, tout tourne sur le cœur 0 (même son) ;
+- si le FM-1 redémarre dans les 10 s d'un démarrage à deux cœurs, le démarrage suivant se fait sur un seul cœur ;
+  `SYSTEM › AUDIO CORES` permet de réessayer ;
+- pendant chaque écriture en flash (patch, réglages), le cœur 1 attend dans une boucle en RAM ;
+- avant une mise à jour, le mode UBOOT ou un plantage, il est remis en reset.
+
+`SYSTEM › AUDIO CORES` affiche `DUAL · ON` quand le cœur 1 tourne vraiment. `CPU LOAD` donne la part d'un bloc
+utilisée par chaque cœur.
+
+**Gouverneur de charge** (comme KAWA) : si un bloc dépasse 70 % deux fois de suite, le son s'allège d'un cran :
+1. la reverb et le chorus s'arrêtent ;
+2. il reste 2 voix et 3 dents de scie par SUPER ;
+3. il reste 1 voix et 2 dents de scie.
+
+Après 2 s sous 45 %, on remonte d'un cran. Un bloc ne dépasse jamais son temps : la fin reste silencieuse, et le
+chien de garde ne voit jamais l'audio bloqué. `CPU LOAD` affiche `· -1`, `-2` ou `-3` quand le son est allégé.
+
+**Pas encore essayé sur un vrai FM-1.** Au premier essai, regarde la page SYSTEM : `AUDIO CORES`, `CPU LOAD` en
+jouant un preset lourd (WIDE REESE en POLY, accords), et dis-moi ce qui s'affiche.
 
 ## Construire
 
@@ -72,15 +108,17 @@ et tout tourne sur le cœur 0, avec exactement le même son (c'est aussi ce que 
 cd source
 python3 tools/gen_ksub.py        # tables (hauteurs, filtre, enveloppes, tables d'onde) et polices
 web/make_emulator.sh             # -> ../emulator/index.html (clang avec la cible wasm32 et wasm-ld)
+tools/get_toolchain.sh           # la chaîne JieLi (une fois), + les 3 fichiers du SDK AC79 (voir ../../source/BUILDING.md)
+./build.sh --release 0.1         # -> build/k-wa-sub-0.1.fwsc, avec toutes les vérifications de KAWA
+tests/run_loader_tests.sh        # la mise à jour sur l'ordinateur (de KAWA vers K-WA SUB, coupure, paquet abîmé...)
+tests/run_stress.sh              # chaque preset, chaque paramètre aux extrêmes, sous UBSan : aucun entier ne déborde
 node tests/shots.mjs && python3 tests/png.py   # les écrans de tests/tour.txt -> build/shots/sheet.png, et un WAV
 node tests/levels.mjs            # chaque preset : crête, RMS, écrêtage, DC
 ```
 
-Le paquet pour le FM-1 (`./build.sh` de KAWA, adapté : `tools/build.py`, identité `FM-1_97Y`, sortie
-`k-wa-sub.fwsc`) n'a **pas encore été construit ni essayé** : l'installation viendra quand le son et l'interface
-dans l'émulateur seront validés. Mêmes règles que KAWA : entiers seulement, pas de division 64 bits, une interruption
-audio courte ; la mémoire de stockage (un secteur de 32 patches à `0x97000`) reste hors de la zone qu'une mise à
-jour efface.
+Mêmes règles que KAWA : entiers seulement, pas de division 64 bits, une interruption audio courte, et des registres
+touchés seulement dans `hal/`. `./build.sh` vérifie tout cela. La mémoire de stockage (un secteur de 32 patches à
+`0x97000`) reste hors de la zone qu'une mise à jour efface.
 
 ## Licence
 

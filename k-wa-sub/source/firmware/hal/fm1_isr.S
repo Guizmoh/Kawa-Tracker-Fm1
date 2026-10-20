@@ -18,3 +18,12 @@
 
 	FM1_ISR isr_timer5, fm1_timer5_irq
 	FM1_ISR isr_alnk0, fm1_alnk0_irq
+
+/* core 1's entry (fm1_cpu1.h, as JieLi's startup.S cpu1_start): its own stacks, then fm1_cpu1_main */
+	.section .text.fm1_cpu1_entry,"ax",@progbits
+	.globl fm1_cpu1_entry
+fm1_cpu1_entry:
+	usp = fm1_cpu1_ustk + 3072
+	sp = fm1_cpu1_sstk + 1024
+	reti = fm1_cpu1_main
+	rti

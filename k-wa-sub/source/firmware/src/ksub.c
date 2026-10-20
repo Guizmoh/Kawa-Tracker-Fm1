@@ -28,6 +28,9 @@
 #include "platform.c"
 #if !defined(DINGHY_HOST) && !defined(KAWA_WASM)
 #include "fm1_cpu1.h"
+#ifndef KS_DUAL
+#define KS_DUAL 1                               /* the voices on core 1 (SYSTEM: AUDIO CORES) */
+#endif
 #define POOL __attribute__((section(".pool")))
 #else
 #define POOL

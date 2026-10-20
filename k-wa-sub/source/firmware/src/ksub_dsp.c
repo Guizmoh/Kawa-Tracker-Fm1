@@ -12,6 +12,16 @@
 #define NVOICE 4u
 #define CMB_N 1024u                             /* comb filter line per voice */
 
+#if KS_DUAL
+#define KS_SYNC() fm1_csync()                   /* (what one core wrote, the other sees: fm1_cpu1.h) */
+#else
+#define KS_SYNC() RING_PUBLISH()
+#endif
+#define BLOCK_TICKS (HALF_FRAMES * (FM1_TICKS_PER_US * 1000000u / FS))   /* 5.8 ms in 24 MHz ticks */
+#define BLOCK_TICKS100 (BLOCK_TICKS / 100u)
+static volatile uint8_t ks_shed;                /* the load governor's step (0: the whole sound) */
+static volatile uint32_t ks_late;               /* blocks cut short (never past the block: the watchdog) */
+
 /* ---- what the main loop sends to the voices (one writer, one reader) */
 enum { EV_ON, EV_OFF, EV_PANIC, EV_SYNC };
 static volatile uint32_t evq[64], ev_w, ev_r;
@@ -19,7 +29,7 @@ static void ev_push(uint32_t t, uint32_t a, uint32_t b)
 {
     if (ev_w - ev_r >= 64u) return;
     evq[ev_w % 64u] = t | a << 8 | b << 16;
-    RING_PUBLISH();
+    KS_SYNC();
     ev_w++;
 }
 
@@ -139,7 +149,9 @@ static void osc_render(osc_t *o, const oscp_t *q, int32_t *out, const int32_t *p
         break;
     }
     case E_SUPER: {                             /* 2, 3, 5 or 7 saws, detuned around the note */
-        uint32_t nv = SUPER_N[q->p3 >> 13], inc_k[7], rc[7], v0 = nv == 2u ? 1u : 0u;
+        uint32_t nv = SUPER_N[q->p3 >> 13], cap = ks_shed >= 3u ? 2u : ks_shed >= 2u ? 3u : 7u, inc_k[7], rc[7], v0;
+        if (nv > cap) nv = cap;
+        v0 = nv == 2u ? 1u : 0u;
         int32_t s = (int32_t)(((int64_t)q->p1 * q->p1) >> 15), cg = 32767 - (q->p2 >> 1), sg = nv == 2u ? 32767 : 6000 + ((q->p2 * 26767) >> 15), norm;
         norm = nv == 2u ? 19000 : nv == 3u ? 15000 : nv == 5u ? 11500 : 9800;
         for (i = v0; i < v0 + nv; i++) {
@@ -664,20 +676,34 @@ static void voice_block(voice_t *v, int32_t *acc)
 }
 
 /* all the voices for n samples (core 1's job) -> dst, mono */
-static void voices_render(int32_t *dst, uint32_t n)
+static void voices_render(int32_t *dst, uint32_t n, uint32_t t0, uint32_t budget)
 {
-    uint32_t i, k, binc, any = 0;
+    uint32_t i, k, binc, any = 0, lim = ks_shed >= 3u ? 1u : ks_shed >= 2u ? 2u : NVOICE, on = 0;
     while (ev_r != ev_w) {
         uint32_t e = evq[ev_r % 64u], t = e & 255u, a = (e >> 8) & 255u, b = e >> 16;
         ev_r++;
         if (t == EV_ON) note_on(a, b);
         else if (t == EV_OFF) note_off(a);
         else if (t == EV_PANIC) { for (k = 0; k < NVOICE; k++) { vo[k].on = 0; vo[k].ea.st = 0; vo[k].ea.lv = 0; } nheld = 0; }
-        else if (t == EV_SYNC) ks_beats = 0;
+        else if (t == EV_SYNC) ks_beats = a ? b * 699051u : 0u;   /* (the MIDI clock: its tick, 1/24 beat) */
+    }
+    for (k = 0; k < NVOICE; k++) on += vo[k].on;
+    while (on > lim) {                          /* the governor took voices away: the oldest go */
+        uint32_t old = NVOICE;
+        for (k = 0; k < NVOICE; k++) if (vo[k].on && (old == NVOICE || vo[k].age < vo[old].age)) old = k;
+        vo[old].on = 0;
+        vo[old].ea.st = 0;
+        vo[old].ea.lv = 0;
+        on--;
     }
     binc = (ks_bpm10 * 664858u) >> 16;          /* beats per block, Q24: bpm10 x 16 x 2^24 / (600 x 44100) */
     for (i = 0; i < n; i += KS_CB) {
         int32_t *acc = dst + i;
+        if (i && fm1_ticks() - t0 > budget) {   /* out of time: the rest of the block stays silent */
+            for (k = i; k < n; k++) dst[k] = 0;
+            ks_late++;
+            break;
+        }
         ks_beats = (ks_beats + binc) % BEATS_WRAP;
         lfo_run(0, ks_beats);
         lfo_run(1, ks_beats);
@@ -749,7 +775,7 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
         }
         x = clip(x, 120000);
         L = R = x;
-        if (P[CH_ON]) {                         /* chorus on what is above ~150 Hz (the sub stays mono) */
+        if (P[CH_ON] && !ks_shed) {             /* chorus on what is above ~150 Hz (the sub stays mono) */
             int32_t hp, t0, t1;
             uint32_t r;
             fx.hp_ch += (x - fx.hp_ch) >> 6;
@@ -784,7 +810,7 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
             L += mul15(o[0], dl_mix);
             R += mul15(o[1], dl_mix);
         }
-        if (P[RV_ON]) {                         /* a small Freeverb: 4 combs and 2 all-passes a side */
+        if (P[RV_ON] && !ks_shed) {             /* a small Freeverb: 4 combs and 2 all-passes a side */
             int32_t rin, acc[2] = {0, 0};
             uint32_t base = 0;
             fx.rv_hp += (x - fx.rv_hp) >> 5;
@@ -833,36 +859,88 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
 #ifndef KS_DUAL
 #define KS_DUAL 0
 #endif
-static int32_t vbus[2][HALF_FRAMES];
-static volatile uint32_t c1_req, c1_done;
-static uint8_t dual_on;                         /* the second core runs (fm1_cpu1_start said yes) */
+static int32_t vbus[2][HALF_FRAMES], vzero[HALF_FRAMES];
+static volatile uint32_t c1_req, c1_done, c1_park_req, c1_parked;
+static volatile uint8_t dual_on;                /* the second core runs (fm1_cpu1_start said yes) */
 static volatile uint32_t ks_load[2];            /* % of a block, per core (the SYSTEM page) */
-#define BLOCK_TICKS100 (HALF_FRAMES * (FM1_TICKS_PER_US * 1000000u / FS) / 100u)
 
+/* the load governor (as KAWA's, after Felucca's shed_check): two blocks in a row over 70 % and the sound thins
+ * out a step: 1 the reverb and the chorus, 2 two voices and 3 saws a SUPER, 3 one voice and 2 saws. Two seconds
+ * under 45 %: a step back. The sound thins out instead of crackling, and the watchdog never sees a block that
+ * does not end (voices_render stops at its budget) */
+static void governor(uint32_t pct)
+{
+    static uint8_t hist;
+    static uint32_t calm;
+    hist = (uint8_t)(hist << 1 | (pct > 70u));
+    if ((hist & 3u) == 3u && ks_shed < 3u) { ks_shed++; hist = 0; calm = 0; }
+    if (pct < 45u) { if (++calm > 344u && ks_shed) { ks_shed--; calm = 0; } }   /* 344 blocks: 2 s */
+    else calm = 0;
+}
+
+#if KS_DUAL
 static void core1_main(void)                    /* core 1: the voices of the next block, again and again */
 {
     for (;;) {
-        uint32_t r = c1_req, t0;
+        uint32_t r, t0;
+        if (c1_park_req) { FL_FAR(fm1_cpu1_park)(&c1_park_req, &c1_parked); continue; }   /* (the flash is busy: in RAM) */
+        KS_SYNC();
+        r = c1_req;
         if (r == c1_done) continue;
         t0 = fm1_ticks();
-        voices_render(vbus[r & 1u], HALF_FRAMES);
+        voices_render(vbus[r & 1u], HALF_FRAMES, t0, BLOCK_TICKS * 9u / 10u);
         ks_load[1] = (fm1_ticks() - t0) / BLOCK_TICKS100;
-        RING_PUBLISH();
+        KS_SYNC();
         c1_done = r;
     }
 }
+/* the main loop, around a flash erase or write: core 1 waits in RAM (or, if it does not answer, stops) */
+static void c1_pause(void)
+{
+    uint32_t t0 = fm1_ticks();
+    if (!dual_on) return;
+    c1_park_req = 1;
+    KS_SYNC();
+    while (!c1_parked && fm1_ticks() - t0 < 20000u * FM1_TICKS_PER_US) {}
+    if (!c1_parked) { fm1_cpu1_stop(); dual_on = 0; c1_park_req = 0; }
+}
+static void c1_resume(void) { c1_park_req = 0; KS_SYNC(); }
+static void app_flash_busy(void)                /* an update, UBOOT, a crash: core 1 stops for good */
+{
+    if (!dual_on) return;
+    c1_pause();
+    fm1_cpu1_stop();
+    dual_on = 0;
+    c1_park_req = 0;
+}
+#else
+static void c1_pause(void) {}
+static void c1_resume(void) {}
+static void app_flash_busy(void) {}
+#endif
 
 static void app_audio(int32_t *out, uint32_t n)
 {
-    uint32_t t0 = fm1_ticks();
-    if (dual_on) {
-        uint32_t spin = 0, cur = c1_req;
-        while (c1_done != cur && ++spin < 200000u) {}   /* (core 1 late: what it had) */
-        c1_req = cur + 1u;                      /* core 1 starts the next block now */
-        fx_render(vbus[cur & 1u], out, n);
-    } else {
-        voices_render(vbus[0], n);
+    uint32_t t0 = fm1_ticks(), l1 = 0;
+    if (dual_on && !c1_park_req) {              /* core 1 did this block's voices during the last one */
+        uint32_t cur = c1_req;
+        while (c1_done != cur && fm1_ticks() - t0 < BLOCK_TICKS / 2u) { KS_SYNC(); }
+        t0 = fm1_ticks();
+        if (c1_done == cur) {
+            c1_req = cur + 1u;                  /* core 1 starts the next block now */
+            KS_SYNC();
+            fx_render(vbus[cur & 1u], out, n);
+        } else {
+            ks_late++;                          /* (core 1 late: a silent block, it goes on) */
+            fx_render(vzero, out, n);
+        }
+        l1 = ks_load[1];
+    } else if (dual_on)
+        fx_render(vzero, out, n);               /* core 1 waits for the flash: silence, as on core 0 */
+    else {
+        voices_render(vbus[0], n, t0, BLOCK_TICKS * 7u / 10u);
         fx_render(vbus[0], out, n);
     }
     ks_load[0] = (fm1_ticks() - t0) / BLOCK_TICKS100;
+    governor(ks_load[0] > l1 ? ks_load[0] : l1);
 }

@@ -9,7 +9,7 @@
 enum { PG_PLAY, PG_BASS, PG_ENV, PG_FILT, PG_LFO, PG_FX, PG_PRE, PG_SYS, NPAGE };
 static const uint8_t PAGE_BTN[NPAGE] = {BTN_HOME, BTN_EDIT, BTN_ENV, BTN_SEQ, BTN_LFO, BTN_FX, BTN_ARP, BTN_GLO};
 enum { LY_PLAY, LY_LIST, LY_BOX, LY_FILT, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
-enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_FW, I_NONE = 255 };
+enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, I_NONE = 255 };
 
 typedef struct {
     uint8_t lay;
@@ -44,7 +44,7 @@ static const view_t VIEWS[] = {
     {LY_PRESET, "PRESET BANK A", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_PRESET, "PRESET BANK B", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_SAVE, "SAVE PATCH", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
-    {LY_SYS, "GLOBAL SETUP", 11, {G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_OCT, P_STYLE, G_CORES, G_FW},
+    {LY_SYS, "GLOBAL SETUP", 12, {G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_OCT, P_STYLE, G_CORES, G_CPU, G_FW},
      {V_MODE, V_GLIDE, G_BPM, G_MIDICH}, "SYSTEM"},
 };
 static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 11, 14, 20, 23, 24};   /* each page's first view */
@@ -65,8 +65,8 @@ static upatch_t ustore[NUSER];
 static struct {
     uint8_t ver, midich, clock, oct;            /* midich 0: omni; clock 0 internal, 1 MIDI */
     uint16_t bpm10;
-    uint8_t bank, idx;
-} set = {1, 0, 0, 0xFF, 1400, 0, 0};
+    uint8_t bank, idx, cores;                   /* cores 1: both (the voices on core 1) */
+} set = {2, 0, 0, 0xFF, 1400, 0, 0, 1};
 static char pname[14];
 static uint8_t page, vcur[NPAGE], cursor[24], pre_cur[2], save_slot, save_pos, hold;
 static uint8_t key_note[27], latched[128], phys[128];
@@ -87,21 +87,39 @@ static void toast(const char *s)
 static const view_t *view(void) { return &VIEWS[PAGE_V0[page] + vcur[page]]; }
 static uint32_t vidx(void) { return PAGE_V0[page] + vcur[page]; }
 
+#if KS_DUAL
+#define DUAL_MAGIC 0x4B533143u                  /* "KS1C": a start on two cores not yet confirmed (survives a reset) */
+static uint32_t dual_mark[2] __attribute__((section(".noinit")));
+static uint32_t dual_ms;
+#endif
+
 /* ---- the user store (one sector) */
 #if defined(KAWA_WASM)
 static uint8_t w_store[4096];
 static uint32_t w_store_gen;
 static void store_load(void) { memcpy(ustore, w_store, sizeof ustore); }
 static int store_save(void) { memcpy(w_store, ustore, sizeof ustore); w_store_gen++; return 0; }
+static int settings_write(void) { return settings_save(&set, sizeof set); }
 #else
 static void store_load(void) { if (!flash_ok || st_read(STORE_LO, ustore, sizeof ustore)) memset(ustore, 0xFF, sizeof ustore); }
-static int store_save(void)
+static int store_save(void)                     /* (core 1 waits in RAM while the flash is busy) */
 {
     uint32_t took;
     int rc;
     if (!flash_ok) return -1;
-    if ((rc = fl_erase4k(STORE_LO, &took)) != 0) return rc;
-    return fl_write(STORE_LO, (const uint8_t *)ustore, sizeof ustore);
+    c1_pause();
+    rc = fl_erase4k(STORE_LO, &took);
+    if (!rc) rc = fl_write(STORE_LO, (const uint8_t *)ustore, sizeof ustore);
+    c1_resume();
+    return rc;
+}
+static int settings_write(void)
+{
+    int rc;
+    c1_pause();
+    rc = settings_save(&set, sizeof set);
+    c1_resume();
+    return rc;
 }
 #endif
 static uint8_t up_sum(const upatch_t *u)
@@ -155,7 +173,7 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
     if (item_patch(id)) { *lo = PD[id].lo; *hi = PD[id].hi; return; }
     *lo = 0;
-    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK ? 1 : id == G_OCT ? 6 : 0;
+    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES ? 1 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
 }
 static int32_t item_get(uint32_t id)
@@ -167,6 +185,7 @@ static int32_t item_get(uint32_t id)
     case G_BPM: return set.bpm10;
     case G_CLOCK: return set.clock;
     case G_OCT: return OCT + 3;
+    case G_CORES: return set.cores;
     default: return 0;
     }
 }
@@ -186,6 +205,7 @@ static void item_set(uint32_t id, int32_t v)
     case G_BPM: set.bpm10 = (uint16_t)v; ks_bpm10 = (uint32_t)v; break;
     case G_CLOCK: set.clock = (uint8_t)v; break;
     case G_OCT: set.oct = (uint8_t)(int8_t)(v - 3); break;
+    case G_CORES: set.cores = (uint8_t)v; toast("RESTART TO APPLY"); break;
     default: return;
     }
     set_dirty = 1;
@@ -212,6 +232,7 @@ static const char *item_name(uint32_t id)
     case G_CLOCK: return "CLOCK";
     case G_OCT: return "KEYS OCTAVE";
     case G_CORES: return "AUDIO CORES";
+    case G_CPU: return "CPU LOAD";
     case G_FW: return "FIRMWARE";
     default: return "";
     }
@@ -223,7 +244,7 @@ static const char *item_sname(uint32_t id)
     if (k) return ENG_P[e][k - 1];
     if (id == I_L1RATE || id == I_L2RATE) return "RATE";
     if (item_patch(id)) return PD[id].sname;
-    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : "";
+    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : "";
 }
 static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
 {
@@ -258,7 +279,12 @@ static void item_text(uint32_t id, char *b)
         case G_BPM: b = fmt_u(b, (uint32_t)v / 10u, 0); *b++ = '.'; b = fmt_u(b, (uint32_t)v % 10u, 0); str_cat(b, " BPM"); break;
         case G_CLOCK: str_cat(b, v ? "MIDI" : "INTERNAL"); break;
         case G_OCT: fmt_s(b, v - 3); break;
-        case G_CORES: str_cat(b, dual_on ? "DUAL" : "SINGLE"); break;
+        case G_CORES: str_cat(b, !v ? "SINGLE" : dual_on ? "DUAL \xB7 ON" : KS_DUAL ? "DUAL \xB7 OFF" : "DUAL (FM-1)"); break;
+        case G_CPU:                             /* each core's share of a block, and the governor's step */
+            b = str_cat(b, "C0 "); b = fmt_u(b, ks_load[0], 0); b = str_cat(b, "%");
+            if (dual_on) { b = str_cat(b, " C1 "); b = fmt_u(b, ks_load[1], 0); b = str_cat(b, "%"); }
+            if (ks_shed) { b = str_cat(b, " \xB7 -"); fmt_u(b, ks_shed, 0); }
+            break;
         case G_FW: str_cat(b, "K-WA SUB " APP_VER); break;
         }
         return;
@@ -331,7 +357,8 @@ static void preview_make(void)
             if ((x < 0 ? -x : x) > pk) pk = x < 0 ? -x : x;
         }
     }
-    for (i = 0; i < 224; i++) prev_wave[i] = (int16_t)(w[i] * 32000 / pk);
+    pk = (32000 << 12) / pk;                     /* (a gain, Q12: no 64-bit division) */
+    for (i = 0; i < 224; i++) prev_wave[i] = (int16_t)((w[i] * pk) >> 12);
 }
 
 /* ================================================================ drawing */
@@ -385,7 +412,7 @@ static void draw_item_row(int32_t y, uint32_t id, int sel)
 {
     char b[24];
     item_text(id, b);
-    draw_row(y, item_name(id), b, sel, id == G_CORES || id == G_FW ? K_GREY : K_CYAN);
+    draw_row(y, item_name(id), b, sel, id == G_CPU || id == G_FW ? K_GREY : K_CYAN);
 }
 static void draw_rows(const view_t *v, int32_t y0, uint32_t vis)
 {
@@ -689,7 +716,7 @@ static void key_up(uint32_t n)
 static void edit_item(uint32_t id, int32_t d)
 {
     int32_t lo, hi, v = item_get(id), step = 1;
-    if (id == I_NONE || id == G_CORES || id == G_FW) return;
+    if (id == I_NONE || id == G_CPU || id == G_FW) return;
     item_range(id, &lo, &hi);
     if (hi - lo > 40 && fm1_ms - last_turn_ms < 45u) step = id == G_BPM ? 10 : 3;   /* fast: bigger steps */
     last_turn_ms = fm1_ms;
@@ -876,9 +903,10 @@ static uint32_t ui_frame_ms, prev_ms;
 static void app_init(void)
 {
     uint32_t i;
-    if (settings_load(&set, sizeof set) || set.ver != 1u) {
-        set.ver = 1; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0;
+    if (settings_load(&set, sizeof set) || set.ver != 2u) {
+        set.ver = 2; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1;
     }
+    set.cores = set.cores ? 1u : 0u;
     set.bpm10 = (uint16_t)clampi(set.bpm10, 600, 2400);
     set.oct = (uint8_t)(int8_t)clampi(OCT, -3, 3);
     ks_bpm10 = set.bpm10;
@@ -890,12 +918,22 @@ static void app_init(void)
     set_dirty = 0;
     dual_on = 0;
 #if KS_DUAL
-    {
-        static uint32_t c1_stack[1024];
-        dual_on = fm1_cpu1_start(core1_main, c1_stack + 1024) == 0;
+    if (set.cores) {                            /* the voices on core 1: unless the last try did not hold */
+        if (dual_mark[0] == DUAL_MAGIC && dual_mark[1] == ~DUAL_MAGIC) {
+            set.cores = 0;                      /* (it crashed within 10 s: one core from now, SYSTEM to try again) */
+            set_dirty = 1;
+            set_ms = fm1_ms;
+            toast("ONE CORE (SAFE)");
+        } else {
+            dual_mark[0] = DUAL_MAGIC;
+            dual_mark[1] = ~DUAL_MAGIC;
+            dual_ms = fm1_ms;
+            dual_on = fm1_cpu1_start(core1_main) == 0;
+            if (!dual_on) { dual_mark[0] = dual_mark[1] = 0; toast("CORE 1 SILENT: ONE CORE"); }
+        }
     }
+    if (!set.cores) dual_mark[0] = dual_mark[1] = 0;
 #endif
-    (void)core1_main;
     g_force = 1;
 }
 
@@ -911,8 +949,11 @@ static void app_step(void)
     }
     if (set_dirty && !ks_sounding && fm1_ms - set_ms > 2000u) {   /* (erasing stalls the sound: only when silent) */
         set_dirty = 0;
-        settings_save(&set, sizeof set);
+        settings_write();
     }
+#if KS_DUAL
+    if (dual_on && dual_mark[0] && fm1_ms - dual_ms > 10000u) dual_mark[0] = dual_mark[1] = 0;   /* 10 s on two cores: it holds */
+#endif
 }
 
 static void app_main(void)
