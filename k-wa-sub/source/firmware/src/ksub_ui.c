@@ -14,7 +14,7 @@
 enum { PG_PLAY, PG_BASS, PG_ENV, PG_FILT, PG_LFO, PG_FX, PG_PRE, PG_SYS, NPAGE };
 static const uint8_t PAGE_BTN[NPAGE] = {BTN_HOME, BTN_EDIT, BTN_ENV, BTN_SEQ, BTN_LFO, BTN_FX, BTN_ARP, BTN_GLO};
 enum { LY_PLAY, LY_LIST, LY_BOX, LY_STEP, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
-enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_ACCEL, G_C3COL,
+enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_ACCEL, G_C3COL, G_UI, G_ASK,
        G_SQ_STEP, G_SQ_NOTE, G_SQ_TYPE, G_SQ_PAT, G_SQ_LEN, G_SQ_RATE, G_SQ_SWING,   /* SEQ BASS */
        G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE,                          /* ARP */
        I_NONE = 255 };
@@ -22,7 +22,7 @@ enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU
 typedef struct {
     uint8_t lay;
     const char *cat;
-    uint8_t n, it[16];                          /* the rows, in the order shown: K1..K4 are the first four */
+    uint8_t n, it[18];                          /* the rows, in the order shown: K1..K4 are the first four */
     const char *tag;
 } view_t;
 #define OSCV(L, X) {LY_LIST, "OSCILLATOR " L, 8, {X##_P1, X##_P2, X##_P3, X##_LVL, X##_ENG, X##_OCT, X##_SEMI, X##_FINE}, "EDIT"}
@@ -51,13 +51,8 @@ static const view_t VIEWS[] = {
     {LY_PRESET, "PRESET BANK B", 0, {0}, "PRESET"},
     {LY_SAVE, "SAVE PATCH", 0, {0}, "PRESET"},
     {LY_LIST, "ARPEGGIATOR", 5, {G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE}, "ARP"},
-#if KS_B
-    {LY_SYS, "GLOBAL SETUP", 16, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_THEME, G_PAL, G_FONT, G_C3COL, G_GRID, G_BROWSE, G_MIDICH, V_BEND,
-                                  V_VEL, G_CLOCK, G_CORES, G_CPU}, "SYSTEM"},
-#else
-    {LY_SYS, "GLOBAL SETUP", 15, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_MIDICH, V_BEND, V_VEL,
-                                  G_CLOCK, G_CORES, G_CPU}, "SYSTEM"},
-#endif
+    {LY_SYS, "GLOBAL SETUP", 18, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_UI, G_ASK, G_THEME, G_PAL, G_FONT, G_C3COL, G_GRID, G_BROWSE,
+                                  G_MIDICH, V_BEND, V_VEL, G_CLOCK, G_CORES, G_CPU}, "SYSTEM"},
 };
 /* what K1..K4 turn: the first four rows (the preset lists and SAVE have their own) */
 static uint32_t vknob(const view_t *v, uint32_t i) { return v->lay == LY_PRESET || v->lay == LY_SAVE || i >= v->n ? I_NONE : v->it[i]; }
@@ -87,8 +82,9 @@ static struct {
     uint8_t grid;                               /* LFO GRID: 0 ALL, 1 STRAIGHT (round divisions only) */
     uint8_t browse, fav[12];                    /* PRESETS: 0 all, 1 favorites only; the favorites (A then B) */
     uint8_t accel;                              /* the knobs' acceleration: 0 OFF, 1 ON, 2 FAST (appended: older saves load) */
-    uint8_t c3col;                              /* version B's three columns: 0 the theme's colour, 1 green / yellow / orange */
-} set = {6, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0, 0, {0}, 1, 0};
+    uint8_t c3col;                              /* SHIFT's three columns: 0 the theme's colour, 1 green / yellow / orange */
+    uint8_t ui, ask;                            /* UI MODE: 0 CLASSIC, 1 SHIFT; ask which at each start */
+} set = {6, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0, 0, {0}, 1, 0, KS_B, 1};
 static char pname[14];
 static uint8_t page, vcur[NPAGE], cursor[sizeof VIEWS / sizeof VIEWS[0]], pre_cur[2], save_slot, save_pos, hold;
 static uint8_t key_note[27], latched[128], phys[128];
@@ -287,10 +283,10 @@ static uint32_t vpop_ms;
 static char vpop_before[24], vpop_pre[12];
 static uint32_t splash_until;
 static struct { uint8_t b, used, fired; uint32_t at, next; } hb = {0xFF, 0, 0, 0, 0};   /* the button held */
-#if KS_B
-/* DOUBLE SHIFT (version B): a page's first screen is 12 settings in three columns of four, one row a knob: the knobs
- * alone move the left column (the base), OCT- held the middle one, OCT+ held the right one (OCT tapped: the octave).
- * The page's button (or SEL) then goes through its other views, and back. ini: the cell's initials (0: the engine's) */
+/* SHIFT mode (SYSTEM > UI MODE, asked at each start): a page's first screen is 12 settings in three columns of four,
+ * one row a knob: the knobs alone move the left column (the base), OCT- held the middle one, OCT+ held the right one
+ * (OCT tapped: the octave). The page's button (or SEL) then goes through its other views, and back. CLASSIC: the views
+ * only, OCT is the octave. ini: the cell's initials (0: the engine's) */
 typedef struct { const char *title, *head[3]; uint8_t id[3][4]; const char *ini[3][4]; } col3_t;
 static const col3_t COL3[NPAGE] = {
     [PG_PLAY] = {"PLAY \xB7 LIVE", {"LIVE", "MIX", "TONE"},
@@ -313,11 +309,10 @@ static const col3_t COL3[NPAGE] = {
                {{"DT", "FB", "DLY", "REV"}, {"TYP", "SAT", "MIX", "BIT"}, {"GLU", "SUB", "VOL", "CRU"}}},
 };
 static uint8_t c3_show[NPAGE] = {1, 1, 1, 1, 1, 1, 0, 0}, c3_cur;
-#define C3_ON (COL3[page].title && c3_show[page])
+static uint8_t ask_on, ask_sel;                 /* the start's question: CLASSIC or SHIFT */
+static uint32_t ask_ms;
+#define C3_ON (set.ui && COL3[page].title && c3_show[page])
 static uint32_t c3_col(void) { return hb.b == BTN_OCT_DOWN ? 1u : hb.b == BTN_OCT_UP ? 2u : 0u; }
-#else
-#define C3_ON 0
-#endif
 static uint32_t hold_time(uint32_t b);
 #define PRE_BROWSING (page == PG_PRE && vcur[PG_PRE] < 2u)   /* (SAVE held there: a favorite) */
 static const char *hold_label(uint32_t b);
@@ -371,7 +366,7 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
     if (item_patch(id)) { *lo = PD[id].lo; *hi = PD[id].hi; return; }
     *lo = 0;
-    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE || id == G_C3COL ? 1 : id == G_ACCEL ? 2 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
+    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE || id == G_C3COL || id == G_UI || id == G_ASK ? 1 : id == G_ACCEL ? 2 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
     if (id >= G_SQ_STEP && id <= G_AR_GATE) {
         static const int8_t LO[12] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1}, HI[12] = {15, 48, 4, 15, 16, 5, 50, 1, 4, 5, 3, 10};
@@ -397,6 +392,8 @@ static int32_t item_get(uint32_t id)
     case G_BROWSE: return set.browse;
     case G_ACCEL: return set.accel;
     case G_C3COL: return set.c3col;
+    case G_UI: return set.ui;
+    case G_ASK: return set.ask;
     case G_SQ_STEP: return sq_cur_step;
     case G_SQ_NOTE: return sq_pat()->note[sq_cur_step & 15u];
     case G_SQ_TYPE: return (int32_t)sq_type(sq_pat()->fl[sq_cur_step & 15u]);
@@ -457,6 +454,8 @@ static void item_set(uint32_t id, int32_t v)
     case G_BROWSE: set.browse = (uint8_t)v; break;
     case G_ACCEL: set.accel = (uint8_t)v; break;
     case G_C3COL: set.c3col = (uint8_t)v; break;
+    case G_UI: set.ui = (uint8_t)v; c3_show[page] = (uint8_t)v; vcur[page] = 0; break;
+    case G_ASK: set.ask = (uint8_t)v; break;
     default: return;
     }
     set_dirty = 1;
@@ -491,6 +490,8 @@ static const char *item_name(uint32_t id)
     case G_BROWSE: return "PRESETS";
     case G_ACCEL: return "KNOB ACCEL";
     case G_C3COL: return "SHIFT COLOURS";
+    case G_UI: return "UI MODE";
+    case G_ASK: return "ASK AT START";
     case G_FW: return "FIRMWARE";
     case G_SQ_STEP: return "STEP";
     case G_SQ_NOTE: return "NOTE";
@@ -514,7 +515,7 @@ static const char *item_sname(uint32_t id)
     if (k) return ENG_P[e][k - 1];
     if (id == I_L1RATE || id == I_L2RATE) return "RATE";
     if (item_patch(id)) return PD[id].sname;
-    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : id == G_ACCEL ? "ACCEL" : id == G_C3COL ? "COLOURS" : id == G_SQ_TYPE ? "TYPE" : id == G_SQ_PAT ? "PAT" : id == G_SQ_LEN ? "LEN" : id == G_AR_OCT ? "OCT" : item_name(id);
+    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : id == G_ACCEL ? "ACCEL" : id == G_C3COL ? "COLOURS" : id == G_UI ? "UI" : id == G_ASK ? "ASK" : id == G_SQ_TYPE ? "TYPE" : id == G_SQ_PAT ? "PAT" : id == G_SQ_LEN ? "LEN" : id == G_AR_OCT ? "OCT" : item_name(id);
 }
 static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
 {
@@ -595,6 +596,8 @@ static void item_text(uint32_t id, char *b)
         case G_BROWSE: str_cat(b, v ? "FAVORITES" : "ALL"); break;
         case G_ACCEL: str_cat(b, v == 2 ? "FAST" : v ? "ON" : "OFF"); break;
         case G_C3COL: str_cat(b, v ? "GREEN YEL ORANGE" : "THEME"); break;
+        case G_UI: str_cat(b, v ? "SHIFT (3 COLUMNS)" : "CLASSIC"); break;
+        case G_ASK: str_cat(b, v ? "YES" : "NO"); break;
         case G_FONT: { static const char *const FN[4] = {"SANS", "MONO", "HYPER", "PIXEL"}; str_cat(b, FN[v & 3]); break; }
         case G_CPU:                             /* each core's share of a block, and the governor's step */
             b = str_cat(b, "C0 "); b = fmt_u(b, ks_load[0], 0); b = str_cat(b, "%");
@@ -831,17 +834,15 @@ static void save_open(void)
 }
 static void name_trim(void) { int32_t i; for (i = 12; i >= 0 && pname[i] == ' '; i--) pname[i] = 0; }
 
-static void view_next(void)                     /* the page's next view (version B: the 3 columns first) */
+static void view_next(void)                     /* the page's next view (SHIFT: the 3 columns first) */
 {
     uint32_t nv = (uint32_t)(PAGE_V0[page + 1u] - PAGE_V0[page]);
-#if KS_B
-    if (COL3[page].title) {
+    if (set.ui && COL3[page].title) {
         if (c3_show[page]) { c3_show[page] = 0; vcur[page] = 0; }
         else if (vcur[page] + 1u >= nv) { c3_show[page] = 1; vcur[page] = 0; }
         else vcur[page]++;
         return;
     }
-#endif
     vcur[page] = (uint8_t)((vcur[page] + 1u) % nv);
 }
 static void on_button(uint32_t b)
@@ -906,18 +907,15 @@ static void on_button(uint32_t b)
     }
 }
 
-#if KS_B
 static void c3_edit(uint32_t id, int32_t d)
 {
     vpop_pre[0] = 0;
     edit_item(id, d);
 }
-#endif
 static void on_enc(uint32_t e, int32_t d)
 {
     const view_t *v = view();
     uint32_t vi = vidx();
-#if KS_B
     if (C3_ON && e != ENC_PRESETS) {
         const col3_t *c = &COL3[page];
         if (e == ENC_SELECT) { c3_cur = (uint8_t)clampi(c3_cur + d, 0, 11); return; }
@@ -929,7 +927,6 @@ static void on_enc(uint32_t e, int32_t d)
         }
         return;
     }
-#endif
     if (e == ENC_PRESETS) {                     /* (on PLAY and BASS only: not by mistake elsewhere) */
         if (page == PG_PLAY || page == PG_BASS) preset_step(d);
         else toast("PRESETS: HOME OR EDIT");
@@ -970,7 +967,7 @@ static void on_enc(uint32_t e, int32_t d)
 }
 
 static int page_of_btn(uint32_t b) { uint32_t i; for (i = 0; i < NPAGE; i++) if (PAGE_BTN[i] == b) return (int)i; return -1; }
-static int holdable(uint32_t b) { return page_of_btn(b) >= 0 || b == BTN_SAVE || b == BTN_SEL || b == BTN_PLAY || (KS_B && b <= BTN_OCT_UP); }
+static int holdable(uint32_t b) { return page_of_btn(b) >= 0 || b == BTN_SAVE || b == BTN_SEL || b == BTN_PLAY || (set.ui && b <= BTN_OCT_UP); }
 static void hold_toggle(void)
 {
     uint32_t i;
@@ -1072,14 +1069,30 @@ static void favorite(void)                       /* the preset under the PRESETS
     toast(fav_is(bk, k) ? "* FAVORITE" : "NOT A FAVORITE");
 }
 
+static void ask_done(uint32_t sel)
+{
+    ask_on = 0;
+    splash_until = 0;
+    if (set.ui != sel) { set.ui = (uint8_t)sel; set_dirty = 1; set_ms = fm1_ms; }
+    toast(sel ? "SHIFT MODE" : "CLASSIC MODE");
+    g_force = 1;
+}
 static void ui_input(void)
 {
     uint32_t rel, pr = fm1_input_edges(&rel), b, k, now = fm1_in.notes, ne = fm1_input_note_edges();
     int32_t d;
+    if (ask_on) {                               /* the start's question: OCT- CLASSIC, OCT+ SHIFT, a knob turns, SEL says yes */
+        for (b = 0; b < 7u; b++) if ((d = fm1_enc_take(b)) != 0) ask_sel = (uint8_t)(d > 0);
+        if (pr & (1u << BTN_OCT_DOWN)) ask_done(0);
+        else if (pr & (1u << BTN_OCT_UP)) ask_done(1);
+        else if (pr & ~3u) ask_done(ask_sel);
+        else if (fm1_ms - ask_ms > 20000u) ask_done(ask_sel);   /* (no answer: the one shown) */
+        pr = 0;
+    }
     for (b = 0; b < 14u; b++) {
         if (!(pr & (1u << b))) continue;
         splash_until = 0;
-        if (KS_B && b <= BTN_OCT_UP && (fm1_in.buttons & 3u) == 3u) {
+        if (set.ui && b <= BTN_OCT_UP && (fm1_in.buttons & 3u) == 3u) {
             notes_all_off(); ev_push(EV_PANIC, 0, 0); toast("ALL NOTES OFF");
             if (hb.b <= BTN_OCT_UP) hb.used = 1;
             continue;
@@ -1110,9 +1123,7 @@ static void ui_input(void)
         if (hb.b != 0xFF && (hb.b == BTN_LFO || hb.b == BTN_ENV) && ((b >= ENC_KNOB1 && b <= ENC_KNOB4) || b == ENC_ALGORITHM)) {
             const view_t *v = view();
             uint32_t id = b == ENC_ALGORITHM ? (v->n ? v->it[cursor[vidx()]] : I_NONE) : vknob(v, b - ENC_KNOB1);
-#if KS_B
             if (C3_ON) id = b == ENC_ALGORITHM ? COL3[page].id[c3_cur >> 2][c3_cur & 3u] : COL3[page].id[0][b - ENC_KNOB1];
-#endif
             hb.used = 1;
             if (id != I_NONE) quick_assign(hb.b, rate_like(id), d);
             continue;
@@ -1188,16 +1199,14 @@ static void app_init(void)
 {
     uint32_t i;
     int ok;
-    ok = !settings_load(&set, sizeof set) && set.ver == 6u;
-    if (!ok && !settings_load(&set, (uint32_t)((uint8_t *)&set.accel - (uint8_t *)&set)) && set.ver == 6u) {
-        set.accel = 1;                          /* (saved before KNOB ACCEL: the same, shorter) */
-        set.c3col = 0;
-        ok = 1;
+    {                                           /* (a save from before a field was added: the fields it has, the rest as is) */
+        const uint32_t LEN[3] = {sizeof set, (uint32_t)((uint8_t *)&set.ui - (uint8_t *)&set), (uint32_t)((uint8_t *)&set.accel - (uint8_t *)&set)};
+        for (ok = 0, i = 0; i < 3u && !ok; i++) ok = !settings_load(&set, LEN[i]) && set.ver == 6u;
     }
     if (!ok) {
         set.theme = set.pal = set.font = set.grid = set.browse = 0;
         memset(set.fav, 0, sizeof set.fav);
-        set.ver = 6; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1; set.accel = 1; set.c3col = 0;
+        set.ver = 6; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1; set.accel = 1; set.c3col = 0; set.ui = KS_B; set.ask = 1;
     }
     set.cores = set.cores ? 1u : 0u;
     theme_set(set.theme, set.pal);
@@ -1235,6 +1244,7 @@ static void app_init(void)
 #endif
     booted = 1;
     splash_until = fm1_ms + 2200u;            /* the start screen: the last patch, the cores */
+    if (set.ask) { ask_on = 1; ask_sel = set.ui; ask_ms = fm1_ms; }   /* ... and the question: CLASSIC or SHIFT */
     g_force = 1;
 }
 
@@ -1288,9 +1298,7 @@ WASM_EXPORT("ksub_knob_label") const char *ksub_knob_label(uint32_t i)
     if (i >= 4u) return "";
     if (v->lay == LY_PRESET) return i == 0u ? "SCROLL" : i == 2u ? "LOAD" : "";
     if (v->lay == LY_SAVE) return i == 0u ? "SLOT" : i == 1u ? "POSITION" : i == 2u ? "LETTER" : "STYLE";
-#if KS_B
     if (C3_ON) return item_sname(COL3[page].id[c3_col()][i]);
-#endif
     return vknob(v, i) == I_NONE ? "" : item_sname(vknob(v, i));
 }
 WASM_EXPORT("ksub_store") uint8_t *ksub_store(void) { return w_store; }

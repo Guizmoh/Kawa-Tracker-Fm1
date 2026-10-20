@@ -769,8 +769,7 @@ static void th_rack(const view_t *v, uint32_t vi)
     }
 }
 
-#if KS_B
-/* ---------------------------------------------------------------- DOUBLE SHIFT (version B): three columns
+/* ---------------------------------------------------------------- SHIFT mode: three columns
  * the base (knobs alone) at the left, OCT- held in the middle, OCT+ held at the right; the column not played is dimmed.
  * SYSTEM > SHIFT COLOURS: THEME (the theme's colour, a little lighter in the middle, a little towards its second colour
  * at the right) or fluo green / yellow / orange. The name of a setting shows in full only while it turns (at the top,
@@ -868,17 +867,40 @@ static void draw_c3(void)
         g_rect(228, 226, 7, 7, c3c(2));
     }
 }
-#endif
+/* the start's question: CLASSIC or SHIFT, what each is */
+static void draw_ask(void)
+{
+    static const char *const TX[2][4] = {
+        {"CLASSIC", "PAGES OF LISTS, LIKE A SYNTH", "SELECT: ROW  ALGO: ITS VALUE", "K1-K4: THE FIRST 4 ROWS"},
+        {"SHIFT", "12 SETTINGS A PAGE, 3 COLUMNS", "KNOBS: LEFT  HOLD OCT-: MIDDLE", "HOLD OCT+: RIGHT  TAP: OCTAVE"}};
+    uint32_t k;
+    g_text_c(T_M, 120, 4, "K-WA SUB", K_LIME);
+    g_text_c(T_XS, 120, 22, "HOW DO YOU WANT TO PLAY?", K_GREY);
+    for (k = 0; k < 2u; k++) {
+        int32_t y = 36 + (int32_t)k * 84;
+        int on = k == ask_sel;
+        if (!g_vis(y, 78)) continue;
+        g_box(8, y, 224, 78, on ? K_LIMED : K_PANEL, on ? K_LIME : K_LINE);
+        g_text(T_B, 16, y + 6, TX[k][0], on ? K_LIME : K_WHITE);
+        g_text_r(T_XS, 224, y + 10, k ? "OCT+" : "OCT-", on ? K_LIME : K_GREY);
+        g_text(T_XS, 16, y + 30, TX[k][1], K_WHITE);
+        g_text(T_XS, 16, y + 44, TX[k][2], K_GREY);
+        g_text(T_XS, 16, y + 58, TX[k][3], K_GREY);
+    }
+    g_text_c(T_XS, 120, 210, "OCT- / OCT+ CHOOSE  \xB7  SEL: OK", K_WHITE);
+    g_text_c(T_XS, 120, 225, "LATER: SYSTEM > UI MODE", K_GREY);
+}
+
+
 
 static void draw_all(void)
 {
     const view_t *v = view();
     uint32_t vi = vidx();
     g_rect(0, g_y0, 240, (int32_t)BAND_H, K_BG);
-#if KS_B
+    if (ask_on) { draw_ask(); return; }
     if (C3_ON) draw_c3();
     else
-#endif
     switch (theme) {
     case TH_STUDIO: th_studio(v, vi); break;
     case TH_PURE: th_pure(v, vi); break;

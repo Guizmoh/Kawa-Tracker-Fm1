@@ -134,7 +134,8 @@ patch et l'état du second cœur. Sur PRESETS, `K2` fait défiler tous les prese
 ## Version B (test : 4 moteurs)
 
 Une deuxième version, à essayer dans l'émulateur [`emulator/b.html`](emulator/b.html) (et sur le FM-1 avec
-`install/version-b/`), ne garde que **4 moteurs**, un par usage :
+`install/version-b/`), ne garde que **4 moteurs**, un par usage (la question CLASSIC / SHIFT y propose SHIFT
+d'abord) :
 
 | Moteur gardé | Rôle | Ce qu'il remplace |
 |---|---|---|
@@ -148,8 +149,20 @@ de 0 à +24 demi-tons, modulable par les LFO : la vraie « sync sweep »). Ce mo
 normale. Les patches faits avec PHASE, FOLD, SYNC ou VOCAL sont convertis au chargement ; les patches enregistrés
 restent compatibles entre les deux versions.
 
-**Double Shift (version B seulement).** Sur PLAY, EDIT, ENV, FILTER, LFO et FX, le premier écran montre 12 réglages
-en 3 colonnes de 4 (une ligne par potard `K1`–`K4`) :
+## Deux façons de jouer : CLASSIC ou SHIFT
+
+À chaque démarrage, K-WA SUB demande comment jouer (dans les deux versions, A et B) :
+
+- **CLASSIC** : des pages de listes, comme un synthé classique. `SELECT` choisit la ligne, `ALGO` change sa valeur,
+  `K1`–`K4` règlent les 4 premières lignes ; `OCT−` / `OCT+` changent l'octave.
+- **SHIFT** : 12 réglages par page en 3 colonnes (détail ci-dessous), `OCT−` / `OCT+` maintenus servent de Shift.
+
+`OCT−` choisit CLASSIC, `OCT+` choisit SHIFT ; un potard bascule entre les deux et `SEL` (ou un autre bouton)
+valide ; sans réponse en 20 s, le dernier choix est gardé. Ensuite : `SYSTEM › UI MODE` change de mode à tout
+moment, `SYSTEM › ASK AT START` = NO pour ne plus avoir la question.
+
+**Mode SHIFT.** Sur PLAY, EDIT, ENV, FILTER, LFO et FX, le premier écran montre 12 réglages en 3 colonnes de 4 (une
+ligne par potard `K1`–`K4`) :
 
 | Colonne | Pour la jouer |
 |---|---|
@@ -179,8 +192,6 @@ bouton de la page (ou `SEL`) passe ensuite aux vues détaillées habituelles, pu
 
 - **Page MIDI** (prévue, pas encore faite) : canal par fonction, start/stop du SEQ par l'horloge MIDI, envoi de
   l'horloge, CC appris, réponse aux program change.
-- Le nouveau workflow `OCT−` / `OCT+` maintenus en 3 colonnes : maquette dans
-  [`docs/mockups/workflow-shift.png`](docs/mockups/workflow-shift.png), en attente de validation.
 - MACROS (4 macros × 4 destinations), MORPH / XY.
 
 ## Installer sur le FM-1
