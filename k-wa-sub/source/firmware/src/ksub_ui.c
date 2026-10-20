@@ -6,7 +6,7 @@
  *   the page's button again, or SEL: its next view (OSC A, OSC B, SUB, COMBINE...)
  *   SELECT: the row   ALGORITHM: the row's value   K1..K4: what the footer says   PRESETS: the next patch
  *   PLAY: SEQ BASS play / stop   REC: TAP tempo (SEQ view: step record)   OCT- / OCT+: octave (both: all off)
- *   SAVE: save; held: UNDO (and again every 0.4 s while it stays held)
+ *   SAVE: save; held: OCT- UNDO, OCT+ REDO (PRESETS: FAVORITE)
  * Held buttons (a loading bar says what comes): a page button 1.2 s: RANDOM on that page; with K1..K4: that page's
  * knobs from anywhere (SHIFT); LFO or ENV held + a knob or ALGO: assigns LFO 1 / the mod envelope to it (QUICK ASSIGN);
  * SEL held: hear the saved sound (COMPARE); SAVE held on PRESETS: FAVORITE (elsewhere UNDO); PLAY held: HOLD.
@@ -17,6 +17,8 @@ enum { LY_PLAY, LY_LIST, LY_BOX, LY_STEP, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
 enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_ACCEL, G_C3COL, G_UI, G_ASK,
        G_SQ_STEP, G_SQ_NOTE, G_SQ_TYPE, G_SQ_PAT, G_SQ_LEN, G_SQ_RATE, G_SQ_SWING,   /* SEQ BASS */
        G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE,                          /* ARP */
+       G_LV_FLT, G_LV_PUMP, G_LV_STUT, G_LV_TAPE, G_LV_PRATE, G_LV_FRES,             /* SEL: FX LIVE */
+       G_MC1, G_MC2, G_MC3, G_MC4, G_MC_DST, G_MC_AMT,                               /* SEL: MACROS */
        I_NONE = 255 };
 
 typedef struct {
@@ -173,7 +175,26 @@ static const char *const SQ_DEF[8][2] = {
     {"2-STEP", "C0^ - - C0 - - G0 - - C0 - - A#0~ G0 - -"},
     {"OCTAVES", "C0 C1 C0 C1 C0 C1 C0 C1 D#0 D#1 D#0 D#1 F0 F1 G0 G1"},
     {"ROOT", "C0 - - - C0 - - - C0 - - - C0 - - -"}};
-static uint8_t perf_sum(void) { const uint8_t *b = (const uint8_t *)&perf; uint32_t i, x = 0x3C; for (i = 2; i < sizeof perf; i++) x = (x * 5u + b[i]) & 0xFFu; return (uint8_t)x; }
+static uint8_t perf_sum(void)                   /* (up to the macros: they check themselves, mc_magic) */
+{
+    const uint8_t *b = (const uint8_t *)&perf;
+    uint32_t i, x = 0x3C, n = (uint32_t)((const uint8_t *)&perf.mc_magic - b);
+    for (i = 2; i < n; i++) x = (x * 5u + b[i]) & 0xFFu;
+    return (uint8_t)x;
+}
+/* the first MACROS: FILTER (cutoff, resonance), WOBBLE (depth, rate), GRIT (filter drive, noise, saturation), TONE
+ * (both oscillators' first control, X-MOD) */
+static void mc_defaults(void)
+{
+    static const uint8_t D[16] = {D_CUT, D_RES, 0, 0, D_WOB, D_L1RATE, 0, 0, D_DRV, D_NOISE, D_DRAMT, 0, D_AP1, D_BP1, D_XMOD, 0};
+    static const int8_t A[16] = {44, 18, 0, 0, 48, 16, 0, 0, 60, 20, 40, 0, 40, 40, 30, 0};
+    memcpy(perf.mc_dst, D, 16);
+    memcpy(perf.mc_amt, A, 16);
+    perf.mc_magic = MC_MAGIC;
+}
+/* ---- the SEL windows: 1 FX LIVE, 2 MACROS (SEL again: the next, then back to the page) */
+static uint8_t win, win_cur, mc_pos;            /* the window, its row (FX LIVE), the target being edited (MACROS: 0..31) */
+static const uint8_t LV_IT[6] = {G_LV_FLT, G_LV_PUMP, G_LV_STUT, G_LV_TAPE, G_LV_PRATE, G_LV_FRES};
 static void perf_defaults(void)
 {
     uint32_t k, i;
@@ -198,6 +219,7 @@ static void perf_defaults(void)
         }
     }
     perf.sum = perf_sum();
+    mc_defaults();
 }
 static void perf_touch(void) { perf.sum = perf_sum(); perf_dirty = 1; perf_ms = fm1_ms; }
 static void seq_play(int on)
@@ -237,13 +259,22 @@ static int8_t undo_p[NUNDO][NP_MAX];
 static char undo_nm[NUNDO][14];
 static uint32_t undo_w, undo_n, undo_ms, undo_id = 0xFFFFu;
 static uint8_t booted;
-static void undo_push(void)
+static int8_t redo_p[NUNDO][NP_MAX];             /* what UNDO took back, for REDO (a new change clears it) */
+static char redo_nm[NUNDO][14];
+static uint32_t redo_n;
+static uint8_t ur_on;                           /* SAVE held: OCT- UNDO, OCT+ REDO */
+static void undo_keep(void)                     /* the sound now onto the undo ring */
 {
-    if (!booted) return;
     memcpy(undo_p[undo_w], patch, NP_MAX);
     memcpy(undo_nm[undo_w], pname, 14);
     undo_w = (undo_w + 1u) % NUNDO;
     if (undo_n < NUNDO) undo_n++;
+}
+static void undo_push(void)
+{
+    if (!booted) return;
+    undo_keep();
+    redo_n = 0;
 }
 static void undo_mark(uint32_t id)              /* a parameter is about to change */
 {
@@ -256,6 +287,14 @@ static void undo(void)
 {
     char t[16], *p;
     if (!undo_n) { toast("NOTHING TO UNDO"); return; }
+    if (redo_n == NUNDO) {                      /* (full: the oldest goes) */
+        uint32_t k;
+        for (k = 1; k < NUNDO; k++) { memcpy(redo_p[k - 1u], redo_p[k], NP_MAX); memcpy(redo_nm[k - 1u], redo_nm[k], 14); }
+        redo_n--;
+    }
+    memcpy(redo_p[redo_n], patch, NP_MAX);
+    memcpy(redo_nm[redo_n], pname, 14);
+    redo_n++;
     undo_w = (undo_w + NUNDO - 1u) % NUNDO;
     undo_n--;
     memcpy(patch, undo_p[undo_w], NP_MAX);
@@ -264,6 +303,22 @@ static void undo(void)
     prev_dirty = 1;
     p = str_cat(t, "UNDO \xB7 ");
     p = fmt_u(p, undo_n, 0);
+    str_cat(p, " LEFT");
+    toast(t);
+}
+static void redo(void)
+{
+    char t[16], *p;
+    if (!redo_n) { toast("NOTHING TO REDO"); return; }
+    undo_keep();
+    redo_n--;
+    memcpy(patch, redo_p[redo_n], NP_MAX);
+    memcpy(pname, redo_nm[redo_n], 14);
+    undo_id = 0xFFFFu;
+    prev_dirty = 1;
+    pdirty = 1;
+    p = str_cat(t, "REDO \xB7 ");
+    p = fmt_u(p, redo_n, 0);
     str_cat(p, " LEFT");
     toast(t);
 }
@@ -372,6 +427,10 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
         static const int8_t LO[12] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1}, HI[12] = {15, 48, 4, 15, 16, 5, 50, 1, 4, 5, 3, 10};
         *lo = LO[id - G_SQ_STEP]; *hi = HI[id - G_SQ_STEP];
     }
+    if (id >= G_LV_FLT && id <= G_MC_AMT) {
+        static const int8_t LO[12] = {-64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -64}, HI[12] = {63, 127, 5, 127, 3, 127, 127, 127, 127, 127, ND - 1, 63};
+        *lo = LO[id - G_LV_FLT]; *hi = HI[id - G_LV_FLT];
+    }
 }
 static seqpat_t *sq_pat(void) { return &perf.pat[perf.cur % SQ_NPAT]; }
 static uint32_t sq_type(uint32_t f) { return !(f & SF_ON) ? 0u : (f & SF_ACC) && (f & SF_SLIDE) ? 4u : (f & SF_SLIDE) ? 3u : (f & SF_ACC) ? 2u : 1u; }
@@ -406,6 +465,15 @@ static int32_t item_get(uint32_t id)
     case G_AR_RATE: return perf.ar_rate;
     case G_AR_OCT: return perf.ar_oct;
     case G_AR_GATE: return perf.ar_gate;
+    case G_LV_FLT: return lfx_flt;
+    case G_LV_PUMP: return lfx_pump;
+    case G_LV_STUT: return lfx_stut;
+    case G_LV_TAPE: return lfx_tape;
+    case G_LV_PRATE: return lfx_prate;
+    case G_LV_FRES: return lfx_fres;
+    case G_MC1: case G_MC2: case G_MC3: case G_MC4: return mc_val[id - G_MC1];
+    case G_MC_DST: return perf.mc_dst[(mc_pos >> 1) & 15u];
+    case G_MC_AMT: return perf.mc_amt[(mc_pos >> 1) & 15u];
     default: return 0;
     }
 }
@@ -421,6 +489,19 @@ static void item_set(uint32_t id, int32_t v)
         if (PD[id].fmt == FM_DEST && (v == D_DRAMT || v == D_DRMIX) && !patch[DR_ON]) { patch[DR_ON] = 1; toast("SATURATION ON"); }
         if (id < N_LVL || id == S_LVL || id == S_WAVE || id == S_OCT) prev_dirty = 1;
         return;
+    }
+    if (id >= G_LV_FLT && id <= G_MC_AMT) {
+        switch (id) {
+        case G_LV_FLT: lfx_flt = (int8_t)v; return;
+        case G_LV_PUMP: lfx_pump = (uint8_t)v; return;
+        case G_LV_STUT: lfx_stut = (uint8_t)v; return;
+        case G_LV_TAPE: lfx_tape = (uint8_t)v; return;
+        case G_LV_PRATE: lfx_prate = (uint8_t)v; return;
+        case G_LV_FRES: lfx_fres = (uint8_t)v; return;
+        case G_MC_DST: perf.mc_dst[(mc_pos >> 1) & 15u] = (uint8_t)v; perf_touch(); return;
+        case G_MC_AMT: perf.mc_amt[(mc_pos >> 1) & 15u] = (int8_t)v; perf_touch(); return;
+        default: mc_val[id - G_MC1] = (uint8_t)v; return;
+        }
     }
     if (id >= G_SQ_STEP && id <= G_AR_GATE) {
         seqpat_t *q = sq_pat();
@@ -505,6 +586,18 @@ static const char *item_name(uint32_t id)
     case G_AR_RATE: return "RATE";
     case G_AR_OCT: return "OCTAVES";
     case G_AR_GATE: return "GATE";
+    case G_LV_FLT: return "DJ FILTER";
+    case G_LV_PUMP: return "PUMP";
+    case G_LV_STUT: return "STUTTER";
+    case G_LV_TAPE: return "TAPE STOP";
+    case G_LV_PRATE: return "PUMP RATE";
+    case G_LV_FRES: return "FILTER RESO";
+    case G_MC1: return "MACRO 1";
+    case G_MC2: return "MACRO 2";
+    case G_MC3: return "MACRO 3";
+    case G_MC4: return "MACRO 4";
+    case G_MC_DST: return "TARGET";
+    case G_MC_AMT: return "AMOUNT";
     default: return "";
     }
 }
@@ -618,6 +711,18 @@ static void item_text(uint32_t id, char *b)
         case G_AR_MODE: str_cat(b, L_ARMODE[v % 5]); break;
         case G_AR_OCT: fmt_u(b, (uint32_t)v + 1u, 0); break;
         case G_AR_GATE: b = fmt_u(b, (uint32_t)v * 10u, 0); str_cat(b, "%"); break;
+        case G_LV_FLT:
+            if (!v) { str_cat(b, "OFF"); break; }
+            b = str_cat(b, v < 0 ? "LOW PASS " : "HIGH PASS ");
+            b = fmt_u(b, (uint32_t)(v < 0 ? -v : v) * 100u / 64u, 0); str_cat(b, "%"); break;
+        case G_LV_STUT: { static const char *const ST[6] = {"OFF", "1/4", "1/8", "1/16", "1/32", "1/64"}; str_cat(b, ST[v % 6]); break; }
+        case G_LV_TAPE: if (!v) str_cat(b, "OFF"); else if (v >= 127) str_cat(b, "STOP"); else { b = str_cat(b, "SLOW "); b = fmt_u(b, (uint32_t)v * 100u / 127u, 0); str_cat(b, "%"); } break;
+        case G_LV_PRATE: { static const char *const PR[4] = {"1/4", "1/8", "1/2", "1 BAR"}; str_cat(b, PR[v & 3]); break; }
+        case G_LV_PUMP: case G_LV_FRES: case G_MC1: case G_MC2: case G_MC3: case G_MC4:
+            if (id == G_LV_PUMP && !v) { str_cat(b, "OFF"); break; }
+            b = fmt_u(b, (uint32_t)v * 100u / 127u, 0); str_cat(b, "%"); break;
+        case G_MC_DST: str_cat(b, v ? dst_name((uint32_t)v) : "-"); break;
+        case G_MC_AMT: b = v ? fmt_s(b, v * 100 / 64) : fmt_u(b, 0, 0); str_cat(b, "%"); break;
         }
         return;
     }
@@ -857,6 +962,7 @@ static void on_button(uint32_t b)
     }
     for (i = 0; i < NPAGE; i++)
         if (PAGE_BTN[i] == b) {
+            if (win) { win = 0; vpop_ms = 0; page = (uint8_t)i; name_trim(); return; }   /* (a window open: back to that page) */
             if (page == i) view_next();
             else page = (uint8_t)i;
             if (VIEWS[vidx()].lay == LY_SAVE) vcur[i]++;   /* (SAVE opens from SAVE only: on to the ARP) */
@@ -864,10 +970,11 @@ static void on_button(uint32_t b)
             return;
         }
     switch (b) {
-    case BTN_SEL:
-        view_next();
-        if (VIEWS[vidx()].lay == LY_SAVE) vcur[page]++;
-        name_trim();
+    case BTN_SEL:                               /* the windows: FX LIVE, MACROS, back (held: COMPARE) */
+        win = (uint8_t)((win + 1u) % 3u);
+        win_cur = 0;
+        vpop_ms = 0;
+        g_force = 1;
         break;
     case BTN_SAVE:
         if (VIEWS[vidx()].lay == LY_SAVE) { name_trim(); save_user(save_slot); vcur[PG_PRE] = 1; pre_cur[1] = save_slot; }
@@ -916,6 +1023,26 @@ static void on_enc(uint32_t e, int32_t d)
 {
     const view_t *v = view();
     uint32_t vi = vidx();
+    if (win && e != ENC_PRESETS) {              /* the SEL windows: K1..K4 their four, SELECT a row, ALGO its value */
+        vpop_pre[0] = 0;
+        if (win == 1u) {
+            if (e == ENC_SELECT) win_cur = (uint8_t)clampi(win_cur + d, 0, 5);
+            else if (e == ENC_ALGORITHM) edit_item(LV_IT[win_cur], d);
+            else if (e >= ENC_KNOB1 && e <= ENC_KNOB4) { win_cur = (uint8_t)(e - ENC_KNOB1); edit_item(LV_IT[win_cur], d); }
+            return;
+        }
+        if (e == ENC_SELECT) mc_pos = (uint8_t)clampi(mc_pos + d, 0, 31);
+        else if (e == ENC_ALGORITHM) {
+            if (mc_pos & 1u) edit_item(G_MC_AMT, d);
+            else {                              /* (a target: every destination, the oscillators' with their engine's words) */
+                int32_t i, at = 0, cur = perf.mc_dst[(mc_pos >> 1) & 15u];
+                for (i = 0; i < ND; i++) if (DST_ORDER[i] == cur) at = i;
+                item_set(G_MC_DST, DST_ORDER[clampi(at + d, 0, ND - 1)]);
+                if (!perf.mc_amt[(mc_pos >> 1) & 15u] && perf.mc_dst[(mc_pos >> 1) & 15u]) item_set(G_MC_AMT, 32);
+            }
+        } else if (e >= ENC_KNOB1 && e <= ENC_KNOB4) edit_item(G_MC1 + (e - ENC_KNOB1), d);
+        return;
+    }
     if (C3_ON && e != ENC_PRESETS) {
         const col3_t *c = &COL3[page];
         if (e == ENC_SELECT) { c3_cur = (uint8_t)clampi(c3_cur + d, 0, 11); return; }
@@ -990,7 +1117,7 @@ static const char *hold_label(uint32_t b)
     int pg = page_of_btn(b);
     if (b == BTN_SAVE && PRE_BROWSING) { uint32_t bk = vcur[PG_PRE] ? 1u : 0u;
         return fav_is(bk, pre_cur[bk]) ? "REMOVE FROM FAVORITES" : "ADD TO FAVORITES"; }
-    if (b == BTN_SAVE) return "UNDO";
+    if (b == BTN_SAVE) return "UNDO / REDO";
     if (b == BTN_SEL) return "COMPARE: THE SAVED SOUND";
     if (b == BTN_PLAY) return hold ? "HOLD OFF" : "HOLD: THE KEYS STAY ON";
     if (b == BTN_LFO) return "TURN A KNOB: LFO 1 ON IT";
@@ -1092,6 +1219,11 @@ static void ui_input(void)
     for (b = 0; b < 14u; b++) {
         if (!(pr & (1u << b))) continue;
         splash_until = 0;
+        if (hb.b == BTN_SAVE && !PRE_BROWSING && b <= BTN_OCT_UP) {   /* SAVE held: OCT- UNDO, OCT+ REDO */
+            ur_on = 1; hb.fired = 1;
+            if (b == BTN_OCT_DOWN) undo(); else redo();
+            continue;
+        }
         if (set.ui && b <= BTN_OCT_UP && (fm1_in.buttons & 3u) == 3u) {
             notes_all_off(); ev_push(EV_PANIC, 0, 0); toast("ALL NOTES OFF");
             if (hb.b <= BTN_OCT_UP) hb.used = 1;
@@ -1104,7 +1236,7 @@ static void ui_input(void)
         uint32_t held = (fm1_in.buttons >> hb.b) & 1u;
         if (held && !hb.used && hb.next && fm1_ms - hb.at >= hb.next) {
             if (hb.b == BTN_SAVE && PRE_BROWSING) { favorite(); hb.next = 0; }
-            else if (hb.b == BTN_SAVE) { undo(); hb.next += 400u; }
+            else if (hb.b == BTN_SAVE) { ur_on = 1; hb.next = 0; }   /* (then OCT- UNDO, OCT+ REDO) */
             else if (hb.b == BTN_SEL) { compare(1); hb.next = 0; }
             else if (hb.b == BTN_PLAY) { hold_toggle(); hb.next = 0; }
             else { randomize((uint32_t)page_of_btn(hb.b)); hb.next = 0; }
@@ -1113,6 +1245,7 @@ static void ui_input(void)
         if ((rel >> hb.b) & 1u || !held) {
             uint32_t bb = hb.b;
             hb.b = 0xFF;
+            if (bb == BTN_SAVE) ur_on = 0;
             if (cmp_on) compare(0);
             else if (!hb.used && !hb.fired && (bb > BTN_OCT_UP || fm1_ms - hb.at < 500u)) on_button(bb);   /* (OCT held long: no octave) */
         }
@@ -1123,7 +1256,8 @@ static void ui_input(void)
         if (hb.b != 0xFF && (hb.b == BTN_LFO || hb.b == BTN_ENV) && ((b >= ENC_KNOB1 && b <= ENC_KNOB4) || b == ENC_ALGORITHM)) {
             const view_t *v = view();
             uint32_t id = b == ENC_ALGORITHM ? (v->n ? v->it[cursor[vidx()]] : I_NONE) : vknob(v, b - ENC_KNOB1);
-            if (C3_ON) id = b == ENC_ALGORITHM ? COL3[page].id[c3_cur >> 2][c3_cur & 3u] : COL3[page].id[0][b - ENC_KNOB1];
+            if (win) id = I_NONE;
+            else if (C3_ON) id = b == ENC_ALGORITHM ? COL3[page].id[c3_cur >> 2][c3_cur & 3u] : COL3[page].id[0][b - ENC_KNOB1];
             hb.used = 1;
             if (id != I_NONE) quick_assign(hb.b, rate_like(id), d);
             continue;
@@ -1220,6 +1354,7 @@ static void app_init(void)
     for (i = 0; i < NUSER; i++) if (!up_valid(i)) ustore[i].magic = 0;
     if (perf.magic != PF_MAGIC || perf.sum != perf_sum()) perf_defaults();
     perf.ar_on = 0;                             /* (the ARP starts off: a key does what it says) */
+    if (perf.mc_magic != MC_MAGIC) mc_defaults();
     load_preset(set.bank, set.idx);
     if (set.bank && !up_valid(set.idx)) load_preset(0, 0);
     pre_cur[set.bank] = set.idx;
@@ -1298,6 +1433,7 @@ WASM_EXPORT("ksub_knob_label") const char *ksub_knob_label(uint32_t i)
     if (i >= 4u) return "";
     if (v->lay == LY_PRESET) return i == 0u ? "SCROLL" : i == 2u ? "LOAD" : "";
     if (v->lay == LY_SAVE) return i == 0u ? "SLOT" : i == 1u ? "POSITION" : i == 2u ? "LETTER" : "STYLE";
+    if (win) return item_sname(win == 1u ? LV_IT[i] : G_MC1 + i);
     if (C3_ON) return item_sname(COL3[page].id[c3_col()][i]);
     return vknob(v, i) == I_NONE ? "" : item_sname(vknob(v, i));
 }

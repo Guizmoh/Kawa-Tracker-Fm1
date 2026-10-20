@@ -69,11 +69,31 @@ int main(void)
             load_preset(0, NFACTORY - 1u);
             patch[A_ENG] = patch[B_ENG] = (int8_t)k; patch[B_LVL] = 127; patch[A_LVL] = 127; patch[F_TYPE] = (int8_t)f;
             patch[A_P1] = patch[A_P2] = patch[A_P3] = 127; patch[B_P1] = patch[B_P2] = patch[B_P3] = 0;
-            patch[X_MODE] = (int8_t)(f % 3u); patch[X_AMT] = 127; patch[F_RES] = 127; patch[F_DRV] = 127;
+            patch[X_MODE] = (int8_t)(f % 4u); patch[X_AMT] = 127; patch[F_RES] = 127; patch[F_DRV] = 127;
             patch[L1_DEP] = 63; patch[L1_DST] = (int8_t)(1 + f % (ND - 1)); patch[L1_SHP] = (int8_t)(f % 9u);
             play(chord, 4, 20);
             play(low, 1, 10);
         }
+    }
+    {                                           /* FX LIVE at their extremes, the MACROS full, SEQ BASS and the ARP */
+        static const int8_t FL[3] = {-64, 63, 20};
+        uint32_t j;
+        load_preset(0, 0);
+        mc_defaults();
+        for (j = 0; j < 4u; j++) mc_val[j] = 127;
+        for (j = 0; j < 3u; j++) {
+            lfx_flt = FL[j]; lfx_fres = 127; lfx_pump = 127; lfx_prate = (uint8_t)j; lfx_stut = (uint8_t)(j + 1u); lfx_tape = j == 2u ? 127 : 60;
+            play(chord, 4, 60);
+            lfx_stut = 0; lfx_tape = 0;
+            play(low, 1, 30);
+        }
+        lfx_flt = 0; lfx_pump = 0;
+        for (j = 0; j < 4u; j++) mc_val[j] = 0;
+        perf_defaults();
+        ev_push(EV_SEQ, 1, 1); blocks(400); ev_push(EV_SEQ, 0, 0); blocks(20);
+        perf.ar_on = 1; perf.ar_oct = 3; perf.ar_mode = 2;
+        play(chord, 4, 200);
+        perf.ar_on = 0; blocks(10);
     }
     printf("stress: %u parameter runs, peak %.3f, late blocks %u: no integer wrapped\n", runs, (double)peak, ks_late);
     return 0;

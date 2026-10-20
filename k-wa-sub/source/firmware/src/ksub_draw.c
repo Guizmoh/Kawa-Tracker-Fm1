@@ -433,7 +433,7 @@ static void draw_vbox(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t id, i
     g_text(T_XS, x + 7, y + 6, lab ? lab : item_name(id), sel ? K_LIME : K_GREY);
     if (h >= 50) g_text(T_B, x + 7, y + 18, b, sel ? K_LIME : K_WHITE);
     else g_text(T_M, x + 7, y + 17, b, sel ? K_LIME : K_WHITE);
-    g_bar(x + 7, y + h - 10, w - 14, 5, item_frac(id), sel ? K_LIME : K_CYAN);
+    g_vbar(x + 7, y + h - 10, w - 14, 5, item_frac(id), sel ? K_LIME : K_CYAN);
 }
 static void draw_cell(const view_t *v, int32_t x, int32_t y, int32_t w, int32_t h, uint32_t id, int sel)   /* STUDIO */
 {
@@ -455,7 +455,7 @@ static void draw_cell(const view_t *v, int32_t x, int32_t y, int32_t w, int32_t 
     }
     g_text(T_XS, x + 5, y + 16, item_sname(id), K_GREY);
     g_text(b[0] && g_text_w(T_M, b) > w - 8 ? T_XS : T_M, x + 5, y + 27, b, sel ? K_LIME : K_WHITE);
-    g_bar(x + 5, y + h - 9, w - 10, 4, item_frac(id), sel ? K_LIME : K_CYAN);
+    g_vbar(x + 5, y + h - 9, w - 10, 4, item_frac(id), sel ? K_LIME : K_CYAN);
 }
 
 /* the foot: what the knobs do, as many as fit */
@@ -638,7 +638,7 @@ static void th_studio(const view_t *v, uint32_t vi)
             g_rect(5, y + 5, 6, 6, theme_pal >= 4u ? K_WHITE : KNOB_RGB[i]);
             g_text(T_S, 16, y + 3, id == I_L1RATE ? "WOB RATE" : id == L1_DEP ? "WOB DEPTH" : item_name(id), i == c ? K_LIME : K_GREY);
             g_text_r(T_M, 235, y + 2, b, K_WHITE);
-            g_bar(16, y + 17, 219, 4, item_frac(id), theme_pal >= 4u ? K_WAVE : KNOB_RGB[i]);
+            g_vbar(16, y + 17, 219, 4, item_frac(id), theme_pal >= 4u ? K_WAVE : KNOB_RGB[i]);
         }
     } else if (v->lay == LY_PRESET) presets_g(vi - PAGE_V0[PG_PRE], 3, 70, 234, 28, 31, 5, T_S);
     else if (v->lay == LY_SAVE) save_g(6, 98, 228, 70);
@@ -855,7 +855,7 @@ static void draw_c3(void)
         item_text(id, b);
         f = g_text_w(T_M, b) <= 66 ? T_M : g_text_w(T_S, b) <= 66 ? T_S : T_XS;
         g_text(f, x + 4, y + 14, b, on ? K_WHITE : K_GREY);
-        g_bar(x + 4, y + 31, 66, 3, item_frac(id), on ? cc : dim);
+        g_vbar(x + 4, y + 31, 66, 3, item_frac(id), on ? cc : dim);
     }
     if (g_vis(220, 20)) {                       /* which button gives which column */
         g_rect(0, 219, 240, 1, K_LINE);
@@ -866,6 +866,97 @@ static void draw_c3(void)
         g_rect(228, 226, 7, 7, c3c(2));
     }
 }
+/* ---------------------------------------------------------------- the SEL windows: FX LIVE, MACROS
+ * (in the theme's colours, the same in every theme: four big rows for K1..K4, what SELECT and ALGO reach below) */
+static void win_head(const char *ti, const char *sub, const char *k)
+{
+    if (!g_vis(0, 40)) return;
+    g_text(T_XS, 6, 3, k, K_LIME);
+    g_text_r(T_XS, 234, 3, win == 1u ? "SEL: MACROS" : "SEL: BACK", K_GREY);
+    g_text(T_B, 6, 13, ti, K_WHITE);
+    g_text(T_XS, 6, 31, sub, K_GREY);
+}
+static void win_row(int32_t y, const char *kn, uint32_t id, int sel, int on, int bip)
+{
+    char b[24];
+    if (!g_vis(y, 36)) return;
+    g_box(4, y, 232, 36, on ? K_LIMED : K_PANEL, sel ? K_WHITE : on ? K_LIME : K_LINE);
+    g_text(T_XS, 10, y + 4, kn, on ? K_LIME : K_GREY);
+    g_text(T_S, 10 + g_text_w(T_XS, kn) + 6, y + 3, item_name(id), K_WHITE);
+    item_text(id, b);
+    g_text_r(T_M, 230, y + 3, b, on ? K_LIME : K_WHITE);
+    g_vbar(10, y + 26, 220, 5, item_frac(id), on ? K_LIME : K_CYAN);
+    if (bip) g_rect(119, y + 24, 2, 9, K_GREY);  /* (the middle: off) */
+}
+static void draw_win(void)
+{
+    uint32_t k;
+    char t[48], b[24], *p;
+    if (win == 1u) {
+        win_head("FX LIVE", "PLAYED LIVE \xB7 NOT SAVED \xB7 OFF AT START", "SEL 1/2");
+        for (k = 0; k < 4u; k++) {
+            static const char *const KN[4] = {"K1", "K2", "K3", "K4"};
+            uint32_t id = LV_IT[k];
+            win_row(42 + (int32_t)k * 39, KN[k], id, win_cur == k, item_get(id) != 0, id == G_LV_FLT);
+        }
+        for (k = 0; k < 2u; k++) {              /* the two settings behind: SELECT, ALGO */
+            int32_t x = 4 + (int32_t)k * 117, y = 200;
+            uint32_t id = LV_IT[4u + k];
+            if (!g_vis(y, 22)) continue;
+            g_box(x, y, 115, 22, K_PANEL, win_cur == 4u + k ? K_WHITE : K_LINE);
+            g_text(T_XS, x + 6, y + 7, item_name(id), K_GREY);
+            item_text(id, b);
+            g_text_r(T_S, x + 109, y + 5, b, K_WHITE);
+        }
+        if (g_vis(226, 12)) g_text(T_XS, 6, 228, "SELECT + ALGO: ALL SIX \xB7 A PAGE BUTTON: BACK", K_GREY);
+        return;
+    }
+    win_head("MACROS", "4 KNOBS \xB7 4 TARGETS EACH \xB7 EVERY SOUND", "SEL 2/2");
+    for (k = 0; k < 4u; k++) {                  /* each macro: its value, its targets */
+        int32_t y = 42 + (int32_t)k * 39, x, s;
+        int on = mc_val[k] != 0;
+        if (!g_vis(y, 36)) continue;
+        g_box(4, y, 232, 36, on ? K_LIMED : K_PANEL, (mc_pos >> 3) == k ? K_WHITE : on ? K_LIME : K_LINE);
+        p = str_cat(t, "M");
+        *p++ = (char)('1' + k); *p = 0;
+        g_text(T_M, 10, y + 3, t, on ? K_LIME : K_WHITE);
+        item_text(G_MC1 + k, b);
+        g_text_r(T_M, 230, y + 3, b, on ? K_LIME : K_WHITE);
+        g_vbar(10, y + 26, 220, 5, item_frac(G_MC1 + k), on ? K_LIME : K_CYAN);
+        for (s = 0, x = 40; s < 4; s++) {       /* the targets, short: CUTOFF +34 */
+            uint32_t q = k * 4u + (uint32_t)s, d = perf.mc_dst[q];
+            int32_t a = perf.mc_amt[q], w;
+            const char *nm;
+            if (!d || !a) continue;
+            nm = dst_name(d);
+            p = t;
+            for (w = 0; w < 7 && nm[w]; w++) *p++ = nm[w];
+            *p++ = ' ';
+            p = a ? fmt_s(p, a * 100 / 64) : fmt_u(p, 0, 0);
+            *p = 0;
+            w = g_text_w(T_XS, t);
+            if (x + w > 190) break;
+            g_text(T_XS, x, y + 7, t, (mc_pos >> 1) == q ? K_WHITE : K_MOD);
+            x += w + 8;
+        }
+    }
+    if (g_vis(198, 42)) {                       /* the target being edited */
+        uint32_t q = (mc_pos >> 1) & 15u;
+        g_box(4, 198, 232, 40, K_PANEL, K_LIME);
+        p = str_cat(t, "M");
+        *p++ = (char)('1' + (q >> 2));
+        p = str_cat(p, " \xB7 TARGET ");
+        *p++ = (char)('1' + (q & 3u)); *p = 0;
+        g_text(T_XS, 10, 202, t, K_LIME);
+        g_text_r(T_XS, 230, 202, "SELECT: NEXT \xB7 ALGO: CHANGE", K_GREY);
+        g_text(T_S, 10, 217, perf.mc_dst[q] ? dst_name(perf.mc_dst[q]) : "- NONE -", (mc_pos & 1u) ? K_GREY : K_WHITE);
+        item_text(G_MC_AMT, b);
+        g_text_r(T_S, 230, 217, b, (mc_pos & 1u) ? K_WHITE : K_GREY);
+        if (mc_pos & 1u) g_rect(230 - g_text_w(T_S, b), 233, g_text_w(T_S, b), 2, K_LIME);
+        else g_rect(10, 233, g_text_w(T_S, perf.mc_dst[q] ? dst_name(perf.mc_dst[q]) : "- NONE -"), 2, K_LIME);
+    }
+}
+
 /* the start's question: CLASSIC or SHIFT, what each is */
 static void draw_ask(void)
 {
@@ -898,7 +989,8 @@ static void draw_all(void)
     uint32_t vi = vidx();
     g_rect(0, g_y0, 240, (int32_t)BAND_H, K_BG);
     if (ask_on) { draw_ask(); return; }
-    if (C3_ON) draw_c3();
+    if (win) draw_win();
+    else if (C3_ON) draw_c3();
     else
     switch (theme) {
     case TH_STUDIO: th_studio(v, vi); break;
@@ -956,7 +1048,7 @@ static void draw_all(void)
         g_text_c(T_XS, 120, 188, "SEL = LOAD \xB7 OTHER BUTTON = KEEP", K_LIME);
         g_text_c(T_XS, 120, 200, "PRESETS: ANOTHER ONE", K_GREY);
     }
-    if (vpop_ms && !dpop_ms && !pend_on && !C3_ON && g_vis(72, 66)) {   /* the value turned, big: before -> now */
+    if (vpop_ms && !dpop_ms && !pend_on && !C3_ON && !win && g_vis(72, 66)) {   /* the value turned, big: before -> now */
         char now[24], t[40];
         str_cat(str_cat(t, vpop_pre), item_name(vpop_id));
         item_text(vpop_id, now);
@@ -975,6 +1067,16 @@ static void draw_all(void)
         g_text_c(T_XS, 120, 186, hold_label(hb.b), hb.next ? K_WHITE : K_MOD);
         if (hb.next) g_bar(24, 202, 192, 7, fr, K_LIME);
         else g_text_c(T_XS, 120, 202, "WAITING FOR A KNOB...", K_GREY);
+    }
+    if (ur_on && g_vis(136, 52)) {               /* SAVE held: undo or redo, how many of each */
+        char u[24], r[24];
+        str_cat(fmt_u(str_cat(u, "OCT-  UNDO "), undo_n, 0), "");
+        str_cat(fmt_u(str_cat(r, "REDO "), redo_n, 0), "  OCT+");
+        g_box(10, 136, 220, 50, K_PANEL, K_LIME);
+        g_text_c(T_XS, 120, 141, "SAVE HELD \xB7 UNDO / REDO", K_LIME);
+        g_text(T_S, 18, 156, u, undo_n ? K_WHITE : K_GREY);
+        g_text_r(T_S, 222, 156, r, redo_n ? K_WHITE : K_GREY);
+        g_text_c(T_XS, 120, 174, "RELEASE SAVE: DONE", K_GREY);
     }
     if (splash_until && (int32_t)(splash_until - fm1_ms) > 0) {   /* the start: the last patch, the cores */
         char b[40], *p;

@@ -46,7 +46,7 @@ droite, le genre et les moteurs de chaque patch.
 
 ## Les pages et le panneau
 
-| Bouton | Page | Vues (même bouton ou `SEL`) |
+| Bouton | Page | Vues (le même bouton à nouveau) |
 | --- | --- | --- |
 | `HOME` | 01 PLAY | patch courant + macros live · mix live |
 | `EDIT` | 02 BASS | OSC A · OSC B · SUB + NOISE · COMBINE |
@@ -70,7 +70,7 @@ La page `ARP` › PRESETS montre la banque A, `ARP` encore la banque B (`K1` dé
 - RACK : rail des pages à gauche, gros caractères.
 
 `SYSTEM › PALETTE` donne 6 palettes par thème : la sienne, une variante (AMBER, OCEAN, PURE RED, MAGMA), SYNTHWAVE,
-MINT, noir et blanc, et inversé (noir sur blanc). `SYSTEM › FONT` : SANS (DejaVu Sans Bold), MONO (IBM Plex Mono),
+MINT, noir et blanc, et INVERTED (tons de gris : fond gris clair, cases un peu plus foncées, texte sombre). `SYSTEM › FONT` : SANS (DejaVu Sans Bold), MONO (IBM Plex Mono),
 HYPER (Atkinson Hyperlegible Mono, faite pour être lue par tous) ou PIXEL (Press Start 2P, nette à 8 px).
 
 **Visuels.** Chaque vue montre ce qu'elle règle : forme d'onde de chaque oscillateur et du sub, enveloppes (avec un
@@ -81,14 +81,38 @@ compression du master, charge des cœurs.
 `SELECT` choisit la ligne, `ALGORITHM` change sa valeur, `K1`–`K4` règlent toujours **les 4 premières lignes de la vue, dans l'ordre** (les réglages les plus joués sont mis en tête ; le bas de l'écran les rappelle) (dans
 l'émulateur, leur fonction s'affiche sous chaque potard), `PRESETS` charge le patch suivant depuis n'importe quelle
 page. `SAVE` ouvre l'enregistrement (emplacement, nom lettre par lettre, style) ; `SAVE` à nouveau écrit.
-**`SAVE` maintenu = UNDO** : il annule la dernière modification (les tours d'un même bouton dans la même seconde
-et demie comptent pour une seule ; un chargement de preset aussi), puis une de plus toutes les 0,4 s tant qu'il
-reste appuyé, jusqu'à 16 en arrière.
+**`SAVE` maintenu = UNDO / REDO** : une fenêtre s'ouvre, `OCT−` annule la dernière modification, `OCT+` la refait
+(les tours d'un même bouton dans la même seconde et demie comptent pour une seule ; un chargement de preset aussi),
+jusqu'à 16 en arrière ; relâcher `SAVE` ferme la fenêtre.
 `OCT-` / `OCT+` : octave du clavier ; les deux ensemble : tout couper.
 
 **Accélération des potards.** Plus on tourne vite, plus le pas est grand (jusqu'à ×6, ×12 en FAST ; les petites
 plages restent fines, le tempo passe de 0,1 BPM à plusieurs BPM). `SYSTEM › KNOB ACCEL` : OFF, ON (par défaut),
 FAST. Monter un réglage d'un effet éteint (ou du STEP FX) l'allume.
+
+## Les fenêtres SEL : FX LIVE et MACROS
+
+`SEL` n'ouvre plus les vues de la page (c'est le bouton de la page qui les fait défiler) : il ouvre deux fenêtres,
+`SEL` une fois FX LIVE, deux fois MACROS, trois fois retour. Un bouton de page referme la fenêtre et va à sa page.
+`SEL` maintenu reste A/B (COMPARE).
+
+**FX LIVE** : des effets à jouer en direct (pas enregistrés, éteints à chaque démarrage).
+
+| Potard | Effet |
+|---|---|
+| `K1` DJ FILTER | au milieu : rien ; à gauche passe-bas, à droite passe-haut (résonance : `FILTER RESO`) |
+| `K2` PUMP | le creux du sidechain sur le tempo (`PUMP RATE` : 1/4, 1/8, 1/2, 1 mesure) |
+| `K3` STUTTER | rejoue la dernière tranche en boucle : 1/4, 1/8, 1/16, 1/32, 1/64 (puis OFF : on repart) |
+| `K4` TAPE STOP | ralentit comme une bande jusqu'à l'arrêt (STOP) ; on revient à 0 : retour au direct en fondu |
+
+`SELECT` + `ALGO` atteignent aussi PUMP RATE et FILTER RESO. STUTTER et TAPE agissent avant la saturation et les
+effets (le delay et la reverb continuent derrière), le DJ FILTER et le PUMP à la sortie.
+
+**MACROS** : `K1`–`K4` = 4 macros, chacune envoie jusqu'à 4 cibles avec leur quantité. Elles agissent sur tous
+les sons (elles ne sont pas dans le patch) ; leurs cibles sont enregistrées, leur position revient à 0 au démarrage.
+Au départ : M1 FILTER (cutoff, résonance), M2 WOBBLE (profondeur et vitesse du LFO 1), M3 GRIT (drive du filtre,
+bruit, saturation), M4 TONE (le 1er réglage des deux oscillateurs, X-MOD). `SELECT` choisit une cible (M1 cible 1,
+sa quantité, M1 cible 2…), `ALGO` la change ; une cible choisie sans quantité part à +50 %.
 
 ## SEQ BASS et ARP
 
@@ -120,7 +144,7 @@ relâcher avant la fin annule (le bouton fait alors son action normale) :
 
 | Maintenir | Effet |
 |---|---|
-| `SAVE` | UNDO (sur la page PRESETS : ajoute ou retire le preset sélectionné des favoris, marqué `*`) |
+| `SAVE` | UNDO / REDO : tant que `SAVE` est tenu, `OCT−` annule, `OCT+` refait (16 pas) ; sur la page PRESETS : ajoute ou retire le preset sélectionné des favoris, marqué `*` |
 | `SEL` | A/B : on entend le son enregistré tant que `SEL` reste appuyé |
 | `PLAY` | HOLD : les touches restent tenues (ou relâchées si HOLD était déjà mis) |
 | `LFO` + tourner un potard | assignation rapide « à la Pure SUB » : le LFO 1 va sur ce que règle le potard, le tour règle la quantité |

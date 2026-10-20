@@ -28,9 +28,9 @@ static const uint16_t PALS[12][KC_N] = {
     /* for every theme: SYNTHWAVE, MINT */
     {C3(18,8,30), C3(32,16,52), C3(70,40,100), C3(255,70,200), C3(60,20,70), C3(80,230,255), C3(250,236,255), C3(170,140,200), C3(64,36,90), C3(255,160,60), C3(255,70,200), C3(18,8,30), C3(80,230,255)},
     {C3(8,20,16), C3(14,34,28), C3(34,70,58), C3(120,255,190), C3(20,60,44), C3(255,230,140), C3(230,255,244), C3(120,170,150), C3(30,64,52), C3(255,140,90), C3(120,255,190), C3(8,20,16), C3(255,230,140)},
-    /* MONO: white on black (classic), INVERT: black on white */
+    /* MONO: white on black (classic); INVERT: greys, dark on light, the cards a shade darker (as through a tint) */
     {C3(0,0,0), C3(16,16,16), C3(70,70,70), C3(255,255,255), C3(48,48,48), C3(200,200,200), C3(255,255,255), C3(140,140,140), C3(50,50,50), C3(255,255,255), C3(255,255,255), C3(0,0,0), C3(200,200,200)},
-    {C3(255,255,255), C3(236,236,236), C3(180,180,180), C3(0,0,0), C3(210,210,210), C3(60,60,60), C3(0,0,0), C3(110,110,110), C3(205,205,205), C3(0,0,0), C3(0,0,0), C3(255,255,255), C3(80,80,80)},
+    {C3(206,209,212), C3(184,188,192), C3(156,160,165), C3(34,38,44), C3(160,164,170), C3(74,80,88), C3(22,24,28), C3(92,98,104), C3(166,170,175), C3(52,56,62), C3(40,44,50), C3(222,224,226), C3(100,104,116)},
 };
 static const char *const PAL_NAME[4][2] = {{"NEON", "AMBER"}, {"STUDIO", "OCEAN"}, {"PURE", "PURE RED"}, {"RACK", "MAGMA"}};
 static uint16_t kc[KC_N];
@@ -114,6 +114,22 @@ static void g_box(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t fill, uin
     g_px(x + w - 2, y + 1, edge);
     g_px(x + 1, y + h - 2, edge);
     g_px(x + w - 2, y + h - 2, edge);
+}
+/* a setting's bar: the part up to the knob a little softer, the knob's place a sharp line, a light fade on each side */
+static void g_vbar(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t frac, uint16_t c)   /* frac 0..256 */
+{
+    int32_t f = (int32_t)((uint32_t)(w - 2) * frac >> 8), i;
+    uint16_t soft = g_mix(K_TRACK, c, 150);
+    if (!g_vis(y, h)) return;
+    g_rect(x, y, w, h, K_TRACK);
+    if (f > 0) g_rect(x, y, f, h, soft);
+    for (i = 1; i <= 6; i++) {
+        uint32_t t = 256u - (uint32_t)i * 34u;
+        if (f - i >= 0) g_rect(x + f - i, y, 1, h, g_mix(soft, c, t));
+        if (f + 1 + i < w) g_rect(x + f + 1 + i, y, 1, h, g_mix(K_TRACK, c, t * 3u / 4u));
+    }
+    g_rect(x + f, y, 2, h, c);
+    if (h > 3) { g_px(x, y, K_BG); g_px(x, y + h - 1, K_BG); g_px(x + w - 1, y, K_BG); g_px(x + w - 1, y + h - 1, K_BG); }
 }
 static void g_bar(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t frac, uint16_t c)   /* frac 0..256 */
 {

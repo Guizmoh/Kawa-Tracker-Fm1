@@ -35,6 +35,22 @@ static void ev_push(uint32_t t, uint32_t a, uint32_t b)
 
 /* ---- shared with the main loop */
 static int8_t patch[NP_MAX];                    /* the sound (the main loop writes, the voices read) */
+typedef struct { uint8_t note[16], fl[16], len, rate, swing, pad; } seqpat_t;   /* 36 B */
+enum { SF_ON = 1, SF_ACC = 2, SF_SLIDE = 4 };
+#define SQ_NPAT 16u
+#define PF_MAGIC 0x5Bu
+#define MC_MAGIC 0x4Du
+static struct {                                 /* stored (the store's second sector): what plays, whatever the patch */
+    uint8_t magic, sum, cur, ar_on, ar_mode, ar_rate, ar_oct, ar_gate;
+    seqpat_t pat[SQ_NPAT];                      /* (sum: up to here) */
+    uint8_t mc_magic, mc_dst[16];               /* MACROS: four targets each (a destination, an amount) */
+    int8_t mc_amt[16];
+} perf;
+static volatile uint8_t mc_val[4];              /* the four macros now, 0..127 (K1..K4 in the MACROS window; not stored) */
+/* FX LIVE (not stored, all off at the start): DJ filter (- low pass, + high pass) and its resonance, PUMP (the
+ * sidechain dip on the tempo) and its rate, STUTTER (the last slice played again and again), TAPE (slower, to a stop) */
+static volatile int8_t lfx_flt;
+static volatile uint8_t lfx_fres = 40, lfx_pump, lfx_prate, lfx_stut, lfx_tape;
 static volatile uint32_t ks_bpm10 = 1400;       /* tempo x 10 */
 static volatile int32_t ks_wheel, ks_press, ks_bend;   /* Q15 */
 static volatile uint32_t ks_beats;              /* Q24 beats, kept modulo 48 beats (every division fits) */
@@ -552,6 +568,13 @@ static void route(int32_t *m, const int32_t *src)
         if (IS_PITCH(patch[ME_DST])) m[patch[ME_DST]] += (int32_t)(((int64_t)(a < 0 ? -a * a : a * a) * 3 * src[SR_MENV]) >> 15);
         else m[patch[ME_DST]] += (a * src[SR_MENV]) >> 6;
     }
+    if (perf.mc_magic == MC_MAGIC)              /* the MACROS: each knob onto its four targets */
+        for (k = 0; k < 16u; k++) {
+            int32_t mv = mc_val[k >> 2], a = perf.mc_amt[k], d = perf.mc_dst[k];
+            if (!mv || !a || !d || d >= ND) continue;
+            if (IS_PITCH(d)) m[d] += (int32_t)(((int64_t)(a < 0 ? -a * a : a * a) * 3 * (mv * 258)) >> 15);
+            else m[d] += (a * mv * 258) >> 6;
+        }
 }
 /* the global destinations (the effects, the rates, the gate): once a block, the newest note's envelopes */
 static void fx_mods(void)
@@ -770,14 +793,6 @@ static void step_run(uint32_t beats)
  * (no new attack, a glide). While it plays the keys transpose it (C4 = as written) and do not sound.
  * ARP: the keys held (or HOLD) played one at a time on the tempo: UP, DOWN, UP-DN, RANDOM, ORDER, over 1..4
  * octaves. Both run on ks_beats: on the MIDI clock with the LFOs. */
-typedef struct { uint8_t note[16], fl[16], len, rate, swing, pad; } seqpat_t;   /* 36 B */
-enum { SF_ON = 1, SF_ACC = 2, SF_SLIDE = 4 };
-#define SQ_NPAT 16u
-#define PF_MAGIC 0x5Bu
-static struct {                                 /* stored (the store's second sector): what plays, whatever the patch */
-    uint8_t magic, sum, cur, ar_on, ar_mode, ar_rate, ar_oct, ar_gate;
-    seqpat_t pat[SQ_NPAT];
-} perf;
 static volatile uint8_t sq_play, sq_rec;        /* playing (the voices say), step record (the main loop says) */
 static volatile uint8_t sq_show = 0xFF;         /* the step playing (the screen) */
 static int32_t sq_tr;                           /* the keys' transposition */
@@ -925,6 +940,13 @@ static void voices_render(int32_t *dst, uint32_t n, uint32_t t0, uint32_t budget
 #define DL_N 32768u
 #define CH_N 2048u
 static int16_t dl_buf[2][DL_N] POOL;
+#define LV_N 32768u                             /* FX LIVE: the last 0.74 s of the voices (STUTTER, TAPE) */
+static int16_t lv_buf[LV_N] POOL;
+static struct {
+    uint32_t w, st_start, st_len, st_pos, tp_lag, tp_fade;
+    uint8_t st_on, st_div, tp_on;
+    int32_t dj_l[2], dj_b[2];
+} lv;
 static int16_t ch_buf[CH_N];
 static const uint16_t RV_LEN[8] = {1116, 1188, 1277, 1356, 1139, 1211, 1300, 1379}, AP_LEN[4] = {556, 441, 579, 464};
 static int16_t rv_c[1116 + 1188 + 1277 + 1356 + 1139 + 1211 + 1300 + 1379] POOL;
@@ -946,6 +968,8 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
     int32_t rv_fb = 22000 + fpv(RV_SIZE, D_RVSIZE) * 80, rv_d = fpv(RV_DAMP, D_RVDAMP) * 200, rv_mix = fpv(RV_MIX, D_RVMIX) * 258;
     int32_t vol = (mv * mv * 419) >> 10, boost = fpv(MS_SUB, D_SUBB) * 200, glue = fpv(MS_GLUE, D_GLUE);
     int32_t thr = 32767 - glue * 180, makeup = 4096 + glue * 24;
+    int32_t dj_f = 0, dj_q = 0, dj_mix = 0;
+    uint32_t pb = 0, pinc = 0;
     {                                           /* the delay time from the tempo */
         uint32_t cpb = DIV_CPB[P[DL_TIME] & 15], spb = 26460000u / (ks_bpm10 | 1u), t = (spb << 8) / (cpb >> 8);
         dl_t = (int32_t)(t > DL_N - 4u ? DL_N - 4u : t) << 8;
@@ -961,8 +985,47 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
         meter_gr = fx.gain;
         meter_pk -= meter_pk >> 3;              /* (the meter falls back) */
     }
+    {                                           /* FX LIVE: the STUTTER slice from the tempo */
+        uint32_t spb = 26460000u / (ks_bpm10 | 1u), len = lfx_stut ? spb >> (lfx_stut - 1u) : 0u;
+        if (len > LV_N - 256u) len = LV_N - 256u;
+        if (lv.st_on && (!lfx_stut || lfx_stut != lv.st_div)) lv.st_on = 0;   /* (another length: from the same end) */
+        if (lfx_stut && !lv.st_on) { lv.st_on = 1; lv.st_div = lfx_stut; lv.st_len = len < 64u ? 64u : len; lv.st_start = lv.w - lv.st_len; lv.st_pos = 0; }
+    }
+    if (lfx_flt || lfx_pump) {                  /* the DJ filter's coefficients and the PUMP's place on the beat */
+        int32_t v = lfx_flt < 0 ? -lfx_flt : lfx_flt;
+        dj_f = lfx_flt < 0 ? (64 - v) * (64 - v) * 6 + 360 : v * v * 6 + 120;
+        if (dj_f > 24000) dj_f = 24000;
+        dj_q = 46000 - lfx_fres * 280;
+        dj_mix = v * 4096 > 32767 ? 32767 : v * 4096;
+        pb = ks_beats;
+        pinc = (ks_bpm10 * 41546u) >> 16;       /* beats a sample, Q24 */
+    }
     for (i = 0; i < n; i++) {
         int32_t x = in[i] * 7 / 8, L, R, w;
+        if (lv.st_on) {                         /* STUTTER: the slice again, a short fade at its ends; nothing written */
+            uint32_t q = lv.st_pos, e = lv.st_len - q, g = q < e ? q : e;
+            int32_t y = lv_buf[(lv.st_start + q) & (LV_N - 1u)];
+            x = g < 64u ? (y * (int32_t)g) >> 6 : y;
+            if (++lv.st_pos >= lv.st_len) lv.st_pos = 0;
+        } else {
+            lv_buf[lv.w & (LV_N - 1u)] = (int16_t)sat15(x);
+            lv.w++;
+            if (lfx_tape || lv.tp_fade) {       /* TAPE: read slower and slower; let go, back to now through a fade */
+                uint32_t sp = lfx_tape ? 65536u - (uint32_t)lfx_tape * 516u : 65536u, r, f, pos;
+                int32_t a, b, y;
+                if (!lv.tp_on && lfx_tape) { lv.tp_on = 1; lv.tp_lag = 0; }
+                lv.tp_lag += 65536u - sp;       /* (how far behind now, Q16: it grows while slower) */
+                if (lv.tp_lag > (LV_N - 512u) << 16) { lv.tp_lag = (LV_N - 512u) << 16; sp = 0; }   /* (as far as it keeps: stopped) */
+                pos = (lv.w << 16) - lv.tp_lag - (2u << 16);
+                r = pos >> 16; f = (pos >> 1) & 32767u;
+                a = lv_buf[r & (LV_N - 1u)]; b = lv_buf[(r + 1u) & (LV_N - 1u)];
+                y = a + (((b - a) * (int32_t)f) >> 15);
+                if (sp < 16384u) y = (int32_t)(((int64_t)y * sp) >> 14);   /* (the stop fades out) */
+                if (lfx_tape) x = y;
+                else { x = y + (((x - y) * (int32_t)(256u - lv.tp_fade)) >> 8); lv.tp_fade--; }
+            }
+            if (!lfx_tape && lv.tp_on) { lv.tp_on = 0; lv.tp_fade = 256u; }
+        }
         if (P[DR_ON]) {                         /* drive */
             int32_t y = (int32_t)(((int64_t)x * dr_g) >> 8);
             switch (P[DR_TYPE]) {
@@ -1050,6 +1113,26 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
             fx.sub_lp += (x * 256 - fx.sub_lp) >> 8;
             L += mul15(fx.sub_lp >> 8, boost);
             R += mul15(fx.sub_lp >> 8, boost);
+        }
+        if (lfx_flt) {                          /* the DJ filter: a state-variable pair, - low pass, + high pass */
+            int32_t c[2] = {L, R};
+            for (k = 0; k < 2u; k++) {
+                int32_t lo, hi, o;
+                lv.dj_l[k] += mul15(dj_f, lv.dj_b[k]);
+                hi = clip(c[k], 120000) - lv.dj_l[k] - mul15(dj_q, lv.dj_b[k]);
+                lv.dj_b[k] = clip(lv.dj_b[k] + mul15(dj_f, hi), 200000);
+                lo = lv.dj_l[k] = clip(lv.dj_l[k], 200000);
+                o = lfx_flt < 0 ? lo : hi;
+                c[k] += mul15(o - c[k], dj_mix);
+            }
+            L = c[0]; R = c[1];
+        }
+        if (lfx_pump) {                         /* PUMP: down on each beat (or 1/8, 1/2, a bar), back up as a curve */
+            static const uint8_t SH[4] = {0, 1, 1, 2};
+            uint32_t pos = pb + pinc * i, fr = (lfx_prate == 1u ? pos << 1 : lfx_prate ? pos >> SH[lfx_prate] : pos) & 0xFFFFFFu;
+            int32_t u = 32767 - (int32_t)(fr >> 9), g = 32767 - mul15(mul15(u, u), lfx_pump * 258);
+            if ((fr >> 16) < 5u) g = 32767 - (32767 - g) * (int32_t)(fr >> 8) / 1280;   /* (a 2 % slope in, no click) */
+            L = mul15(L, g); R = mul15(R, g);
         }
         L = mul15(L, fx.gain);
         R = mul15(R, fx.gain);
