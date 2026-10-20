@@ -1100,7 +1100,18 @@ static void draw_mxy(void)
     win_head("MORPH X/Y", t, "SEL 3/4");
     if (g_vis(py, ps)) {
         int32_t dx = px + 6 + ex * (ps - 12) / 127, dy = py + 6 + (127 - ey) * (ps - 12) / 127;
+        int32_t gy0 = g_y0 > py + 1 ? g_y0 : py + 1, gy1 = g_y0 + (int32_t)BAND_H < py + ps - 1 ? g_y0 + (int32_t)BAND_H : py + ps - 1, cx, cy;
         g_box(px, py, ps, ps, K_PANEL, K_LINE);
+        for (cy = gy0 & ~1; cy < gy1; cy += 2)  /* each corner's colour glowing from its corner (2 x 2 cells, this band only) */
+            for (cx = px + 1; cx < px + ps - 1; cx += 2) {
+                int32_t u = (cx - px) * 256 / ps, v = (cy - py) * 256 / ps, q[4], r = 0, g = 0, b = 0, t = 0;
+                q[0] = (256 - u) * (256 - v) >> 8; q[1] = u * (256 - v) >> 8; q[2] = (256 - u) * v >> 8; q[3] = u * v >> 8;
+                for (k = 0; k < 4; k++) {
+                    int32_t w2 = q[k] * q[k] >> 8;
+                    r += w2 * (cc[k] >> 11); g += w2 * ((cc[k] >> 5) & 63); b += w2 * (cc[k] & 31); t += w2;
+                }
+                if (t > 0) g_rect(cx, cy, 2, 2, g_mix(K_PANEL, (uint16_t)((r / t) << 11 | (g / t) << 5 | (b / t)), (uint32_t)(t * 2 < 256 ? t * 2 : 256) * 100u / 256u));
+            }
         g_rect(px + ps / 2, py + 2, 1, ps - 4, K_LINE);
         g_rect(px + 2, py + ps / 2, ps - 4, 1, K_LINE);
         g_rect(dx, py + 1, 1, ps - 2, g_mix(K_PANEL, K_WHITE, 80));
