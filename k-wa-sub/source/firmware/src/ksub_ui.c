@@ -20,7 +20,7 @@ enum { I_L1RATE = 200, I_L2RATE, I_ABMIX, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_COR
        G_LV_FLT, G_LV_PUMP, G_LV_STUT, G_LV_TAPE, G_LV_PRATE, G_LV_FRES,             /* SEL: FX LIVE */
        G_MC1, G_MC2, G_MC3, G_MC4, G_MC_DST, G_MC_AMT,                               /* SEL: MACROS */
        G_EQ_F, G_EQ_G, G_EQ_T, G_EQ_Q,                                               /* FX held: the EQ (the band eq_cur) */
-       G_RST,                                                                        /* SYSTEM: why the last stop */
+       G_RST, G_CON,                                                                 /* SYSTEM: why the last stop; CONTRAST */
        I_NONE = 255 };
 
 typedef struct {
@@ -59,7 +59,7 @@ static const view_t VIEWS[] = {
     {LY_PRESET, "PRESET BANK B", 0, {0}, "PRESET"},
     {LY_SAVE, "SAVE PATCH", 0, {0}, "PRESET"},
     {LY_LIST, "ARPEGGIATOR", 5, {G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE}, "ARP"},
-    {LY_SYS, "GLOBAL SETUP", 18, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_UI, G_ASK, G_THEME, G_PAL, G_FONT, G_ZOOM, G_C3COL, G_GRID, G_BROWSE,
+    {LY_SYS, "GLOBAL SETUP", 19, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_UI, G_ASK, G_THEME, G_PAL, G_CON, G_FONT, G_ZOOM, G_C3COL, G_GRID, G_BROWSE,
                                   V_BEND, V_VEL, G_CORES, G_CPU, G_RST}, "SYSTEM"},
     {LY_SYS, "MIDI", 7, {G_MLEARN, G_MMAP, G_MIDICH, G_CLOCK, G_MSTART, G_MPROG, G_MCLK}, "SYSTEM"},
 };
@@ -89,7 +89,7 @@ static struct {                                 /* the user slots' settings past
     uint8_t magic, sum;
     int8_t p[NUSER][NP_MAX - NP_STORE];
 } uext;
-typedef char ids_fit[G_RST < I_NONE ? 1 : -1];
+typedef char ids_fit[G_CON < I_NONE ? 1 : -1];
 typedef char perf_fits_before_uext[sizeof perf <= UX_AT ? 1 : -1];   /* (the 2nd sector: SEQ/ARP/MACROS, then the slots' rest) */
 static uint8_t ux_sum(void) { const uint8_t *b = (const uint8_t *)uext.p; uint32_t i, x = 0x77; for (i = 0; i < sizeof uext.p; i++) x = (x * 7u + b[i]) & 0xFFu; return (uint8_t)x; }
 static void ux_migrate(void)                    /* a store saved with 16 a slot: spread out, the new ones at 0 */
@@ -117,7 +117,8 @@ static struct {
     uint8_t ui, ask;                            /* UI MODE: 0 CLASSIC, 1 SHIFT; ask which at each start */
     uint8_t zoom;                               /* LOUPE: the rows' and values' type as big as they fit */
     uint8_t mstart, mprog, mclk;                /* MIDI: start/stop the SEQ, program change loads, the clock out */
-} set = {6, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0, 0, {0}, 1, 0, KS_B, 1, 0, 1, 1, 0};
+    uint8_t contrast;                           /* CONTRAST: 0 NORMAL, 1 HIGH (black and white), 2 MAX (+ the panel's darker gamma) */
+} set = {6, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0, 0, {0}, 1, 0, KS_B, 1, 0, 1, 1, 0, 1};
 static char pname[14];
 static uint8_t page, vcur[NPAGE], cursor[sizeof VIEWS / sizeof VIEWS[0]], pre_cur[2], save_slot, save_pos, hold;
 static uint8_t key_note[27], latched[128], phys[128];
@@ -309,6 +310,19 @@ static void eq_update(void)                     /* the coefficients to the audio
         }
         eq_curve[x] = (int16_t)clampi(db, -24 * 16, 24 * 16);
     }
+}
+/* CONTRAST on the panel: MAX picks the ST7789's darker gamma curve (GAMSET 0x26: 1 = 2.2, the default; 4 = 2.5) */
+static void lcd_contrast(uint32_t c)
+{
+#if !defined(KAWA_WASM) && !defined(DINGHY_HOST)
+    static uint8_t gm;
+    lcd_sync();
+    gm = c >= 2u ? 0x04u : 0x01u;
+    lcd_cmd(0x26);
+    lcd_data(&gm, 1);
+#else
+    (void)c;
+#endif
 }
 /* ---- why it stopped last time (the reset's source, a crash's mark): on the start screens and in SYSTEM */
 static char rst_why[28];
@@ -570,7 +584,7 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
     if (item_patch(id)) { *lo = PD[id].lo; *hi = PD[id].hi; return; }
     *lo = 0;
-    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE || id == G_C3COL || id == G_UI || id == G_ASK || id == G_ZOOM || id == G_MLEARN || id == G_MSTART || id == G_MPROG || id == G_MCLK ? 1 : id == G_MMAP ? 16 : id == I_ABMIX ? 127 : id == G_ACCEL ? 2 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 7 : id == G_OCT ? 6 : 0;
+    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE || id == G_C3COL || id == G_UI || id == G_ASK || id == G_ZOOM || id == G_MLEARN || id == G_MSTART || id == G_MPROG || id == G_MCLK ? 1 : id == G_MMAP ? 16 : id == I_ABMIX ? 127 : id == G_ACCEL || id == G_CON ? 2 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 7 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
     if (id >= G_SQ_STEP && id <= G_AR_GATE) {
         static const int8_t LO[12] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1}, HI[12] = {15, 48, 4, 15, 16, 5, 50, 1, 4, 5, 3, 10};
@@ -607,6 +621,7 @@ static int32_t item_get(uint32_t id)
     case G_UI: return set.ui;
     case G_ASK: return set.ask;
     case G_ZOOM: return set.zoom;
+    case G_CON: return set.contrast;
     case G_MLEARN: return ml_state != 0;
     case G_MMAP: return (int32_t)cc_count();
     case G_MSTART: return set.mstart;
@@ -716,6 +731,7 @@ static void item_set(uint32_t id, int32_t v)
     case G_UI: set.ui = (uint8_t)v; c3_show[page] = (uint8_t)v; vcur[page] = 0; break;
     case G_ASK: set.ask = (uint8_t)v; break;
     case G_ZOOM: set.zoom = (uint8_t)v; font_set(set.font, set.zoom); g_force = 1; break;
+    case G_CON: set.contrast = (uint8_t)v; g_con = set.contrast; lcd_contrast(v); theme_set(set.theme, set.pal); g_force = 1; break;
     case G_MLEARN: ml_state = (uint8_t)v; toast(v ? "LEARN: TURN A KNOB" : "LEARN OFF"); return;
     case G_MMAP: if (!v) { memset(perf.cc_num, 0xFF, sizeof perf.cc_num); perf_touch(); toast("CC MAP CLEARED"); } return;
     case G_MSTART: set.mstart = (uint8_t)v; break;
@@ -765,6 +781,7 @@ static const char *item_name(uint32_t id)
     case G_UI: return "UI MODE";
     case G_ASK: return "ASK AT START";
     case G_ZOOM: return "LOUPE";
+    case G_CON: return "CONTRAST";
     case G_RST: return "LAST STOP";
     case G_MLEARN: return "MIDI LEARN";
     case G_MMAP: return "CC MAP";
@@ -811,7 +828,7 @@ static const char *item_sname(uint32_t id)
     if (k) return ENG_P[e][k - 1];
     if (id == I_L1RATE || id == I_L2RATE) return "RATE";
     if (item_patch(id)) return PD[id].sname;
-    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : id == G_ACCEL ? "ACCEL" : id == G_C3COL ? "COLOURS" : id == G_UI ? "UI" : id == G_ASK ? "ASK" : id == G_ZOOM ? "LOUPE" : id == G_MLEARN ? "LEARN" : id == G_MMAP ? "CC MAP" : id == I_ABMIX ? "A/B" : id == G_SQ_TYPE ? "TYPE" : id == G_SQ_PAT ? "PAT" : id == G_SQ_LEN ? "LEN" : id == G_AR_OCT ? "OCT" : item_name(id);
+    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : id == G_ACCEL ? "ACCEL" : id == G_C3COL ? "COLOURS" : id == G_UI ? "UI" : id == G_ASK ? "ASK" : id == G_ZOOM ? "LOUPE" : id == G_CON ? "CONTRAST" : id == G_MLEARN ? "LEARN" : id == G_MMAP ? "CC MAP" : id == I_ABMIX ? "A/B" : id == G_SQ_TYPE ? "TYPE" : id == G_SQ_PAT ? "PAT" : id == G_SQ_LEN ? "LEN" : id == G_AR_OCT ? "OCT" : item_name(id);
 }
 static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
 {
@@ -897,6 +914,7 @@ static void item_text(uint32_t id, char *b)
         case G_UI: str_cat(b, v ? "SHIFT (3 COLUMNS)" : "CLASSIC"); break;
         case G_ASK: str_cat(b, v ? "YES" : "NO"); break;
         case G_ZOOM: str_cat(b, v ? "ON (BIG TYPE)" : "OFF"); break;
+        case G_CON: str_cat(b, v == 2 ? "MAX (DEEP BLACK)" : v ? "HIGH" : "NORMAL"); break;
         case G_RST: str_cat(b, rst_why); break;
         case G_MLEARN: str_cat(b, ml_state == 1u ? "TURN A KNOB" : ml_state == 2u ? "SEND A CC" : "OFF"); break;
         case G_MMAP: if (v) { b = fmt_u(b, (uint32_t)v, 0); str_cat(b, v > 1 ? " CCS \xB7 LEFT: CLEAR" : " CC \xB7 LEFT: CLEAR"); } else str_cat(b, "EMPTY"); break;
@@ -1632,15 +1650,17 @@ static void app_init(void)
     uint32_t i;
     int ok;
     {                                           /* (a save from before a field was added: the fields it has, the rest as is) */
-        const uint32_t LEN[5] = {sizeof set, (uint32_t)((uint8_t *)&set.mstart - (uint8_t *)&set), (uint32_t)((uint8_t *)&set.zoom - (uint8_t *)&set),
+        const uint32_t LEN[6] = {sizeof set, (uint32_t)((uint8_t *)&set.contrast - (uint8_t *)&set), (uint32_t)((uint8_t *)&set.mstart - (uint8_t *)&set), (uint32_t)((uint8_t *)&set.zoom - (uint8_t *)&set),
                                  (uint32_t)((uint8_t *)&set.ui - (uint8_t *)&set), (uint32_t)((uint8_t *)&set.accel - (uint8_t *)&set)};
-        for (ok = 0, i = 0; i < 5u && !ok; i++) ok = !settings_load(&set, LEN[i]) && set.ver == 6u;
+        for (ok = 0, i = 0; i < 6u && !ok; i++) ok = !settings_load(&set, LEN[i]) && set.ver == 6u;
     }
     if (!ok) {
         set.theme = set.pal = set.font = set.grid = set.browse = 0;
         memset(set.fav, 0, sizeof set.fav);
-        set.ver = 6; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1; set.accel = 1; set.c3col = 0; set.ui = KS_B; set.ask = 1; set.zoom = 0; set.mstart = 1; set.mprog = 1; set.mclk = 0;
+        set.ver = 6; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1; set.accel = 1; set.c3col = 0; set.ui = KS_B; set.ask = 1; set.zoom = 0; set.mstart = 1; set.mprog = 1; set.mclk = 0; set.contrast = 1;
     }
+    set.contrast = set.contrast < 3u ? set.contrast : 1u;
+    g_con = set.contrast; lcd_contrast(set.contrast);
     set.cores = set.cores ? 1u : 0u;
     theme_set(set.theme, set.pal);
     font_set(set.font, set.zoom);

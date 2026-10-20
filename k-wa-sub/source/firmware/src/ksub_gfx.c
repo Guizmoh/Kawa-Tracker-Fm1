@@ -39,13 +39,31 @@ static const char *const PAL_NAME[4][2] = {{"NEON", "AMBER"}, {"STUDIO", "OCEAN"
 static uint16_t kc[KC_N];
 static uint8_t theme, theme_pal;
 #define PAL_BW (theme_pal == 4u || theme_pal == 5u)   /* black and white, inverted: no colours of their own */
+static uint16_t g_mix(uint16_t a, uint16_t b, uint32_t t);
+static uint8_t g_con;                           /* CONTRAST: 0 as drawn, 1 HIGH and 2 MAX: the background to black, the text to white */
+static uint32_t con_ch(uint32_t v, uint32_t a, uint32_t b)   /* one channel (8 bits): a -> 0, b -> 255 (a > b: reversed) */
+{
+    if (a > b) return 255u - con_ch(255u - v, 255u - a, 255u - b);
+    if (b <= a + 8u) return v;
+    return v <= a ? 0u : v >= b ? 255u : (v - a) * 255u / (b - a);
+}
+static uint16_t con_px(uint16_t c, uint16_t bg, uint16_t wh)
+{
+    uint32_t r = con_ch((c >> 11) * 255u / 31u, (bg >> 11) * 255u / 31u, (wh >> 11) * 255u / 31u);
+    uint32_t g = con_ch(((c >> 5) & 63u) * 255u / 63u, ((bg >> 5) & 63u) * 255u / 63u, ((wh >> 5) & 63u) * 255u / 63u);
+    uint32_t b = con_ch((c & 31u) * 255u / 31u, (bg & 31u) * 255u / 31u, (wh & 31u) * 255u / 31u);
+    return RGB(r, g, b);
+}
 static void theme_set(uint32_t t, uint32_t pal)
 {
     uint32_t i, k;
     theme = (uint8_t)(t < 4u ? t : 0u);
     theme_pal = (uint8_t)(pal < 8u ? pal : 0u);
     k = theme_pal < 2u ? theme * 2u + theme_pal : 6u + theme_pal;
-    for (i = 0; i < KC_N; i++) kc[i] = PALS[k][i];
+    for (i = 0; i < KC_N; i++) kc[i] = g_con ? con_px(PALS[k][i], PALS[k][KC_BG], PALS[k][KC_WHITE]) : PALS[k][i];
+    if (g_con) {                                /* (the cards stay apart from the background) */
+        kc[KC_PANEL] = g_mix(kc[KC_PANEL], PALS[k][KC_PANEL], 128u);
+    }
 }
 #define K_BG kc[KC_BG]
 #define K_PANEL kc[KC_PANEL]

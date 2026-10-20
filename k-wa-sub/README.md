@@ -73,6 +73,11 @@ La page `ARP` › PRESETS montre la banque A, `ARP` encore la banque B (`K1` dé
 MINT, noir et blanc, INVERTED (tons de gris : fond gris clair, cases un peu plus foncées, texte sombre), RED (le
 style STUDIO en rouge) et ICE (bleu glacier) : 8 palettes par thème. `SYSTEM › FONT` : SANS (DejaVu Sans Bold), MONO (IBM Plex Mono),
 HYPER (Atkinson Hyperlegible Mono, faite pour être lue par tous) ou PIXEL (Press Start 2P, nette à 8 px).
+`SYSTEM › CONTRAST` (sous PALETTE) : `HIGH` (par défaut) étire chaque palette pour que le fond soit vraiment noir et
+le texte vraiment blanc (les cartes gardent un léger gris pour rester visibles) ; `MAX (DEEP BLACK)` choisit en plus la
+courbe gamma la plus sombre de l'écran (ST7789, 2,5 au lieu de 2,2 : noirs plus profonds, visible seulement sur le
+FM-1) ; `NORMAL` garde les couleurs d'avant. Avec INVERTED, c'est l'inverse : fond blanc, texte noir.
+
 `SYSTEM › LOUPE` (juste sous FONT) : les lignes et les valeurs passent à la plus grande taille qui tient dans leurs
 cases (SANS 9 → 11, MONO et HYPER 10 → 12, valeurs 11-12 → 13-14) ; un texte qui toucherait le bord de sa case repasse
 à la taille du dessous. PIXEL n'a que 8 et 16 : la loupe n'y change rien.
@@ -282,15 +287,15 @@ sauf s'ils ont été appris pour autre chose.
 
 ## Installer sur le FM-1
 
-Le paquet est [`install/k-wa-sub-0.9.9-5.fwsc`](install/k-wa-sub-0.9.9-5.fwsc) (identité `FM-1_979` ; les anciens dans `install/older/`). Il s'installe exactement
+Le paquet est [`install/k-wa-sub-0.9.9-6.fwsc`](install/k-wa-sub-0.9.9-6.fwsc) (identité `FM-1_979` ; les anciens dans `install/older/`). Il s'installe exactement
 comme KAWA, avec le même chargeur de mise à jour, et fonctionne depuis le firmware d'origine comme depuis KAWA :
 
 - **Installateur rapide** : ouvrir [`installer.html`](installer.html) dans Chrome ou Edge (un seul fichier, hors ligne,
   le firmware est dedans), cliquer sur « Installer K-WA SUB », confirmer. Il accepte aussi un autre .fwsc (KAWA...).
 - **Dans le navigateur** (Chrome ou Edge, Web MIDI) : la page d'installation de KAWA ([`../index.html`](../index.html)),
-  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.9.9-5.fwsc`.
+  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.9.9-6.fwsc`.
 - **Avec Python 3** : `INSTALL-Linux.sh`, `INSTALL-Mac.command` ou `INSTALL-Windows.bat` dans ce dossier (ou
-  `python3 install/fm1_install.py install/k-wa-sub-0.9.9-5.fwsc`).
+  `python3 install/fm1_install.py install/k-wa-sub-0.9.9-6.fwsc`).
 
 Un câble USB **de données**, aucun autre logiciel MIDI ouvert, rien à débrancher avant la fin. Pour revenir à KAWA :
 installer `kawa-0.5.fwsc` de la même façon. Pour le firmware officiel : M-UPGRADE, comme décrit pour KAWA. En cas de
