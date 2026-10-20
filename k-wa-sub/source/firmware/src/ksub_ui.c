@@ -374,8 +374,8 @@ static const col3_t COL3[NPAGE] = {
                  {{F_CUT, I_L1RATE, L1_DEP, F_RES}, {S_LVL, DR_AMT, DL_MIX, MS_VOL}, {A_P1, B_P1, X_AMT, F_ENV}},
                  {{"CUT", "RT", "DP", "RES"}, {"SUB", "SAT", "DLY", "VOL"}, {"A1", "B1", "XM", "ENV"}}},
     [PG_BASS] = {"EDIT \xB7 OSCILLATORS", {"MIX", "OSC A", "OSC B"},
-                 {{A_LVL, B_LVL, I_ABMIX, X_AMT}, {A_P1, A_P2, A_P3, A_SEMI}, {B_P1, B_P2, B_P3, B_SEMI}},
-                 {{"A", "B", "A/B", "XM"}, {0, 0, 0, "PT"}, {0, 0, 0, "PT"}}},
+                 {{A_LVL, B_LVL, I_ABMIX, X_AMT}, {A_ENG, A_P1, A_P2, A_P3}, {B_ENG, B_P1, B_P2, B_P3}},
+                 {{"A", "B", "A/B", "XM"}, {"ENG", 0, 0, 0}, {"ENG", 0, 0, 0}}},   /* (the engine on top, K1) */
     [PG_ENV] = {"ENVELOPES", {"AMP", "FILTER", "MOD"},
                 {{AE_A, AE_D, AE_S, AE_R}, {FE_A, FE_D, FE_S, FE_R}, {ME_A, ME_D, ME_AMT, ME_DST}},
                 {{"A", "D", "S", "R"}, {"A", "D", "S", "R"}, {"A", "D", "AMT", "DST"}}},

@@ -11,7 +11,7 @@ pkg = sorted(glob.glob("../install/k-wa-sub-*.fwsc"), key=lambda p: [int(x) for 
 raw = Path(pkg).read_bytes()
 js = Path("../../install/webinstall.js").read_text()
 name = Path(pkg).name
-ver = re.search(r"k-wa-sub-([\d.]+)\.fwsc", name).group(1)
+ver = re.search(r"k-wa-sub-([\d.]+)(?:-\w+)?\.fwsc", name).group(1)
 page = (Path("web/installer.html").read_text().replace("__WEBINSTALL_JS__", js).replace("__PKG_B64__", base64.b64encode(raw).decode())
         .replace("__PKG_NAME__", name).replace("__PKG_ID__", "FM-1_97" + ver.split(".")[1]))
 Path("../installer.html").write_text(page)
