@@ -8,10 +8,10 @@
  * Every visual is drawn with integers only (no FPU), from the patch and what the voices say (ksub_dsp.c). */
 enum { TH_CLASSIC, TH_STUDIO, TH_PURE, TH_RACK, NTHEMES };
 enum { VZ_NONE, VZ_SCOPE, VZ_OSCA, VZ_OSCB, VZ_SUB, VZ_MIX, VZ_ENV0, VZ_ENV1, VZ_ENV2, VZ_FILT, VZ_LFO1, VZ_LFO2, VZ_STEP,
-       VZ_DRIVE, VZ_CRUSH, VZ_CHORUS, VZ_DELAY, VZ_REVERB, VZ_MASTER, VZ_CPU };
+       VZ_SEQ, VZ_DRIVE, VZ_CRUSH, VZ_CHORUS, VZ_DELAY, VZ_REVERB, VZ_MASTER, VZ_CPU };
 static const uint8_t VZ_OF[] = {VZ_SCOPE, VZ_SCOPE, VZ_OSCA, VZ_OSCB, VZ_SUB, VZ_MIX, VZ_ENV0, VZ_ENV1, VZ_ENV2, VZ_FILT, VZ_FILT,
-                                VZ_LFO1, VZ_LFO2, VZ_STEP, VZ_NONE, VZ_DRIVE, VZ_CRUSH, VZ_CHORUS, VZ_DELAY, VZ_REVERB,
-                                VZ_MASTER, VZ_NONE, VZ_NONE, VZ_NONE, VZ_CPU};
+                                VZ_SEQ, VZ_LFO1, VZ_LFO2, VZ_STEP, VZ_NONE, VZ_DRIVE, VZ_CRUSH, VZ_CHORUS, VZ_DELAY, VZ_REVERB,
+                                VZ_MASTER, VZ_NONE, VZ_NONE, VZ_NONE, VZ_NONE, VZ_CPU};
 static const char *const PAGE_SHORT[NPAGE] = {"PLAY", "BASS", "ENV", "FILT", "LFO", "FX", "PRE", "SYS"};
 static const uint16_t KNOB_RGB[4] = {RGB(255, 92, 92), RGB(255, 204, 64), RGB(92, 226, 116), RGB(84, 164, 255)};
 static int16_t live[224];
@@ -191,6 +191,25 @@ static void vis_step(int32_t x, int32_t y, int32_t w, int32_t h)
                !patch[ST_ON] ? K_LINE : i == step_pos ? K_LIME : (i & 3) ? K_WAVE : g_mix(K_WAVE, K_WHITE, 90));
     }
 }
+static void vis_seq(int32_t x, int32_t y, int32_t w, int32_t h)   /* SEQ BASS: the 16 steps as a little piano roll */
+{
+    const seqpat_t *q = sq_pat();
+    int32_t i, len = q->len ? q->len : 16, bw = (w - 8) / 16, x0 = x + 4 + (w - 8 - bw * 16) / 2, H = h - 11, top = y + 4;
+    if (!g_vis(y, h)) return;
+    for (i = 0; i < 16; i++) {
+        int32_t bx = x0 + i * bw, f = q->fl[i], nh;
+        int on = sq_play && i == sq_show;
+        g_rect(bx + 1, top, bw - 2, H, i >= len ? K_BG : on ? g_mix(K_TRACK, K_LIME, 40) : K_TRACK);
+        if (i < len && (f & SF_ON)) {
+            uint16_t c = on ? K_LIME : (f & SF_ACC) ? K_ORANGE : K_WAVE;
+            nh = 4 + q->note[i] * (H - 4) / 48;
+            g_rect(bx + 1, top + H - nh, bw - 2, 3, c);
+            g_rect(bx + 2, top + H - nh + 3, bw - 4, nh - 3, g_mix(K_TRACK, c, 45));
+            if (f & SF_SLIDE) g_rect(bx + bw - 2, top + H - nh + 1, 3, 1, c);   /* (into the next) */
+        }
+        g_rect(bx + 1, top + H + 2, bw - 2, 3, i == sq_cur_step ? (sq_rec ? K_ORANGE : K_WHITE) : (i & 3) ? K_BG : K_LINE);
+    }
+}
 static void vis_fx(uint32_t kind, int32_t x, int32_t y, int32_t w, int32_t h)
 {
     int32_t px, W = w - 10, x0 = x + 5, cy = y + h / 2, H2 = h / 2 - 3;
@@ -290,6 +309,7 @@ static void draw_visual(uint32_t kind, int32_t x, int32_t y, int32_t w, int32_t 
     case VZ_FILT: vis_filter(x, y, w, h); break;
     case VZ_LFO1: case VZ_LFO2: vis_lfo(x, y, w, h, kind - VZ_LFO1); break;
     case VZ_STEP: vis_step(x, y, w, h); break;
+    case VZ_SEQ: vis_seq(x, y, w, h); break;
     default: vis_fx(kind, x, y, w, h); break;
     }
 }
@@ -337,6 +357,24 @@ static const char *view_title(uint32_t vi, char *t, char *sub)
         str_cat(p, patch[ST_ON] ? dst_name((uint32_t)patch[ST_DST]) : "OFF");
         return t;
     default: break;
+    }
+    if (vi == V_SEQ) {                          /* the pattern; playing or not, REC, its rate */
+        p = str_cat(sub, sq_play ? "PLAYING" : "PLAY = START");
+        if (sq_rec) p = str_cat(p, " \xB7 REC");
+        p = str_cat(p, " \xB7 ");
+        p = str_cat(p, L_SRATE[sq_pat()->rate % 6u]);
+        str_cat(p, sq_play ? " \xB7 KEYS TRANSPOSE" : " \xB7 REC = WRITE");
+        item_text(G_SQ_PAT, t);
+        return t;
+    }
+    if (vi == V_ARP) {
+        p = str_cat(sub, L_SRATE[perf.ar_rate % 6u]);
+        p = str_cat(p, " \xB7 ");
+        p = fmt_u(p, perf.ar_oct + 1u, 0);
+        str_cat(p, perf.ar_oct ? " OCTAVES \xB7 PLAY HELD = HOLD" : " OCTAVE \xB7 PLAY HELD = HOLD");
+        p = str_cat(t, "ARP ");
+        str_cat(p, perf.ar_on ? L_ARMODE[perf.ar_mode % 5u] : "OFF");
+        return t;
     }
     if (page == PG_BASS && vi <= 3u) { uint32_t e = (uint32_t)patch[vi == 2u ? A_ENG : B_ENG] & 7u; str_cat(sub, ENG_SUB[e]); return ENG_TITLE[e]; }
     if (page == PG_BASS && vi == 4u) { str_cat(sub, "LOW END CHARACTER"); return "SUB / NOISE"; }

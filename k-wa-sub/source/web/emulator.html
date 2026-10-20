@@ -130,7 +130,7 @@ label.vol { display: flex; align-items: center; gap: 8px; color: var(--mute); fo
       <ul>
         <li>Notes : <kbd>Z</kbd><kbd>S</kbd><kbd>X</kbd>… et <kbd>Q</kbd><kbd>2</kbd><kbd>W</kbd>…</li>
         <li><kbd>↑</kbd><kbd>↓</kbd> ligne &middot; <kbd>←</kbd><kbd>→</kbd> valeur &middot; <kbd>PgUp</kbd><kbd>PgDn</kbd> preset</li>
-        <li><kbd>Shift</kbd>+<kbd>1</kbd>…<kbd>8</kbd> pages &middot; <kbd>Tab</kbd> vue suivante &middot; <kbd>Espace</kbd> HOLD &middot; <kbd>Entrée</kbd> TAP &middot; <kbd>⌫</kbd> SAVE (maintenu : undo)</li>
+        <li><kbd>Shift</kbd>+<kbd>1</kbd>…<kbd>8</kbd> pages &middot; <kbd>Tab</kbd> vue suivante &middot; <kbd>Espace</kbd> SEQ PLAY/STOP &middot; <kbd>Entrée</kbd> TAP (vue SEQ : REC) &middot; <kbd>⌫</kbd> SAVE (maintenu : undo)</li>
         <li><kbd>-</kbd> <kbd>=</kbd> octave &middot; molette ou glisser sur un bouton rotatif</li>
       </ul>
     </section>
@@ -141,8 +141,8 @@ label.vol { display: flex; align-items: center; gap: 8px; color: var(--mute); fo
 "use strict";
 const WASM_B64 = "__KSUB_WASM__";
 const BTN = { OCT_DOWN: 0, OCT_UP: 1, FX: 2, SEL: 3, ENV: 4, LFO: 5, EDIT: 6, GLO: 7, HOME: 8, SAVE: 9, ARP: 10, SEQ: 11, PLAY: 12, REC: 13 };
-const BTN_LAYOUT = [["HOME", "PLAY"], ["EDIT", "BASS"], ["ENV", "ENVELOPE"], ["SEQ", "FILTER"], ["LFO", "LFO"], ["FX", "FX"], ["ARP", "PRESETS"],
-                    ["GLO", "SYSTEM"], ["SEL", "VIEW"], ["SAVE", "SAVE"], ["PLAY", "HOLD"], ["REC", "TAP"], ["OCT_DOWN", "OCT -"], ["OCT_UP", "OCT +"]];
+const BTN_LAYOUT = [["HOME", "PLAY"], ["EDIT", "BASS"], ["ENV", "ENVELOPE"], ["SEQ", "FILTER · SEQ"], ["LFO", "LFO"], ["FX", "FX"], ["ARP", "PRESETS · ARP"],
+                    ["GLO", "SYSTEM"], ["SEL", "VIEW"], ["SAVE", "SAVE"], ["PLAY", "SEQ ▶ (tenu: HOLD)"], ["REC", "TAP · REC"], ["OCT_DOWN", "OCT -"], ["OCT_UP", "OCT +"]];
 const ENC = { SELECT: 0, ALGO: 1, K1: 2, K2: 3, K3: 4, K4: 5, PRESETS: 6 };
 const LS = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
 const $ = id => document.getElementById(id);

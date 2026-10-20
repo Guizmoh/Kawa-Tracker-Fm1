@@ -48,11 +48,20 @@ enum { VM_MONO, VM_LEGATO, VM_POLY };
 /* formats of the values on the screen */
 enum { FM_PCT, FM_BIP, FM_LIST, FM_INT, FM_SEMI, FM_CENT, FM_TIME, FM_CUT, FM_LFOHZ, FM_DIV, FM_VOL, FM_OSCP, FM_DEST };
 
+#ifndef KS_B
+#define KS_B 0
+#endif
+#if KS_B   /* version B: four engines, one for each job (the others' patches are moved onto them: eng_b) */
+#define NENG_UI 4
+static const char *const L_ENG[NENG] = {"ANALOG", "REESE", "WAVE", "FM", "FM", "ANALOG", "ANALOG", "WAVE"};
+#else
+#define NENG_UI NENG
 static const char *const L_ENG[NENG] = {"ANALOG", "SUPER", "WAVE", "FM", "PHASE", "FOLD", "SYNC", "VOCAL"};
+#endif
 static const char *const L_SUBW[] = {"SINE", "TRI", "SQUARE", "PULSE"};
 static const char *const L_SUBO[] = {"-2 OCT", "-1 OCT", "0 OCT"};
 static const char *const L_ROUTE[] = {"FILTER", "DIRECT"};
-static const char *const L_XMODE[] = {"ADD", "RING", "X-MOD"};
+static const char *const L_XMODE[] = {"ADD", "RING", "X-MOD", "SYNC"};   /* SYNC: B restarts with A */
 static const char *const L_FT[NFT] = {"LP 24", "LP 12", "BAND", "HIGH", "NOTCH", "VOWEL", "COMB"};
 static const char *const L_SHAPE[] = {"SINE", "TRI", "SAW DN", "SAW UP", "SQUARE", "S&H", "WUB", "STEPS", "DRIFT"};
 static const char *const L_DIV[16] = {"4 BAR", "2 BAR", "1 BAR", "1/2", "1/4D", "1/2T", "1/4", "1/8D", "1/4T", "1/8", "1/8T",
@@ -114,7 +123,7 @@ typedef struct {
 } pdesc_t;
 
 #define OSC_PD(L) \
-    {L "ENGINE", "ENGINE", 0, NENG - 1, 0, FM_LIST, L_ENG}, {L "LEVEL", "LEVEL", 0, 127, 100, FM_PCT, 0}, \
+    {L "ENGINE", "ENGINE", 0, NENG_UI - 1, 0, FM_LIST, L_ENG}, {L "LEVEL", "LEVEL", 0, 127, 100, FM_PCT, 0}, \
     {L "P1", "P1", 0, 127, 85, FM_OSCP, 0}, {L "P2", "P2", 0, 127, 0, FM_OSCP, 0}, {L "P3", "P3", 0, 127, 0, FM_OSCP, 0}, \
     {L "OCTAVE", "OCT", -3, 2, 0, FM_INT, 0}, {L "SEMI", "SEMI", -12, 12, 0, FM_SEMI, 0}, \
     {L "FINE", "FINE", -50, 50, 0, FM_CENT, 0}
@@ -133,7 +142,7 @@ static const pdesc_t PD[NP] = {
     {"SUB WAVE", "WAVE", 0, 3, 0, FM_LIST, L_SUBW}, {"SUB OCTAVE", "OCT", 0, 2, 1, FM_LIST, L_SUBO},
     {"SUB LEVEL", "SUB", 0, 127, 0, FM_PCT, 0}, {"SUB ROUTE", "ROUTE", 0, 1, 1, FM_LIST, L_ROUTE},
     {"NOISE LEVEL", "NOISE", 0, 127, 0, FM_PCT, 0}, {"NOISE COLOR", "COLOR", 0, 127, 40, FM_PCT, 0},
-    {"MODE", "MODE", 0, 2, 0, FM_LIST, L_XMODE}, {"X-MOD", "XMOD", 0, 127, 0, FM_PCT, 0},
+    {"MODE", "MODE", 0, 3, 0, FM_LIST, L_XMODE}, {"X-MOD", "XMOD", 0, 127, 0, FM_PCT, 0},
     {"DRIFT", "DRIFT", 0, 127, 10, FM_PCT, 0}, {"KEY RESET", "RESET", 0, 1, 1, FM_LIST, L_ONOFF},
     {"TYPE", "TYPE", 0, NFT - 1, 0, FM_LIST, L_FT}, {"CUTOFF", "FREQ", 0, 127, 90, FM_CUT, 0},
     {"RESONANCE", "RES", 0, 127, 15, FM_PCT, 0}, {"DRIVE", "DRIVE", 0, 127, 0, FM_PCT, 0},
@@ -291,9 +300,52 @@ static void patch_defaults(int8_t *p)
     p[L2_SHP] = 1;
 }
 
+#if KS_B
+static void dst_move(int8_t *p, int32_t from, int32_t to)
+{
+    static const uint8_t DS[] = {L1_DST, L2_DST, ME_DST, ST_DST, M1_DST, M2_DST, M3_DST, M4_DST};
+    uint32_t i;
+    for (i = 0; i < sizeof DS; i++) if (p[DS[i]] == from) p[DS[i]] = (int8_t)to;
+}
+/* PHASE -> FM, FOLD -> ANALOG sine into the FOLD saturation, SYNC -> ANALOG with B synced to A, VOCAL -> the VOCAL
+ * wavetable */
+static void eng_b(int8_t *p)
+{
+    uint32_t k;
+    for (k = 0; k < 2u; k++) {
+        int8_t *o = p + k * OSC_B;              /* o[0] the engine, o[2..4] P1..P3 */
+        int32_t dp1 = k ? D_BP1 : D_AP1, r = o[2], w = o[3];
+        switch (o[0]) {
+        case E_PHASE: o[0] = E_FM; o[2] = (int8_t)(r * 3 / 4); o[3] = (int8_t)(w >= 64 ? 28 : 12); o[4] = 20; break;
+        case E_FOLD:
+            o[0] = E_ANALOG; o[2] = 0; o[3] = 64; o[4] = 0;
+            p[DR_ON] = 1; p[DR_TYPE] = 3; p[DR_AMT] = (int8_t)clampi(30 + r / 2, p[DR_AMT], 127); p[DR_MIX] = 127;
+            dst_move(p, dp1, D_DRAMT);
+            break;
+        case E_SYNC:
+            o[0] = E_ANALOG; o[2] = (int8_t)(85 + w * 42 / 127); o[3] = 64; o[4] = 0;
+            if (!k && !p[B_LVL] && !p[X_MODE]) {   /* the synced wave goes to B, A plays silent and leads */
+                p[B_ENG] = E_ANALOG; p[B_P1] = o[2]; p[B_P2] = 64; p[B_P3] = 0; p[B_LVL] = p[A_LVL]; p[A_LVL] = 0;
+                p[B_OCT] = p[A_OCT]; p[B_SEMI] = p[A_SEMI]; p[B_FINE] = p[A_FINE];
+                p[X_MODE] = 3; p[X_AMT] = (int8_t)clampi(r * 3 / 2, 0, 127);
+                dst_move(p, D_AP1, D_XMOD); dst_move(p, D_AP2, D_BP1); dst_move(p, D_ALVL, D_BLVL);
+            } else if (k && !p[X_MODE]) {
+                p[X_MODE] = 3; p[X_AMT] = (int8_t)clampi(r * 3 / 2, 0, 127);
+                dst_move(p, D_BP1, D_XMOD);
+            }
+            break;
+        case E_VOCAL: o[0] = E_WAVE; o[3] = 56; o[4] = 0; break;
+        }
+    }
+}
+#endif
+
 static void patch_sanitize(int8_t *p)
 {
     uint32_t i;
+#if KS_B
+    eng_b(p);
+#endif
     for (i = 0; i < NP; i++)
         p[i] = (int8_t)clampi(p[i], PD[i].lo, PD[i].hi);
 }

@@ -1,19 +1,22 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* K-WA SUB: the eight pages, the panel, the presets, MIDI, app_main.
  *
- *   HOME 01 PLAY     EDIT 02 BASS     ENV 03 ENVELOPE  SEQ 04 FILTER
- *   LFO  05 LFO      FX   06 FX       ARP 07 PRESETS   GLO 08 SYSTEM
+ *   HOME 01 PLAY     EDIT 02 BASS     ENV 03 ENVELOPE  SEQ 04 FILTER + SEQ BASS
+ *   LFO  05 LFO      FX   06 FX       ARP 07 PRESETS + ARP  GLO 08 SYSTEM
  *   the page's button again, or SEL: its next view (OSC A, OSC B, SUB, COMBINE...)
  *   SELECT: the row   ALGORITHM: the row's value   K1..K4: what the footer says   PRESETS: the next patch
- *   PLAY: HOLD (the notes stay)   REC: TAP tempo   OCT- / OCT+: octave (both: all notes off)
+ *   PLAY: SEQ BASS play / stop   REC: TAP tempo (SEQ view: step record)   OCT- / OCT+: octave (both: all off)
  *   SAVE: save; held: UNDO (and again every 0.4 s while it stays held)
  * Held buttons (a loading bar says what comes): a page button 1.2 s: RANDOM on that page; with K1..K4: that page's
  * knobs from anywhere (SHIFT); LFO or ENV held + a knob or ALGO: assigns LFO 1 / the mod envelope to it (QUICK ASSIGN);
- * SEL held: hear the saved sound (COMPARE); ARP held: FAVORITE. Page buttons and SEL act on release. */
+ * SEL held: hear the saved sound (COMPARE); SAVE held on PRESETS: FAVORITE (elsewhere UNDO); PLAY held: HOLD.
+ * Page buttons, SEL and PLAY act on release. */
 enum { PG_PLAY, PG_BASS, PG_ENV, PG_FILT, PG_LFO, PG_FX, PG_PRE, PG_SYS, NPAGE };
 static const uint8_t PAGE_BTN[NPAGE] = {BTN_HOME, BTN_EDIT, BTN_ENV, BTN_SEQ, BTN_LFO, BTN_FX, BTN_ARP, BTN_GLO};
 enum { LY_PLAY, LY_LIST, LY_BOX, LY_STEP, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
 enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE,
+       G_SQ_STEP, G_SQ_NOTE, G_SQ_TYPE, G_SQ_PAT, G_SQ_LEN, G_SQ_RATE, G_SQ_SWING,   /* SEQ BASS */
+       G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE,                          /* ARP */
        I_NONE = 255 };
 
 typedef struct {
@@ -36,6 +39,8 @@ static const view_t VIEWS[] = {
     {LY_BOX, "MOD ENVELOPE", 4, {ME_A, ME_D, ME_AMT, ME_DST}, {ME_A, ME_D, ME_AMT, ME_DST}, "ENV"},
     {LY_BOX, "FILTER / COLOUR", 4, {F_CUT, F_RES, F_DRV, F_TYPE}, {F_CUT, F_RES, F_DRV, F_TYPE}, "FX"},
     {LY_LIST, "FILTER MOD", 6, {F_TYPE, F_ENV, F_KEY, F_VEL, F_CUT, F_RES}, {F_ENV, F_KEY, F_VEL, F_TYPE}, "FX"},
+    {LY_LIST, "SEQ BASS", 7, {G_SQ_STEP, G_SQ_NOTE, G_SQ_TYPE, G_SQ_PAT, G_SQ_LEN, G_SQ_RATE, G_SQ_SWING},
+     {G_SQ_STEP, G_SQ_NOTE, G_SQ_TYPE, G_SQ_PAT}, "SEQ"},
     {LY_LFO, "LFO 1 \xB7 WOBBLE", 9, {L1_SHP, I_L1RATE, L1_DEP, L1_DST, G_GRID, L1_SYNC, L1_TRIG, L1_PH, L1_SMO},
      {L1_SHP, I_L1RATE, L1_DEP, L1_DST}, "LFO"},
     {LY_LFO, "LFO 2 \xB7 MOTION", 9, {L2_SHP, I_L2RATE, L2_DEP, L2_DST, G_GRID, L2_SYNC, L2_TRIG, L2_PH, L2_SMO},
@@ -50,10 +55,13 @@ static const view_t VIEWS[] = {
     {LY_PRESET, "PRESET BANK A", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_PRESET, "PRESET BANK B", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_SAVE, "SAVE PATCH", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
+    {LY_LIST, "ARPEGGIATOR", 5, {G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE}, {G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE}, "ARP"},
     {LY_SYS, "GLOBAL SETUP", 14, {G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_CORES, G_CPU},
      {G_THEME, G_PAL, G_FONT, G_BPM}, "SYSTEM"},
 };
-static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 11, 15, 21, 24, 25};   /* each page's first view */
+static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 12, 16, 22, 26, 27};   /* each page's first view */
+#define V_SEQ 11u                               /* SEQ BASS (the SEQ button's third view), ARP (the ARP button's last) */
+#define V_ARP 25u
 static const char *const FX_TITLE[6] = {"SATURATION", "BITCRUSH", "CHORUS", "DUB DELAY", "REVERB", "MASTER"};
 static const char *const FT_TITLE[NFT] = {"DARK EDGE", "SOFT EDGE", "BAND RAZOR", "THIN AIR", "HOLLOW", "TALK BOX", "METAL COMB"};
 static const char *const FT_SUB[NFT] = {"LOW PASS \xB7 24 dB", "LOW PASS \xB7 12 dB", "BAND PASS \xB7 12 dB", "HIGH PASS \xB7 24 dB",
@@ -104,13 +112,29 @@ static uint32_t dual_ms;
 
 /* ---- the user store (one sector) */
 #if defined(KAWA_WASM)
-static uint8_t w_store[4096];
+static uint8_t w_store[8192];
 static uint32_t w_store_gen;
-static void store_load(void) { memcpy(ustore, w_store, sizeof ustore); }
+static void store_load(void) { memcpy(ustore, w_store, sizeof ustore); memcpy(&perf, w_store + 4096, sizeof perf); }
 static int store_save(void) { memcpy(w_store, ustore, sizeof ustore); w_store_gen++; return 0; }
+static int perf_save(void) { memcpy(w_store + 4096, &perf, sizeof perf); w_store_gen++; return 0; }
 static int settings_write(void) { return settings_save(&set, sizeof set); }
 #else
-static void store_load(void) { if (!flash_ok || st_read(STORE_LO, ustore, sizeof ustore)) memset(ustore, 0xFF, sizeof ustore); }
+static void store_load(void)
+{
+    if (!flash_ok || st_read(STORE_LO, ustore, sizeof ustore)) memset(ustore, 0xFF, sizeof ustore);
+    if (!flash_ok || st_read(STORE_LO + 0x1000u, &perf, sizeof perf)) memset(&perf, 0xFF, sizeof perf);
+}
+static int perf_save(void)                      /* SEQ BASS and the ARP: the store's second sector */
+{
+    uint32_t took;
+    int rc;
+    if (!flash_ok) return -1;
+    c1_pause();
+    rc = fl_erase4k(STORE_LO + 0x1000u, &took);
+    if (!rc) rc = fl_write(STORE_LO + 0x1000u, (const uint8_t *)&perf, sizeof perf);
+    c1_resume();
+    return rc;
+}
 static int store_save(void)                     /* (core 1 waits in RAM while the flash is busy) */
 {
     uint32_t took;
@@ -131,6 +155,56 @@ static int settings_write(void)
     return rc;
 }
 #endif
+/* ---- SEQ BASS, ARP: kept apart from the patches (a line goes on when the sound changes) */
+static uint8_t sq_cur_step, perf_dirty;
+static uint32_t perf_ms;
+static const char *const L_SQTYPE[5] = {"REST", "NOTE", "ACCENT", "SLIDE", "ACC+SLIDE"};
+static const uint8_t SQ_FL[5] = {0, SF_ON, SF_ON | SF_ACC, SF_ON | SF_SLIDE, SF_ON | SF_ACC | SF_SLIDE};
+static const char *const L_ARMODE[5] = {"UP", "DOWN", "UP-DOWN", "RANDOM", "ORDER"};
+static const char *const NOTE_N[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+/* the first lines, one token a step: a note and its octave above C2 ("D#1"), ^ accent, ~ slide, - a rest */
+static const char *const SQ_DEF[8][2] = {
+    {"DNB ROLL", "C0^ - - C0 - - C0 - - - C0^ - D#0 - C0 -"},
+    {"DUB STEPPA", "C0^ - C0 - G0 - F0 - C0^ - C0 - D#0 - F0~ G0"},
+    {"TECHNO OFF", "- - C0 - - - C0^ - - - C0 - - - C0 C1"},
+    {"HALFTIME", "C0^~ C0 - - - - - - F0^ - - - D#0~ C0 - -"},
+    {"ACID", "C0 C1^ - C0~ D#0 C0 G0^ - C0 A#0~ C1 - C0^ F0 - D#0"},
+    {"2-STEP", "C0^ - - C0 - - G0 - - C0 - - A#0~ G0 - -"},
+    {"OCTAVES", "C0 C1 C0 C1 C0 C1 C0 C1 D#0 D#1 D#0 D#1 F0 F1 G0 G1"},
+    {"ROOT", "C0 - - - C0 - - - C0 - - - C0 - - -"}};
+static uint8_t perf_sum(void) { const uint8_t *b = (const uint8_t *)&perf; uint32_t i, x = 0x3C; for (i = 2; i < sizeof perf; i++) x = (x * 5u + b[i]) & 0xFFu; return (uint8_t)x; }
+static void perf_defaults(void)
+{
+    uint32_t k, i;
+    memset(&perf, 0, sizeof perf);
+    perf.magic = PF_MAGIC; perf.ar_rate = 3; perf.ar_oct = 0; perf.ar_gate = 5;
+    for (k = 0; k < SQ_NPAT; k++) {
+        seqpat_t *q = &perf.pat[k];
+        const char *t = k < 8u ? SQ_DEF[k][1] : "";
+        q->len = 16; q->rate = 3;
+        for (i = 0; i < 16u && *t; i++) {
+            while (*t == ' ') t++;
+            if (*t == '-') { t++; continue; }
+            if (*t >= 'A' && *t <= 'G') {
+                static const uint8_t L2N[7] = {9, 11, 0, 2, 4, 5, 7};
+                int32_t n = L2N[*t++ - 'A'];
+                if (*t == '#') { n++; t++; }
+                if (*t >= '0' && *t <= '3') n += (*t++ - '0') * 12;
+                q->note[i] = (uint8_t)clampi(n + 12, 0, 48);
+                q->fl[i] = SF_ON;
+                while (*t == '^' || *t == '~') q->fl[i] |= *t++ == '^' ? SF_ACC : SF_SLIDE;
+            }
+        }
+    }
+    perf.sum = perf_sum();
+}
+static void perf_touch(void) { perf.sum = perf_sum(); perf_dirty = 1; perf_ms = fm1_ms; }
+static void seq_play(int on)
+{
+    ev_push(EV_SEQ, on ? 1u : 0u, set.clock ? 0u : 1u);
+    if (!on) sq_rec = 0;
+}
+
 static uint8_t up_sum(const upatch_t *u)
 {
     uint32_t i, s = 0x5A;
@@ -263,7 +337,13 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     *lo = 0;
     *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE ? 1 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
+    if (id >= G_SQ_STEP && id <= G_AR_GATE) {
+        static const int8_t LO[12] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1}, HI[12] = {15, 48, 4, 15, 16, 5, 50, 1, 4, 5, 3, 10};
+        *lo = LO[id - G_SQ_STEP]; *hi = HI[id - G_SQ_STEP];
+    }
 }
+static seqpat_t *sq_pat(void) { return &perf.pat[perf.cur % SQ_NPAT]; }
+static uint32_t sq_type(uint32_t f) { return !(f & SF_ON) ? 0u : (f & SF_ACC) && (f & SF_SLIDE) ? 4u : (f & SF_SLIDE) ? 3u : (f & SF_ACC) ? 2u : 1u; }
 static int32_t item_get(uint32_t id)
 {
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
@@ -279,6 +359,18 @@ static int32_t item_get(uint32_t id)
     case G_FONT: return set.font;
     case G_GRID: return set.grid;
     case G_BROWSE: return set.browse;
+    case G_SQ_STEP: return sq_cur_step;
+    case G_SQ_NOTE: return sq_pat()->note[sq_cur_step & 15u];
+    case G_SQ_TYPE: return (int32_t)sq_type(sq_pat()->fl[sq_cur_step & 15u]);
+    case G_SQ_PAT: return perf.cur;
+    case G_SQ_LEN: return sq_pat()->len;
+    case G_SQ_RATE: return sq_pat()->rate;
+    case G_SQ_SWING: return sq_pat()->swing;
+    case G_AR_ON: return perf.ar_on;
+    case G_AR_MODE: return perf.ar_mode;
+    case G_AR_RATE: return perf.ar_rate;
+    case G_AR_OCT: return perf.ar_oct;
+    case G_AR_GATE: return perf.ar_gate;
     default: return 0;
     }
 }
@@ -293,6 +385,25 @@ static void item_set(uint32_t id, int32_t v)
         patch[id] = (int8_t)v;
         if (PD[id].fmt == FM_DEST && (v == D_DRAMT || v == D_DRMIX) && !patch[DR_ON]) { patch[DR_ON] = 1; toast("SATURATION ON"); }
         if (id < N_LVL || id == S_LVL || id == S_WAVE || id == S_OCT) prev_dirty = 1;
+        return;
+    }
+    if (id >= G_SQ_STEP && id <= G_AR_GATE) {
+        seqpat_t *q = sq_pat();
+        switch (id) {
+        case G_SQ_STEP: sq_cur_step = (uint8_t)v; return;
+        case G_SQ_NOTE: q->note[sq_cur_step & 15u] = (uint8_t)v; if (!(q->fl[sq_cur_step & 15u] & SF_ON)) q->fl[sq_cur_step & 15u] = SF_ON; break;
+        case G_SQ_TYPE: q->fl[sq_cur_step & 15u] = SQ_FL[v]; break;
+        case G_SQ_PAT: perf.cur = (uint8_t)v; break;
+        case G_SQ_LEN: q->len = (uint8_t)v; if (sq_cur_step >= v) sq_cur_step = (uint8_t)(v - 1); break;
+        case G_SQ_RATE: q->rate = (uint8_t)v; break;
+        case G_SQ_SWING: q->swing = (uint8_t)v; break;
+        case G_AR_ON: perf.ar_on = (uint8_t)v; break;
+        case G_AR_MODE: perf.ar_mode = (uint8_t)v; break;
+        case G_AR_RATE: perf.ar_rate = (uint8_t)v; break;
+        case G_AR_OCT: perf.ar_oct = (uint8_t)v; break;
+        case G_AR_GATE: perf.ar_gate = (uint8_t)v; break;
+        }
+        perf_touch();
         return;
     }
     switch (id) {
@@ -339,6 +450,18 @@ static const char *item_name(uint32_t id)
     case G_GRID: return "LFO GRID";
     case G_BROWSE: return "PRESETS";
     case G_FW: return "FIRMWARE";
+    case G_SQ_STEP: return "STEP";
+    case G_SQ_NOTE: return "NOTE";
+    case G_SQ_TYPE: return "STEP TYPE";
+    case G_SQ_PAT: return "PATTERN";
+    case G_SQ_LEN: return "LENGTH";
+    case G_SQ_RATE: return "RATE";
+    case G_SQ_SWING: return "SWING";
+    case G_AR_ON: return "ARP";
+    case G_AR_MODE: return "MODE";
+    case G_AR_RATE: return "RATE";
+    case G_AR_OCT: return "OCTAVES";
+    case G_AR_GATE: return "GATE";
     default: return "";
     }
 }
@@ -349,7 +472,7 @@ static const char *item_sname(uint32_t id)
     if (k) return ENG_P[e][k - 1];
     if (id == I_L1RATE || id == I_L2RATE) return "RATE";
     if (item_patch(id)) return PD[id].sname;
-    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : "";
+    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : id == G_SQ_TYPE ? "TYPE" : id == G_SQ_PAT ? "PAT" : id == G_SQ_LEN ? "LEN" : id == G_AR_OCT ? "OCT" : item_name(id);
 }
 static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
 {
@@ -435,6 +558,19 @@ static void item_text(uint32_t id, char *b)
             if (ks_shed) { b = str_cat(b, " \xB7 -"); fmt_u(b, ks_shed, 0); }
             break;
         case G_FW: str_cat(b, "K-WA SUB " APP_VER); break;
+        case G_SQ_STEP: b = fmt_u(b, (uint32_t)v + 1u, 2); b = str_cat(b, "/"); fmt_u(b, sq_pat()->len, 2); break;
+        case G_SQ_NOTE:
+            if (!(sq_pat()->fl[sq_cur_step & 15u] & SF_ON)) { str_cat(b, "REST"); break; }
+            b = str_cat(b, NOTE_N[v % 12]); fmt_u(b, 1u + (uint32_t)v / 12u, 0); break;
+        case G_SQ_TYPE: str_cat(b, L_SQTYPE[v % 5]); break;
+        case G_SQ_PAT: b = str_cat(b, "P"); b = fmt_u(b, (uint32_t)v + 1u, 2); if (v < 8) { b = str_cat(b, " "); str_cat(b, SQ_DEF[v][0]); } break;
+        case G_SQ_LEN: b = fmt_u(b, (uint32_t)v, 0); str_cat(b, " STEPS"); break;
+        case G_SQ_RATE: case G_AR_RATE: str_cat(b, L_SRATE[v % 6]); break;
+        case G_SQ_SWING: if (v) { b = fmt_u(b, 50u + (uint32_t)v / 2u, 0); str_cat(b, "%"); } else str_cat(b, "OFF"); break;
+        case G_AR_ON: str_cat(b, v ? "ON" : "OFF"); break;
+        case G_AR_MODE: str_cat(b, L_ARMODE[v % 5]); break;
+        case G_AR_OCT: fmt_u(b, (uint32_t)v + 1u, 0); break;
+        case G_AR_GATE: b = fmt_u(b, (uint32_t)v * 10u, 0); str_cat(b, "%"); break;
         }
         return;
     }
@@ -486,7 +622,7 @@ static uint32_t item_frac(uint32_t id)          /* 0..256 for the bars */
 static void preview_make(void)
 {
     osc_t oa, ob;
-    oscp_t qa, qb;
+    oscp_t qa = {0}, qb = {0};
     int32_t a[16], bb[16], pk = 1, i, j, la = lvl15(patch[A_LVL]), lb = lvl15(patch[B_LVL]), ls = lvl15(patch[S_LVL]);
     int32_t w[224];
     uint32_t ps = 0;
@@ -545,8 +681,8 @@ static void ui_leds(void)
     uint32_t i, beat = ((ks_beats >> 24) & 1u) == 0u && ((ks_beats >> 21) & 7u) < 2u;
     for (i = 0; i < 41u; i++) led_want[i] = 0;
     for (i = 0; i < NPAGE; i++) led(PAGE_BTN[i], i == page ? 2u : 1u);
-    led(BTN_PLAY, hold ? 2u : 0u);
-    led(BTN_REC, beat ? 2u : 0u);
+    led(BTN_PLAY, sq_play ? (beat ? 2u : 1u) : hold ? 1u : 0u);
+    led(BTN_REC, sq_rec ? 2u : beat ? 1u : 0u);
     led(BTN_SAVE, VIEWS[vidx()].lay == LY_SAVE ? 2u : 0u);
     for (i = 0; i < 27u; i++) if (fm1_in.notes & (1u << i)) led(KEY_LED(i), 2u);
     leds_flush();
@@ -560,6 +696,15 @@ static void notes_all_off(void)
 static void key_down(uint32_t n, uint32_t vel)
 {
     uint32_t i, any = 0;
+    if (sq_rec) {                               /* REC: the key goes to the step, the cursor on (heard when stopped) */
+        seqpat_t *q = sq_pat();
+        uint32_t c = sq_cur_step & 15u;
+        q->note[c] = (uint8_t)clampi((int32_t)n - 48 - 12 * OCT, 0, 48);   /* (the keys' C: C2) */
+        if (!(q->fl[c] & SF_ON)) q->fl[c] = SF_ON;
+        sq_cur_step = (uint8_t)((c + 1u) % (q->len ? q->len : 16u));
+        perf_touch();
+        if (sq_play) return;
+    }
     if (hold) {                                 /* a new phrase on a latched one: the old notes go */
         for (i = 0; i < 128u; i++) any |= phys[i];
         if (!any) for (i = 0; i < 128u; i++) if (latched[i]) { latched[i] = 0; ev_push(EV_OFF, i, 0); }
@@ -641,26 +786,30 @@ static void on_button(uint32_t b)
         if (PAGE_BTN[i] == b) {
             if (page == i) vcur[i] = (uint8_t)((vcur[i] + 1u) % (uint32_t)(PAGE_V0[i + 1u] - PAGE_V0[i]));
             else page = (uint8_t)i;
-            if (VIEWS[vidx()].lay == LY_SAVE && b == BTN_ARP) vcur[i] = 0;   /* (SAVE opens from SAVE only) */
+            if (VIEWS[vidx()].lay == LY_SAVE) vcur[i]++;   /* (SAVE opens from SAVE only: on to the ARP) */
             name_trim();
             return;
         }
     switch (b) {
     case BTN_SEL:
         vcur[page] = (uint8_t)((vcur[page] + 1u) % (uint32_t)(PAGE_V0[page + 1u] - PAGE_V0[page]));
-        if (VIEWS[vidx()].lay == LY_SAVE) vcur[page] = 0;
+        if (VIEWS[vidx()].lay == LY_SAVE) vcur[page]++;
         name_trim();
         break;
     case BTN_SAVE:
         if (VIEWS[vidx()].lay == LY_SAVE) { name_trim(); save_user(save_slot); vcur[PG_PRE] = 1; pre_cur[1] = save_slot; }
         else save_open();
         break;
-    case BTN_PLAY:
-        hold ^= 1u;
-        if (!hold) for (i = 0; i < 128u; i++) if (latched[i]) { latched[i] = 0; ev_push(EV_OFF, i, 0); }
-        toast(hold ? "HOLD ON" : "HOLD OFF");
+    case BTN_PLAY:                              /* SEQ BASS: play / stop (held: HOLD, ui_input) */
+        seq_play(!sq_play);
+        toast(sq_play ? "SEQ STOP" : "SEQ PLAY");
         break;
-    case BTN_REC: {                             /* TAP: the tempo from the last taps, the LFOs on the beat */
+    case BTN_REC: {                             /* SEQ view: step record; elsewhere TAP: the tempo from the last taps */
+        if (vidx() == V_SEQ) {
+            sq_rec ^= 1u;
+            toast(sq_rec ? "REC: KEYS WRITE STEPS" : "REC OFF");
+            break;
+        }
         uint32_t now = fm1_ms, d = now - tap_ms[0];
         if (d > 250u && d < 2000u) {
             uint32_t avg = tap_ms[1] && tap_ms[0] - tap_ms[1] < 2000u ? (d + (tap_ms[0] - tap_ms[1])) / 2u : d;
@@ -729,11 +878,19 @@ static void on_enc(uint32_t e, int32_t d)
 }
 
 static int page_of_btn(uint32_t b) { uint32_t i; for (i = 0; i < NPAGE; i++) if (PAGE_BTN[i] == b) return (int)i; return -1; }
-static int holdable(uint32_t b) { return page_of_btn(b) >= 0 || b == BTN_SAVE || b == BTN_SEL; }
+static int holdable(uint32_t b) { return page_of_btn(b) >= 0 || b == BTN_SAVE || b == BTN_SEL || b == BTN_PLAY; }
+static void hold_toggle(void)
+{
+    uint32_t i;
+    hold ^= 1u;
+    if (!hold) for (i = 0; i < 128u; i++) if (latched[i]) { latched[i] = 0; ev_push(EV_OFF, i, 0); }
+    toast(hold ? "HOLD ON" : "HOLD OFF");
+}
 static uint32_t hold_time(uint32_t b)           /* how long until the held action (0: none, only combos) */
 {
     if (b == BTN_SAVE) return PRE_BROWSING ? 700u : 600u;
     if (b == BTN_SEL) return 400u;
+    if (b == BTN_PLAY) return 600u;
     if (b == BTN_ARP) return 0u;
     if (b == BTN_LFO || b == BTN_ENV) return 0u;   /* (they wait for a knob: QUICK ASSIGN) */
     return 1200u;
@@ -746,6 +903,7 @@ static const char *hold_label(uint32_t b)
         return fav_is(bk, pre_cur[bk]) ? "REMOVE FROM FAVORITES" : "ADD TO FAVORITES"; }
     if (b == BTN_SAVE) return "UNDO";
     if (b == BTN_SEL) return "COMPARE: THE SAVED SOUND";
+    if (b == BTN_PLAY) return hold ? "HOLD OFF" : "HOLD: THE KEYS STAY ON";
     if (b == BTN_LFO) return "TURN A KNOB: LFO 1 ON IT";
     if (b == BTN_ENV) return "TURN A KNOB: MOD ENV ON IT";
     str_cat(str_cat(t, "RANDOM "), PAGE_SHORT[pg >= 0 ? pg : 0]);
@@ -838,6 +996,7 @@ static void ui_input(void)
             if (hb.b == BTN_SAVE && PRE_BROWSING) { favorite(); hb.next = 0; }
             else if (hb.b == BTN_SAVE) { undo(); hb.next += 400u; }
             else if (hb.b == BTN_SEL) { compare(1); hb.next = 0; }
+            else if (hb.b == BTN_PLAY) { hold_toggle(); hb.next = 0; }
             else { randomize((uint32_t)page_of_btn(hb.b)); hb.next = 0; }
             hb.fired = 1;
         }
@@ -942,6 +1101,8 @@ static void app_init(void)
     ks_bpm10 = set.bpm10;
     store_load();
     for (i = 0; i < NUSER; i++) if (!up_valid(i)) ustore[i].magic = 0;
+    if (perf.magic != PF_MAGIC || perf.sum != perf_sum()) perf_defaults();
+    perf.ar_on = 0;                             /* (the ARP starts off: a key does what it says) */
     load_preset(set.bank, set.idx);
     if (set.bank && !up_valid(set.idx)) load_preset(0, 0);
     pre_cur[set.bank] = set.idx;
@@ -982,6 +1143,8 @@ static void app_step(void)
         ui_leds();
         g_frame_send(draw_all);
     }
+    if (sq_rec && vidx() != V_SEQ) sq_rec = 0;
+    if (perf_dirty && !sq_play && !ks_sounding && fm1_ms - perf_ms > 2000u) { perf_dirty = 0; if (perf_save()) toast("SEQ NOT SAVED"); }
     if (set_dirty && !ks_sounding && fm1_ms - set_ms > 2000u) {   /* (erasing stalls the sound: only when silent) */
         set_dirty = 0;
         settings_write();

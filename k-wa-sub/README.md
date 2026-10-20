@@ -51,10 +51,10 @@ droite, le genre et les moteurs de chaque patch.
 | `HOME` | 01 PLAY | patch courant + macros live · mix live |
 | `EDIT` | 02 BASS | OSC A · OSC B · SUB + NOISE · COMBINE |
 | `ENV` | 03 ENVELOPE | AMP · FILTER · MOD |
-| `SEQ` | 04 FILTER | cutoff / résonance / drive · modulations du filtre |
+| `SEQ` | 04 FILTER | cutoff / résonance / drive · modulations du filtre · **SEQ BASS** |
 | `LFO` | 05 LFO | LFO 1 WOBBLE · LFO 2 · STEP FX · matrice |
 | `FX` | 06 FX | saturation · crush · chorus · delay · reverb · master |
-| `ARP` | 07 PRESETS | banque A (usine) · banque B (utilisateur) |
+| `ARP` | 07 PRESETS | banque A (usine) · banque B (utilisateur) · **ARP** |
 | `GLO` | 08 SYSTEM | canal MIDI, mode de voix, glide, bend, vélocité, tempo, horloge, octave, style |
 
 Les points en haut à droite de l'écran montrent les vues de la page (la vue affichée est allumée). **Banques et presets.** L'encodeur `PRESETS` ne marche que sur `HOME` et `EDIT` (pour ne rien changer par erreur
@@ -86,6 +86,31 @@ et demie comptent pour une seule ; un chargement de preset aussi), puis une de p
 reste appuyé, jusqu'à 16 en arrière.
 `OCT-` / `OCT+` : octave du clavier ; les deux ensemble : tout couper.
 
+## SEQ BASS et ARP
+
+**SEQ BASS** (`SEQ`, 3e vue) : 16 motifs de 1 à 16 pas, chacun une note (C1 à C5), un silence, un accent, un slide
+(la note suivante glisse, sans nouvelle attaque, comme une TB-303). Les 8 premiers motifs sont des lignes prêtes à
+jouer (DNB ROLL, DUB STEPPA, TECHNO OFF, HALFTIME, ACID, 2-STEP, OCTAVES, ROOT).
+
+| Commande | Effet |
+|---|---|
+| `PLAY` | lance / arrête la séquence (depuis n'importe quelle page ; horloge interne : départ sur la mesure) |
+| clavier pendant la lecture | transpose (C4 = tel qu'écrit), sans jouer de note |
+| `REC` (sur la vue SEQ) | enregistrement pas à pas : chaque touche écrit sa note sur le pas du curseur et avance |
+| `K1` / `K2` / `K3` / `K4` | pas (curseur) · note · type (REST, NOTE, ACCENT, SLIDE, ACC+SLIDE) · motif |
+| `SELECT` + `ALGO` | aussi : longueur, vitesse (1/4 à 1/32), swing (50 à 75 %) |
+
+La grille montre les 16 pas comme un petit piano-roll : hauteur = note, orange = accent, trait à droite = slide,
+vert = le pas joué, trait sous le pas = le curseur (orange en REC). Les motifs et l'ARP sont enregistrés à part des
+patches (2e secteur du stockage, à l'arrêt) : changer de son ne change pas la ligne.
+
+**ARP** (`ARP`, dernière vue après les banques) : ON/OFF, MODE (UP, DOWN, UP-DOWN, RANDOM, ORDER), RATE, OCTAVES
+(1 à 4), GATE (10 à 100 %, 100 % = lié). Il joue les touches tenues ; avec HOLD (`PLAY` maintenu) elles restent.
+L'ARP démarre éteint à chaque allumage. SEQ BASS et ARP suivent le tempo, et l'horloge MIDI quand `CLOCK` = MIDI.
+
+**Changé :** `PLAY` lance le SEQ ; **HOLD** est maintenant `PLAY` maintenu 0,6 s. `REC` reste TAP tempo, sauf sur
+la vue SEQ BASS.
+
 **Boutons maintenus.** Une barre de chargement apparaît en bas de l'écran avec ce qui va se passer écrit au-dessus ;
 relâcher avant la fin annule (le bouton fait alors son action normale) :
 
@@ -93,6 +118,7 @@ relâcher avant la fin annule (le bouton fait alors son action normale) :
 |---|---|
 | `SAVE` | UNDO (sur la page PRESETS : ajoute ou retire le preset sélectionné des favoris, marqué `*`) |
 | `SEL` | A/B : on entend le son enregistré tant que `SEL` reste appuyé |
+| `PLAY` | HOLD : les touches restent tenues (ou relâchées si HOLD était déjà mis) |
 | `LFO` + tourner un potard | assignation rapide « à la Pure SUB » : le LFO 1 va sur ce que règle le potard, le tour règle la quantité |
 | `ENV` + tourner un potard | pareil avec l'enveloppe de modulation |
 | un bouton de page + `K1`–`K4` | couche Shift : les potards de cette page, sans la quitter |
@@ -100,6 +126,31 @@ relâcher avant la fin annule (le bouton fait alors son action normale) :
 
 Tourner un réglage l'affiche en grand une seconde, avec l'ancienne valeur. Au démarrage, un écran montre le dernier
 patch et l'état du second cœur. Sur PRESETS, `K2` fait défiler tous les presets ou seulement les favoris.
+
+## Version B (test : 4 moteurs)
+
+Une deuxième version, à essayer dans l'émulateur [`emulator/b.html`](emulator/b.html) (et sur le FM-1 avec
+`install/version-b/`), ne garde que **4 moteurs**, un par usage :
+
+| Moteur gardé | Rôle | Ce qu'il remplace |
+|---|---|---|
+| ANALOG | soustractif : sinus → triangle → scie → carré, largeur, drive | FOLD (sinus + saturation FOLD), SYNC (voir plus bas) |
+| REESE | pile de scies désaccordées (2 à 7) | SUPER |
+| WAVE | 8 tables × 8 images, position, warp | VOCAL (table VOCAL) |
+| FM | 2 opérateurs, ratio, feedback | PHASE |
+
+Le **hard sync** devient un mode du mélange A + B : `COMBINE › MODE = SYNC` (B redémarre avec A, `X-MOD` monte B
+de 0 à +24 demi-tons, modulable par les LFO : la vraie « sync sweep »). Ce mode existe aussi dans la version
+normale. Les patches faits avec PHASE, FOLD, SYNC ou VOCAL sont convertis au chargement ; les patches enregistrés
+restent compatibles entre les deux versions.
+
+## À faire
+
+- **Page MIDI** (prévue, pas encore faite) : canal par fonction, start/stop du SEQ par l'horloge MIDI, envoi de
+  l'horloge, CC appris, réponse aux program change.
+- Le nouveau workflow `OCT−` / `OCT+` maintenus en 3 colonnes : maquette dans
+  [`docs/mockups/workflow-shift.png`](docs/mockups/workflow-shift.png), en attente de validation.
+- MACROS (4 macros × 4 destinations), MORPH / XY.
 
 ## Installer sur le FM-1
 

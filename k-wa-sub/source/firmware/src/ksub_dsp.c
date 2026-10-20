@@ -23,7 +23,7 @@ static volatile uint8_t ks_shed;                /* the load governor's step (0: 
 static volatile uint32_t ks_late;               /* blocks cut short (never past the block: the watchdog) */
 
 /* ---- what the main loop sends to the voices (one writer, one reader) */
-enum { EV_ON, EV_OFF, EV_PANIC, EV_SYNC };
+enum { EV_ON, EV_OFF, EV_PANIC, EV_SYNC, EV_SEQ };   /* EV_SEQ: a 1 play (b 1: from the bar), 0 stop */
 static volatile uint32_t evq[64], ev_w, ev_r;
 static void ev_push(uint32_t t, uint32_t a, uint32_t b)
 {
@@ -122,10 +122,12 @@ typedef struct {
     int32_t fb1, fb2;
 } osc_t;
 typedef struct {
-    uint8_t eng;
+    uint8_t eng, sync;                          /* sync: restart with the master (X MODE SYNC: B with A) */
     int32_t p1, p2, p3;                         /* 0..32767 after the modulation */
-    uint32_t inc;
+    uint32_t inc, mph, minc, mrq;               /* the master's phase and step; its step / ours, Q8 */
 } oscp_t;
+/* hard sync, in the loops that read ph: when the master turns, ph starts again where the master is in its turn */
+#define SYNC_STEP() do { if (sy) { uint32_t m0 = mp; mp += q->minc; if (mp < m0) ph = (mp >> 8) * q->mrq - inc; } } while (0)
 
 static const int32_t SUPER_DET[7] = {0, -7210, 7210, -4121, 4121, -1279, 1279};   /* JP-8000 spread, Q16 */
 static const uint16_t VOX_F[5][3] = {{800, 1150, 2900}, {400, 1600, 2700}, {270, 1850, 2600}, {450, 800, 2830}, {325, 700, 2530}};
@@ -134,7 +136,7 @@ static const uint16_t VOX_A[5][3] = {{32767, 16384, 8192}, {32767, 13107, 6554},
 /* render n samples of one oscillator; pm (or 0): phase modulation per sample */
 static void osc_render(osc_t *o, const oscp_t *q, int32_t *out, const int32_t *pm, uint32_t n)
 {
-    uint32_t i, inc = q->inc, rcp = blep_rcp(inc), ph = o->ph[0];
+    uint32_t i, inc = q->inc, rcp = blep_rcp(inc), ph = o->ph[0], mp = q->mph, sy = q->sync;
     switch (q->eng) {
     case E_ANALOG: {                            /* sine > triangle > saw > square, a width, a drive */
         int32_t w = q->p1 * 3, seg = w >> 15, k = w & 32767, g = 32768 + q->p3 * 7;
@@ -143,6 +145,7 @@ static void osc_render(osc_t *o, const oscp_t *q, int32_t *out, const int32_t *p
         for (i = 0; i < n; i++) {
             int32_t a, b, x;
             uint32_t p;
+            SYNC_STEP();
             ph += inc;
             p = ph + (pm ? (uint32_t)pm[i] : 0u);
             switch (seg) {
@@ -195,6 +198,7 @@ static void osc_render(osc_t *o, const oscp_t *q, int32_t *out, const int32_t *p
         for (i = 0; i < n; i++) {
             uint32_t p, ix, f;
             int32_t a, b;
+            SYNC_STEP();
             ph += inc;
             p = ph + (pm ? (uint32_t)pm[i] : 0u);
             if (K) p = p < K ? (uint32_t)(((uint64_t)p * r1) >> 16) : 0x80000000u + (uint32_t)(((uint64_t)(p - K) * r2) >> 16);
@@ -215,6 +219,7 @@ static void osc_render(osc_t *o, const oscp_t *q, int32_t *out, const int32_t *p
             m = sin32(pm2 + (uint32_t)((((o->fb1 + o->fb2) >> 1) * fk)));
             o->fb2 = o->fb1;
             o->fb1 = m;
+            SYNC_STEP();
             ph += inc;
             out[i] = sin32(ph + (pm ? (uint32_t)pm[i] : 0u) + (uint32_t)((int64_t)m * ik));
         }
@@ -404,7 +409,7 @@ static void lfo_run(uint32_t k, uint32_t beats)
 
 /* ================================================================ the voices */
 typedef struct {
-    uint8_t on, note, vel, gate;
+    uint8_t on, note, vel, gate, slide;         /* slide: the SEQ BASS glides into this note */
     int32_t pitch, target;                      /* Q8 semitones (glide) */
     osc_t oa, ob;
     uint32_t phs;
@@ -419,16 +424,18 @@ typedef struct {
 static voice_t vo[NVOICE];
 static uint8_t held[16], nheld;                 /* the keys held, the last on top (mono) */
 static uint32_t vage;
+static uint8_t ks_slide;                        /* (SEQ BASS) the next note_on slides: no new attack, a glide */
 
 static void voice_start(voice_t *v, uint32_t note, uint32_t vel, int legato)
 {
     v->note = (uint8_t)note;
     v->vel = (uint8_t)vel;
     v->target = (int32_t)note << 8;
-    if (!v->on || !patch[V_GLIDE] || (patch[V_MODE] == VM_LEGATO && !legato))
+    v->slide = ks_slide && v->on && v->gate;
+    if (!v->on || (!patch[V_GLIDE] && !v->slide) || (patch[V_MODE] == VM_LEGATO && !legato && !v->slide))
         v->pitch = v->target;               /* (MONO and POLY glide always, LEGATO only between held keys) */
     v->age = ++vage;
-    if (legato && patch[V_MODE] == VM_LEGATO && v->on && v->gate) return;   /* legato: no new attack */
+    if (legato && (patch[V_MODE] == VM_LEGATO || v->slide) && v->on && v->gate) return;   /* legato: no new attack */
     if (patch[X_RESET] && (!v->on || !v->ea.lv)) {
         uint32_t k;
         for (k = 0; k < 7u; k++) v->oa.ph[k] = v->ob.ph[k] = k * 0x24924924u;
@@ -589,7 +596,8 @@ static void voice_block(voice_t *v, int32_t *acc)
     menv = env_run(&v->em, (uint32_t)P[ME_A], (uint32_t)P[ME_D], 0, (uint32_t)P[ME_D]);
     amp = env_run(&v->ea, (uint32_t)P[AE_A], (uint32_t)P[AE_D], P[AE_S] << 23, (uint32_t)P[AE_R]);
     if (!v->ea.st && !v->ea.lv) { v->on = 0; v->amp = 0; return; }
-    if (P[V_GLIDE]) v->pitch = v->target + (int32_t)(((int64_t)(v->pitch - v->target) * KS_ENV_DEC[P[V_GLIDE] >> 1]) >> 24);
+    if (P[V_GLIDE] || v->slide)                 /* (a SEQ slide without GLIDE: ~60 ms) */
+        v->pitch = v->target + (int32_t)(((int64_t)(v->pitch - v->target) * KS_ENV_DEC[(P[V_GLIDE] ? P[V_GLIDE] : 34) >> 1]) >> 24);
     else v->pitch = v->target;
     voice_mods(v, m, fenv, menv);
     if (P[X_DRIFT]) {                           /* slow wandering of each oscillator */
@@ -608,7 +616,11 @@ static void voice_block(voice_t *v, int32_t *acc)
     qb.p1 = q8to15(pv(P[B_P1], m[D_BP1]));
     qb.p2 = q8to15(pv(P[B_P2], m[D_BP2]));
     qb.p3 = q8to15(pv(P[B_P3], m[D_BP3]));
-    qb.inc = pitch_inc(p + m[D_BPIT] + ((P[B_OCT] * 12 + P[B_SEMI]) << 8) + P[B_FINE] * 256 / 100 + ((v->drift_b * P[X_DRIFT]) >> 9));
+    qb.inc = pitch_inc(p + m[D_BPIT] + ((P[B_OCT] * 12 + P[B_SEMI]) << 8) + P[B_FINE] * 256 / 100 + ((v->drift_b * P[X_DRIFT]) >> 9)
+                       + (P[X_MODE] == 3 ? (pv(P[X_AMT], m[D_XMOD]) >> 8) * 6144 / 127 : 0));   /* (SYNC: X-MOD = +0..24 semitones) */
+    qa.sync = 0;
+    qb.sync = P[X_MODE] == 3;
+    if (qb.sync) { qb.mph = v->oa.ph[0]; qb.minc = qa.inc; qb.mrq = qb.inc / ((qa.inc >> 8) + 1u); }
     inc_sub = pitch_inc(p - (2 - P[S_OCT]) * 12 * 256);
     la = lvl15(pv(P[A_LVL], m[D_ALVL]) >> 8);
     lb = lvl15(pv(P[B_LVL], m[D_BLVL]) >> 8);
@@ -623,7 +635,10 @@ static void voice_block(voice_t *v, int32_t *acc)
         for (i = 0; i < (int32_t)KS_CB; i++) pmb[i] = (int32_t)(uint32_t)((int64_t)bufb[i] * xk);
     }
     if (la || P[X_MODE] == 1) osc_render(&v->oa, &qa, bufa, P[X_MODE] == 2 ? pmb : 0, KS_CB);
-    else for (i = 0; i < (int32_t)KS_CB; i++) bufa[i] = 0;
+    else {
+        for (i = 0; i < (int32_t)KS_CB; i++) bufa[i] = 0;
+        if (qb.sync) v->oa.ph[0] += qa.inc * KS_CB;   /* (A silent still leads B) */
+    }
     {
         int32_t ncoef = 32767 - (pv(P[N_COL], m[D_NCOL]) >> 8) * 250, rm = P[X_MODE] == 1;
         for (i = 0; i < (int32_t)KS_CB; i++) {
@@ -749,6 +764,103 @@ static void step_run(uint32_t beats)
     step_pos = (uint8_t)pos;
 }
 
+
+/* ================================================================ SEQ BASS and ARP (the voices' core, at each KS_CB)
+ * SEQ BASS: 16 patterns of up to 16 steps, each a note (C1 + 0..48), on or a rest, an accent, a slide into the next
+ * (no new attack, a glide). While it plays the keys transpose it (C4 = as written) and do not sound.
+ * ARP: the keys held (or HOLD) played one at a time on the tempo: UP, DOWN, UP-DN, RANDOM, ORDER, over 1..4
+ * octaves. Both run on ks_beats: on the MIDI clock with the LFOs. */
+typedef struct { uint8_t note[16], fl[16], len, rate, swing, pad; } seqpat_t;   /* 36 B */
+enum { SF_ON = 1, SF_ACC = 2, SF_SLIDE = 4 };
+#define SQ_NPAT 16u
+#define PF_MAGIC 0x5Bu
+static struct {                                 /* stored (the store's second sector): what plays, whatever the patch */
+    uint8_t magic, sum, cur, ar_on, ar_mode, ar_rate, ar_oct, ar_gate;
+    seqpat_t pat[SQ_NPAT];
+} perf;
+static volatile uint8_t sq_play, sq_rec;        /* playing (the voices say), step record (the main loop says) */
+static volatile uint8_t sq_show = 0xFF;         /* the step playing (the screen) */
+static int32_t sq_tr;                           /* the keys' transposition */
+static uint8_t sq_note = 0xFF, sq_slide, ar_held[16], ar_n, ar_was;
+static uint32_t sq_tick = 0xFFFFFFFFu, sq_step, sq_gate, ar_i;
+static void sq_off(void) { if (sq_note != 0xFF) note_off(sq_note); sq_note = 0xFF; sq_slide = 0; }
+static void sq_sound(uint32_t n, uint32_t vel, int slide_in, uint32_t gate)   /* (a slide: the new one, then the old one off) */
+{
+    uint8_t old = sq_note;
+    ks_slide = (uint8_t)slide_in;
+    note_on(n, vel);
+    ks_slide = 0;
+    if (old != 0xFF && old != n) note_off(old);
+    sq_note = (uint8_t)n;
+    sq_gate = gate;
+}
+static void ar_add(uint32_t n) { uint32_t i; for (i = 0; i < ar_n; i++) if (ar_held[i] == n) return; if (ar_n < 16u) ar_held[ar_n++] = (uint8_t)n; }
+static void ar_del(uint32_t n)
+{
+    uint32_t i;
+    for (i = 0; i < ar_n && ar_held[i] != n; i++) {}
+    if (i >= ar_n) return;
+    for (; i + 1u < ar_n; i++) ar_held[i] = ar_held[i + 1u];
+    ar_n--;
+}
+static void seq_step_on(void)
+{
+    if (sq_play) {
+        const seqpat_t *p = &perf.pat[perf.cur % SQ_NPAT];
+        uint32_t len = p->len >= 1u && p->len <= 16u ? p->len : 16u, f;
+        sq_step = (sq_step + 1u) % len;
+        sq_show = (uint8_t)sq_step;
+        f = p->fl[sq_step];
+        if (f & SF_ON) {
+            int slide = sq_slide;
+            sq_sound((uint32_t)clampi(24 + p->note[sq_step] + sq_tr, 0, 127), f & SF_ACC ? 127u : 90u, slide, 0x800000u);
+            sq_slide = (uint8_t)(f & SF_SLIDE);
+        } else sq_off();
+        return;
+    }
+    {                                           /* ARP */
+        uint8_t so[16];
+        uint32_t i, j, n = ar_n, oct = perf.ar_oct % 4u + 1u, tot = n * oct, k, nt;
+        for (i = 0; i < n; i++) so[i] = ar_held[i];
+        if (perf.ar_mode != 4u)                 /* (ORDER: as played; the others from the lowest) */
+            for (i = 1; i < n; i++) for (j = i; j > 0 && so[j - 1u] > so[j]; j--) { uint8_t t = so[j]; so[j] = so[j - 1u]; so[j - 1u] = t; }
+        switch (perf.ar_mode) {
+        case 1: k = tot - 1u - ar_i % tot; break;
+        case 2: { uint32_t per = tot > 1u ? 2u * tot - 2u : 1u, q = ar_i % per; k = q < tot ? q : per - q; break; }
+        case 3: k = (rnd() >> 8) % tot; break;
+        default: k = ar_i % tot; break;
+        }
+        ar_i++;
+        nt = so[k % n] + 12u * (k / n);
+        sq_show = (uint8_t)(k & 15u);
+        sq_sound(nt > 127u ? 127u : nt, 100u, 0, (uint32_t)clampi(perf.ar_gate, 1, 10) * 0x199999u);
+        sq_slide = perf.ar_gate >= 10u;
+    }
+}
+static void seq_clock(uint32_t beats)
+{
+    const seqpat_t *p = &perf.pat[perf.cur % SQ_NPAT];
+    uint32_t rate = sq_play ? p->rate : perf.ar_rate, sw = sq_play ? p->swing : 0u, tick, fr;
+    uint64_t t = (uint64_t)beats * STEP_PB[rate % 6u];
+    if (ar_was && !perf.ar_on) ar_n = 0;        /* (the ARP turned off: what it held is let go) */
+    ar_was = perf.ar_on;
+    if (!sq_play && !(perf.ar_on && ar_n)) {
+        if (sq_note != 0xFF) sq_off();
+        sq_tick = 0xFFFFFFFFu;
+        sq_show = 0xFF;
+        ar_i = 0;
+        return;
+    }
+    tick = (uint32_t)(t >> 24);
+    fr = (uint32_t)t & 0xFFFFFFu;
+    if (sw && (tick & 1u)) {                    /* swing: the odd steps late by up to half a step */
+        uint32_t s = (sw > 50u ? 50u : sw) * 167772u;
+        if (fr < s) { tick--; fr += 0x1000000u; } else fr -= s;
+    }
+    if (tick != sq_tick) { sq_tick = tick; seq_step_on(); }
+    if (sq_note != 0xFF && !sq_slide && fr >= sq_gate) { note_off(sq_note); sq_note = 0xFF; }
+}
+
 /* all the voices for n samples (core 1's job) -> dst, mono */
 static void voices_render(int32_t *dst, uint32_t n, uint32_t t0, uint32_t budget)
 {
@@ -756,9 +868,21 @@ static void voices_render(int32_t *dst, uint32_t n, uint32_t t0, uint32_t budget
     while (ev_r != ev_w) {
         uint32_t e = evq[ev_r % 64u], t = e & 255u, a = (e >> 8) & 255u, b = e >> 16;
         ev_r++;
-        if (t == EV_ON) note_on(a, b);
-        else if (t == EV_OFF) note_off(a);
-        else if (t == EV_PANIC) { for (k = 0; k < NVOICE; k++) { vo[k].on = 0; vo[k].ea.st = 0; vo[k].ea.lv = 0; } nheld = 0; }
+        if (t == EV_ON) {
+            if (sq_play && !sq_rec) sq_tr = (int32_t)a - 60;   /* (the SEQ plays: the keys transpose it) */
+            else if (perf.ar_on && !sq_play) ar_add(a);
+            else note_on(a, b);
+        } else if (t == EV_OFF) {
+            if (sq_play && !sq_rec) {}
+            else if (perf.ar_on && !sq_play) ar_del(a);
+            else note_off(a);
+        } else if (t == EV_SEQ) {
+            sq_off();
+            sq_play = (uint8_t)a;
+            sq_step = 0xFFFFFFFFu;
+            sq_tick = 0xFFFFFFFFu;
+            if (a && b) ks_beats = 0;           /* (the internal clock: from the bar, the LFOs too) */
+        } else if (t == EV_PANIC) { for (k = 0; k < NVOICE; k++) { vo[k].on = 0; vo[k].ea.st = 0; vo[k].ea.lv = 0; } nheld = 0; ar_n = 0; sq_note = 0xFF; }
         else if (t == EV_SYNC) ks_beats = a ? b * 699051u : 0u;   /* (the MIDI clock: its tick, 1/24 beat) */
     }
     for (k = 0; k < NVOICE; k++) on += vo[k].on;
@@ -782,6 +906,7 @@ static void voices_render(int32_t *dst, uint32_t n, uint32_t t0, uint32_t budget
         lfo_run(0, ks_beats);
         lfo_run(1, ks_beats);
         step_run(ks_beats);
+        seq_clock(ks_beats);
         for (k = 0; k < KS_CB; k++) acc[k] = 0;
         for (k = 0; k < NVOICE; k++)
             if (vo[k].on) { voice_block(&vo[k], acc); any = 1; }

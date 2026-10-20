@@ -1,6 +1,6 @@
 // every factory preset: two notes (G1, C3) held 1.2 s, released 0.6 s -> peak, RMS, clipped samples, DC
 import fs from "fs";
-const { instance } = await WebAssembly.instantiate(fs.readFileSync("build/web/ksub.wasm"), {});
+const { instance } = await WebAssembly.instantiate(fs.readFileSync(process.argv[2] || "build/web/ksub.wasm"), {});
 const x = instance.exports;
 x.ksub_init();
 const blocks = s => Math.round(s * 44100 / 256);
