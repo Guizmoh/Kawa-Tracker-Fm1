@@ -66,8 +66,9 @@ La page `ARP` › PRESETS montre la banque A, `ARP` encore la banque B (`K1` dé
 - PURE : dans l'esprit de Pure SUB, onglet vert-jaune, grand visuel, 4 anneaux pour les 4 potards ;
 - RACK : rail des pages à gauche, gros caractères.
 
-`SYSTEM › PALETTE` donne 4 palettes par thème : la sienne, une variante (AMBER, OCEAN, PURE RED, MAGMA), noir et blanc,
-et inversé (noir sur blanc). `SYSTEM › FONT` : SANS (DejaVu Sans Bold) ou MONO (IBM Plex Mono).
+`SYSTEM › PALETTE` donne 6 palettes par thème : la sienne, une variante (AMBER, OCEAN, PURE RED, MAGMA), SYNTHWAVE,
+MINT, noir et blanc, et inversé (noir sur blanc). `SYSTEM › FONT` : SANS (DejaVu Sans Bold), MONO (IBM Plex Mono),
+HYPER (Atkinson Hyperlegible Mono, faite pour être lue par tous) ou PIXEL (Press Start 2P, nette à 8 px).
 
 **Visuels.** Chaque vue montre ce qu'elle règle : forme d'onde de chaque oscillateur et du sub, enveloppes (avec un
 point qui suit la note jouée), courbe du filtre (avec le cutoff modulé en direct), LFO (avec leur position),
@@ -84,13 +85,13 @@ reste appuyé, jusqu'à 16 en arrière.
 
 ## Installer sur le FM-1
 
-Le paquet est [`install/k-wa-sub-0.5.fwsc`](install/k-wa-sub-0.5.fwsc) (identité `FM-1_975` ; les anciens dans `install/older/`). Il s'installe exactement
+Le paquet est [`install/k-wa-sub-0.6.fwsc`](install/k-wa-sub-0.6.fwsc) (identité `FM-1_976` ; les anciens dans `install/older/`). Il s'installe exactement
 comme KAWA, avec le même chargeur de mise à jour, et fonctionne depuis le firmware d'origine comme depuis KAWA :
 
 - **Dans le navigateur** (Chrome ou Edge, Web MIDI) : la page d'installation de KAWA ([`../index.html`](../index.html)),
-  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.5.fwsc`.
+  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.6.fwsc`.
 - **Avec Python 3** : `INSTALL-Linux.sh`, `INSTALL-Mac.command` ou `INSTALL-Windows.bat` dans ce dossier (ou
-  `python3 install/fm1_install.py install/k-wa-sub-0.5.fwsc`).
+  `python3 install/fm1_install.py install/k-wa-sub-0.6.fwsc`).
 
 Un câble USB **de données**, aucun autre logiciel MIDI ouvert, rien à débrancher avant la fin. Pour revenir à KAWA :
 installer `kawa-0.5.fwsc` de la même façon. Pour le firmware officiel : M-UPGRADE, comme décrit pour KAWA. En cas de
@@ -135,7 +136,7 @@ cd source
 python3 tools/gen_ksub.py        # tables (hauteurs, filtre, enveloppes, tables d'onde) et polices
 web/make_emulator.sh             # -> ../emulator/index.html (clang avec la cible wasm32 et wasm-ld)
 tools/get_toolchain.sh           # la chaîne JieLi (une fois), + les 3 fichiers du SDK AC79 (voir ../../source/BUILDING.md)
-./build.sh --release 0.2         # -> build/k-wa-sub-0.5.fwsc, avec toutes les vérifications de KAWA
+./build.sh --release 0.2         # -> build/k-wa-sub-0.6.fwsc, avec toutes les vérifications de KAWA
 tests/run_loader_tests.sh        # la mise à jour sur l'ordinateur (de KAWA vers K-WA SUB, coupure, paquet abîmé...)
 tests/run_stress.sh              # chaque preset, chaque paramètre aux extrêmes, sous UBSan : aucun entier ne déborde
 node tests/shots.mjs && python3 tests/png.py   # les écrans de tests/tour.txt -> build/shots/sheet.png, et un WAV

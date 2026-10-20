@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""K-WA SUB: the fixed-point tables and the screen fonts (DejaVu Sans Bold; IBM Plex Mono SemiBold, SIL OFL).
+"""K-WA SUB: the fixed-point tables and the screen fonts (DejaVu Sans Bold; IBM Plex Mono SemiBold, Atkinson Hyperlegible Mono, Press Start 2P: SIL OFL).
 
     python3 tools/gen_ksub.py      -> firmware/gen/ksub_tables.h, firmware/gen/ksub_fonts.h
 
@@ -134,7 +134,9 @@ def gen_tables():
 
 # ---------------------------------------------------------------- fonts
 FONTS = [("F", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", [("XS", 8, 126), ("S", 9, 126), ("M", 11, 126), ("B", 16, 126), ("L", 21, 95)]),
-         ("G", str(ROOT / "assets/fonts/IBMPlexMono-SemiBold.ttf"), [("XS", 9, 126), ("S", 10, 126), ("M", 12, 126), ("B", 16, 126), ("L", 20, 95)])]
+         ("G", str(ROOT / "assets/fonts/IBMPlexMono-SemiBold.ttf"), [("XS", 9, 126), ("S", 10, 126), ("M", 12, 126), ("B", 16, 126), ("L", 20, 95)]),
+         ("H", str(ROOT / "assets/fonts/AtkinsonHyperlegibleMono.ttf"), [("XS", 9, 126), ("S", 10, 126), ("M", 12, 126), ("B", 16, 126), ("L", 20, 95)]),
+         ("P", str(ROOT / "assets/fonts/PressStart2P-Regular.ttf"), [("XS", 8, 126), ("S", 8, 126), ("M", 8, 126), ("B", 16, 126), ("L", 16, 95)])]
 
 
 def gen_fonts():
@@ -143,7 +145,7 @@ def gen_fonts():
          "typedef struct { uint8_t h, first, last; const uint8_t *adv; const uint16_t *off; const uint8_t *data; } ks_font_t;\n"]
     for fam, path, sizes in FONTS:
       for nm, sz, last in sizes:
-        nm = nm if fam == "F" else "G" + nm
+        nm = nm if fam == "F" else fam + nm
         f = ImageFont.truetype(path, sz)
         asc, desc = f.getmetrics()
         cap = f.getbbox("H")[1]          # the empty rows above the capitals are cut

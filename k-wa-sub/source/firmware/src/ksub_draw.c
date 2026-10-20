@@ -407,7 +407,7 @@ static void draw_cell(const view_t *v, int32_t x, int32_t y, int32_t w, int32_t 
     g_box(x, y, w, h, sel ? K_LIMED : K_PANEL, sel ? K_LIME : K_LINE);
     if (k >= 0) {
         char kn[3] = {'K', (char)('1' + k), 0};
-        g_rect(x + 5, y + 5, 5, 5, theme_pal >= 2u ? K_WHITE : KNOB_RGB[k]);
+        g_rect(x + 5, y + 5, 5, 5, theme_pal >= 4u ? K_WHITE : KNOB_RGB[k]);
         g_text(T_XS, x + 13, y + 4, kn, K_GREY);
     }
     if (tag) {
@@ -480,9 +480,11 @@ static void presets_g(uint32_t bank, int32_t x, int32_t y0, int32_t w, int32_t h
             if (h >= 30) {
                 g_text(T_XS, x + 8, y + h - 11, e, K_CYAN);
                 g_text_r(T_XS, x + w - 16, y + h - 11, L_STYLE[clampi(pp[P_STYLE], 0, NSTYLE - 1)], K_MOD);
-            } else {
-                g_text_r(T_XS, x + w - 14, y + h / 2 - 8, L_STYLE[clampi(pp[P_STYLE], 0, NSTYLE - 1)], k == c ? K_LIME : K_GREY);
-                g_text_r(T_XS, x + w - 14, y + h / 2 + 1, e, K_CYAN);
+            } else {                            /* (only what fits beside the name: wide fonts) */
+                const char *st = L_STYLE[clampi(pp[P_STYLE], 0, NSTYLE - 1)];
+                int32_t room = w - 30 - g_text_w(f, b);
+                if (g_text_w(T_XS, st) < room) g_text_r(T_XS, x + w - 14, y + h / 2 - 8, st, k == c ? K_LIME : K_GREY);
+                if (g_text_w(T_XS, e) < room) g_text_r(T_XS, x + w - 14, y + h / 2 + 1, e, K_CYAN);
             }
         }
         if (set.bank == bank && set.idx == k) { /* the one playing */
@@ -596,10 +598,10 @@ static void th_studio(const view_t *v, uint32_t vi)
             char b[24];
             if (!g_vis(y, 24)) continue;
             item_text(id, b);
-            g_rect(5, y + 5, 6, 6, theme_pal >= 2u ? K_WHITE : KNOB_RGB[i]);
+            g_rect(5, y + 5, 6, 6, theme_pal >= 4u ? K_WHITE : KNOB_RGB[i]);
             g_text(T_S, 16, y + 3, id == I_L1RATE ? "WOB RATE" : id == L1_DEP ? "WOB DEPTH" : item_name(id), i == c ? K_LIME : K_GREY);
             g_text_r(T_M, 235, y + 2, b, K_WHITE);
-            g_bar(16, y + 17, 219, 4, item_frac(id), theme_pal >= 2u ? K_WAVE : KNOB_RGB[i]);
+            g_bar(16, y + 17, 219, 4, item_frac(id), theme_pal >= 4u ? K_WAVE : KNOB_RGB[i]);
         }
     } else if (v->lay == LY_PRESET) presets_g(vi - PAGE_V0[PG_PRE], 3, 70, 234, 28, 31, 5, T_S);
     else if (v->lay == LY_SAVE) save_g(6, 98, 228, 70);

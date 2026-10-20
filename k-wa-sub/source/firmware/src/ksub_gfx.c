@@ -9,10 +9,10 @@ static int32_t g_y0;
 static uint32_t g_hash[NBAND];
 static uint8_t g_force = 1, g_tx;
 
-/* the colours: four palettes for each theme (ksub_draw.c): its own, another, black and white, and inverted */
+/* the colours: six palettes for each theme (ksub_draw.c): its own, another, SYNTHWAVE, MINT, black and white, inverted */
 enum { KC_BG, KC_PANEL, KC_LINE, KC_LIME, KC_LIMED, KC_CYAN, KC_WHITE, KC_GREY, KC_TRACK, KC_ORANGE, KC_WAVE, KC_INK, KC_MOD, KC_N };
 #define C3(r, g, b) RGB(r, g, b)
-static const uint16_t PALS[10][KC_N] = {
+static const uint16_t PALS[12][KC_N] = {
     /* CLASSIC: NEON, AMBER */
     {C3(11,18,20), C3(17,27,30), C3(40,56,60), C3(200,240,60), C3(30,40,20), C3(80,216,208), C3(236,242,242), C3(130,146,148), C3(36,52,56), C3(240,140,60), C3(200,240,60), C3(11,18,20), C3(170,140,250)},
     {C3(18,12,6), C3(30,20,10), C3(66,44,20), C3(255,170,40), C3(52,34,10), C3(255,214,140), C3(250,238,220), C3(170,140,110), C3(60,40,20), C3(255,90,60), C3(255,170,40), C3(18,12,6), C3(255,214,140)},
@@ -25,6 +25,9 @@ static const uint16_t PALS[10][KC_N] = {
     /* RACK: RACK, MAGMA */
     {C3(8,10,12), C3(20,24,27), C3(40,46,50), C3(210,245,70), C3(32,42,16), C3(90,220,210), C3(250,250,250), C3(150,160,164), C3(40,46,50), C3(240,140,60), C3(90,220,210), C3(8,10,12), C3(175,145,255)},
     {C3(10,8,8), C3(26,18,16), C3(56,36,30), C3(255,120,40), C3(50,24,12), C3(255,214,80), C3(255,246,236), C3(170,140,120), C3(56,36,30), C3(255,60,60), C3(255,214,80), C3(10,8,8), C3(255,170,120)},
+    /* for every theme: SYNTHWAVE, MINT */
+    {C3(18,8,30), C3(32,16,52), C3(70,40,100), C3(255,70,200), C3(60,20,70), C3(80,230,255), C3(250,236,255), C3(170,140,200), C3(64,36,90), C3(255,160,60), C3(255,70,200), C3(18,8,30), C3(80,230,255)},
+    {C3(8,20,16), C3(14,34,28), C3(34,70,58), C3(120,255,190), C3(20,60,44), C3(255,230,140), C3(230,255,244), C3(120,170,150), C3(30,64,52), C3(255,140,90), C3(120,255,190), C3(8,20,16), C3(255,230,140)},
     /* MONO: white on black (classic), INVERT: black on white */
     {C3(0,0,0), C3(16,16,16), C3(70,70,70), C3(255,255,255), C3(48,48,48), C3(200,200,200), C3(255,255,255), C3(140,140,140), C3(50,50,50), C3(255,255,255), C3(255,255,255), C3(0,0,0), C3(200,200,200)},
     {C3(255,255,255), C3(236,236,236), C3(180,180,180), C3(0,0,0), C3(210,210,210), C3(60,60,60), C3(0,0,0), C3(110,110,110), C3(205,205,205), C3(0,0,0), C3(0,0,0), C3(255,255,255), C3(80,80,80)},
@@ -36,7 +39,7 @@ static void theme_set(uint32_t t, uint32_t pal)
 {
     uint32_t i, k;
     theme = (uint8_t)(t < 4u ? t : 0u);
-    theme_pal = (uint8_t)(pal < 4u ? pal : 0u);
+    theme_pal = (uint8_t)(pal < 6u ? pal : 0u);
     k = theme_pal < 2u ? theme * 2u + theme_pal : 6u + theme_pal;
     for (i = 0; i < KC_N; i++) kc[i] = PALS[k][i];
 }
@@ -54,10 +57,13 @@ static void theme_set(uint32_t t, uint32_t pal)
 #define K_INK kc[KC_INK]
 #define K_MOD kc[KC_MOD]
 
-/* the fonts: two families (DejaVu Sans Bold, IBM Plex Mono SemiBold), five sizes */
-static const ks_font_t *const FAMS[2][5] = {{&F_XS, &F_S, &F_M, &F_B, &F_L}, {&F_GXS, &F_GS, &F_GM, &F_GB, &F_GL}};
+/* the fonts: four families (SANS DejaVu Sans Bold, MONO IBM Plex Mono, HYPER Atkinson Hyperlegible Mono, PIXEL
+ * Press Start 2P), five sizes */
+static const ks_font_t *const FAMS[4][5] = {{&F_XS, &F_S, &F_M, &F_B, &F_L}, {&F_GXS, &F_GS, &F_GM, &F_GB, &F_GL},
+                                           {&F_HXS, &F_HS, &F_HM, &F_HB, &F_HL}, {&F_PXS, &F_PS, &F_PM, &F_PB, &F_PL}};
+static uint8_t g_bold;                          /* (HYPER is light: drawn twice, a pixel apart) */
 static const ks_font_t *tf[5] = {&F_XS, &F_S, &F_M, &F_B, &F_L};
-static void font_set(uint32_t f) { uint32_t i; for (i = 0; i < 5u; i++) tf[i] = FAMS[f & 1u][i]; }
+static void font_set(uint32_t f) { uint32_t i; for (i = 0; i < 5u; i++) tf[i] = FAMS[f & 3u][i]; g_bold = (f & 3u) == 2u; }
 #define T_XS tf[0]
 #define T_S tf[1]
 #define T_M tf[2]
@@ -154,6 +160,7 @@ static int32_t g_text(const ks_font_t *f, int32_t x, int32_t y, const char *s, u
                     int32_t px = x + (int32_t)gx;
                     v = (gx & 1u) ? (v & 15u) : (v >> 4);
                     if (v && (uint32_t)px < 240u) row[px] = v >= 15u ? c : g_mix(row[px], c, v * 17u);
+                    if (v && g_bold && (uint32_t)(px + 1) < 240u) row[px + 1] = v >= 15u ? c : g_mix(row[px + 1], c, v * 17u);
                 }
             }
         }
