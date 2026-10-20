@@ -14,7 +14,7 @@
 enum { PG_PLAY, PG_BASS, PG_ENV, PG_FILT, PG_LFO, PG_FX, PG_PRE, PG_SYS, NPAGE };
 static const uint8_t PAGE_BTN[NPAGE] = {BTN_HOME, BTN_EDIT, BTN_ENV, BTN_SEQ, BTN_LFO, BTN_FX, BTN_ARP, BTN_GLO};
 enum { LY_PLAY, LY_LIST, LY_BOX, LY_STEP, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
-enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_ACCEL, G_C3COL, G_UI, G_ASK, G_ZOOM,
+enum { I_L1RATE = 200, I_L2RATE, I_ABMIX, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_ACCEL, G_C3COL, G_UI, G_ASK, G_ZOOM, G_MLEARN, G_MMAP, G_MSTART, G_MPROG, G_MCLK,
        G_SQ_STEP, G_SQ_NOTE, G_SQ_TYPE, G_SQ_PAT, G_SQ_LEN, G_SQ_RATE, G_SQ_SWING,   /* SEQ BASS */
        G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE,                          /* ARP */
        G_LV_FLT, G_LV_PUMP, G_LV_STUT, G_LV_TAPE, G_LV_PRATE, G_LV_FRES,             /* SEL: FX LIVE */
@@ -35,7 +35,7 @@ static const view_t VIEWS[] = {
     OSCV("A", A), OSCV("B", B),
     {LY_LIST, "OSCILLATOR C \xB7 SAMPLE", 4, {SM_SEL, SM_LVL, SM_TUNE, SM_KEY}, "EDIT"},
     {LY_LIST, "SUB + NOISE", 6, {S_LVL, S_OCT, S_WAVE, N_LVL, N_COL, S_ROUTE}, "EDIT"},
-    {LY_LIST, "COMBINE A + B", 8, {X_AMT, X_MODE, A_LVL, B_LVL, V_GLIDE, V_MODE, X_DRIFT, X_RESET}, "EDIT"},
+    {LY_LIST, "COMBINE A + B", 9, {X_MODE, A_LVL, B_LVL, I_ABMIX, X_AMT, V_GLIDE, V_MODE, X_DRIFT, X_RESET}, "EDIT"},
     {LY_BOX, "AMP ENVELOPE", 4, {AE_A, AE_D, AE_S, AE_R}, "ENV"},
     {LY_BOX, "FILTER ENVELOPE", 4, {FE_A, FE_D, FE_S, FE_R}, "ENV"},
     {LY_BOX, "MOD ENVELOPE", 4, {ME_A, ME_D, ME_AMT, ME_DST}, "ENV"},
@@ -57,13 +57,14 @@ static const view_t VIEWS[] = {
     {LY_PRESET, "PRESET BANK B", 0, {0}, "PRESET"},
     {LY_SAVE, "SAVE PATCH", 0, {0}, "PRESET"},
     {LY_LIST, "ARPEGGIATOR", 5, {G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE}, "ARP"},
-    {LY_SYS, "GLOBAL SETUP", 19, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_UI, G_ASK, G_THEME, G_PAL, G_FONT, G_ZOOM, G_C3COL, G_GRID, G_BROWSE,
-                                  G_MIDICH, V_BEND, V_VEL, G_CLOCK, G_CORES, G_CPU}, "SYSTEM"},
+    {LY_SYS, "GLOBAL SETUP", 17, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_UI, G_ASK, G_THEME, G_PAL, G_FONT, G_ZOOM, G_C3COL, G_GRID, G_BROWSE,
+                                  V_BEND, V_VEL, G_CORES, G_CPU}, "SYSTEM"},
+    {LY_SYS, "MIDI", 7, {G_MLEARN, G_MMAP, G_MIDICH, G_CLOCK, G_MSTART, G_MPROG, G_MCLK}, "SYSTEM"},
 };
 /* what K1..K4 turn: the first four rows (the preset lists and SAVE have their own) */
 static uint32_t vknob(const view_t *v, uint32_t i) { return v->lay == LY_PRESET || v->lay == LY_SAVE || i >= v->n ? I_NONE : v->it[i]; }
 static const uint8_t FX_ON[7] = {DR_ON, CP_ON, CR_ON, CH_ON, PH_ON, DL_ON, RV_ON};   /* the FX page's views, in order */
-static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 7, 10, 13, 17, 25, 29, 30};   /* each page's first view */
+static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 7, 10, 13, 17, 25, 29, 31};   /* each page's first view */
 #define V_SEQ 12u                               /* SEQ BASS (the SEQ button's third view), ARP (the ARP button's last) */
 #define V_ARP 28u
 static const char *const FX_TITLE[8] = {"SATURATION", "COMPRESSOR", "BITCRUSH", "CHORUS", "PHASER", "DELAY", "REVERB", "MASTER"};
@@ -99,7 +100,8 @@ static struct {
     uint8_t c3col;                              /* SHIFT's three columns: 0 the theme's colour, 1 green / yellow / orange */
     uint8_t ui, ask;                            /* UI MODE: 0 CLASSIC, 1 SHIFT; ask which at each start */
     uint8_t zoom;                               /* LOUPE: the rows' and values' type as big as they fit */
-} set = {6, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0, 0, {0}, 1, 0, KS_B, 1, 0};
+    uint8_t mstart, mprog, mclk;                /* MIDI: start/stop the SEQ, program change loads, the clock out */
+} set = {6, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0, 0, {0}, 1, 0, KS_B, 1, 0, 1, 1, 0};
 static char pname[14];
 static uint8_t page, vcur[NPAGE], cursor[sizeof VIEWS / sizeof VIEWS[0]], pre_cur[2], save_slot, save_pos, hold;
 static uint8_t key_note[27], latched[128], phys[128];
@@ -208,6 +210,8 @@ static void mc_defaults(void)
     perf.mc_magic = MC_MAGIC;
 }
 /* ---- the SEL windows: 1 FX LIVE, 2 MACROS (SEL again: the next, then back to the page) */
+static uint8_t ml_state, ml_id;                 /* MIDI LEARN: 1 waits for a setting, 2 for a CC; the setting */
+static uint32_t cc_count(void) { uint32_t k, n = 0; if (perf.cc_magic == 0x43u) for (k = 0; k < 16u; k++) n += perf.cc_num[k] != 0xFFu; return n; }
 static uint8_t win, win_cur, mc_pos;            /* the window, its row (FX LIVE), the target being edited (MACROS: 0..31) */
 static const uint8_t LV_IT[6] = {G_LV_FLT, G_LV_PUMP, G_LV_STUT, G_LV_TAPE, G_LV_PRATE, G_LV_FRES};
 static void perf_defaults(void)
@@ -370,8 +374,8 @@ static const col3_t COL3[NPAGE] = {
                  {{F_CUT, I_L1RATE, L1_DEP, F_RES}, {S_LVL, DR_AMT, DL_MIX, MS_VOL}, {A_P1, B_P1, X_AMT, F_ENV}},
                  {{"CUT", "RT", "DP", "RES"}, {"SUB", "SAT", "DLY", "VOL"}, {"A1", "B1", "XM", "ENV"}}},
     [PG_BASS] = {"EDIT \xB7 OSCILLATORS", {"MIX", "OSC A", "OSC B"},
-                 {{A_LVL, B_LVL, S_LVL, X_AMT}, {A_P1, A_P2, A_P3, A_SEMI}, {B_P1, B_P2, B_P3, B_SEMI}},
-                 {{"A", "B", "SUB", "XM"}, {0, 0, 0, "PT"}, {0, 0, 0, "PT"}}},
+                 {{A_LVL, B_LVL, I_ABMIX, X_AMT}, {A_P1, A_P2, A_P3, A_SEMI}, {B_P1, B_P2, B_P3, B_SEMI}},
+                 {{"A", "B", "A/B", "XM"}, {0, 0, 0, "PT"}, {0, 0, 0, "PT"}}},
     [PG_ENV] = {"ENVELOPES", {"AMP", "FILTER", "MOD"},
                 {{AE_A, AE_D, AE_S, AE_R}, {FE_A, FE_D, FE_S, FE_R}, {ME_A, ME_D, ME_AMT, ME_DST}},
                 {{"A", "D", "S", "R"}, {"A", "D", "S", "R"}, {"A", "D", "AMT", "DST"}}},
@@ -445,7 +449,7 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
     if (item_patch(id)) { *lo = PD[id].lo; *hi = PD[id].hi; return; }
     *lo = 0;
-    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE || id == G_C3COL || id == G_UI || id == G_ASK || id == G_ZOOM ? 1 : id == G_ACCEL ? 2 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 7 : id == G_OCT ? 6 : 0;
+    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE || id == G_C3COL || id == G_UI || id == G_ASK || id == G_ZOOM || id == G_MLEARN || id == G_MSTART || id == G_MPROG || id == G_MCLK ? 1 : id == G_MMAP ? 16 : id == I_ABMIX ? 127 : id == G_ACCEL ? 2 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 7 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
     if (id >= G_SQ_STEP && id <= G_AR_GATE) {
         static const int8_t LO[12] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1}, HI[12] = {15, 48, 4, 15, 16, 5, 50, 1, 4, 5, 3, 10};
@@ -478,6 +482,16 @@ static int32_t item_get(uint32_t id)
     case G_UI: return set.ui;
     case G_ASK: return set.ask;
     case G_ZOOM: return set.zoom;
+    case G_MLEARN: return ml_state != 0;
+    case G_MMAP: return (int32_t)cc_count();
+    case G_MSTART: return set.mstart;
+    case G_MPROG: return set.mprog;
+    case G_MCLK: return set.mclk;
+    case I_ABMIX: {                             /* A/B MIX: from the two levels (the louder one is the scale) */
+        int32_t a = patch[A_LVL], b = patch[B_LVL];
+        if (!a && !b) return 64;
+        return a >= b ? b * 64 / a : 127 - a * 63 / b;
+    }
     case G_SQ_STEP: return sq_cur_step;
     case G_SQ_NOTE: return sq_pat()->note[sq_cur_step & 15u];
     case G_SQ_TYPE: return (int32_t)sq_type(sq_pat()->fl[sq_cur_step & 15u]);
@@ -563,6 +577,18 @@ static void item_set(uint32_t id, int32_t v)
     case G_UI: set.ui = (uint8_t)v; c3_show[page] = (uint8_t)v; vcur[page] = 0; break;
     case G_ASK: set.ask = (uint8_t)v; break;
     case G_ZOOM: set.zoom = (uint8_t)v; font_set(set.font, set.zoom); g_force = 1; break;
+    case G_MLEARN: ml_state = (uint8_t)v; toast(v ? "LEARN: TURN A KNOB" : "LEARN OFF"); return;
+    case G_MMAP: if (!v) { memset(perf.cc_num, 0xFF, sizeof perf.cc_num); perf_touch(); toast("CC MAP CLEARED"); } return;
+    case G_MSTART: set.mstart = (uint8_t)v; break;
+    case G_MPROG: set.mprog = (uint8_t)v; break;
+    case G_MCLK: set.mclk = (uint8_t)v; break;
+    case I_ABMIX: {                             /* the louder of A and B stays, the other follows the balance */
+        int32_t a = patch[A_LVL], b = patch[B_LVL], l = a > b ? a : b;
+        if (!l) l = 100;
+        item_set(A_LVL, v <= 64 ? l : l * (127 - v) / 63);
+        item_set(B_LVL, v >= 64 ? l : l * v / 64);
+        return;
+    }
     default: return;
     }
     set_dirty = 1;
@@ -600,6 +626,12 @@ static const char *item_name(uint32_t id)
     case G_UI: return "UI MODE";
     case G_ASK: return "ASK AT START";
     case G_ZOOM: return "LOUPE";
+    case G_MLEARN: return "MIDI LEARN";
+    case G_MMAP: return "CC MAP";
+    case G_MSTART: return "START / STOP";
+    case G_MPROG: return "PROGRAM CHANGE";
+    case G_MCLK: return "CLOCK OUT";
+    case I_ABMIX: return "A / B MIX";
     case G_FW: return "FIRMWARE";
     case G_SQ_STEP: return "STEP";
     case G_SQ_NOTE: return "NOTE";
@@ -635,7 +667,7 @@ static const char *item_sname(uint32_t id)
     if (k) return ENG_P[e][k - 1];
     if (id == I_L1RATE || id == I_L2RATE) return "RATE";
     if (item_patch(id)) return PD[id].sname;
-    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : id == G_ACCEL ? "ACCEL" : id == G_C3COL ? "COLOURS" : id == G_UI ? "UI" : id == G_ASK ? "ASK" : id == G_ZOOM ? "LOUPE" : id == G_SQ_TYPE ? "TYPE" : id == G_SQ_PAT ? "PAT" : id == G_SQ_LEN ? "LEN" : id == G_AR_OCT ? "OCT" : item_name(id);
+    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : id == G_ACCEL ? "ACCEL" : id == G_C3COL ? "COLOURS" : id == G_UI ? "UI" : id == G_ASK ? "ASK" : id == G_ZOOM ? "LOUPE" : id == G_MLEARN ? "LEARN" : id == G_MMAP ? "CC MAP" : id == I_ABMIX ? "A/B" : id == G_SQ_TYPE ? "TYPE" : id == G_SQ_PAT ? "PAT" : id == G_SQ_LEN ? "LEN" : id == G_AR_OCT ? "OCT" : item_name(id);
 }
 static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
 {
@@ -721,6 +753,15 @@ static void item_text(uint32_t id, char *b)
         case G_UI: str_cat(b, v ? "SHIFT (3 COLUMNS)" : "CLASSIC"); break;
         case G_ASK: str_cat(b, v ? "YES" : "NO"); break;
         case G_ZOOM: str_cat(b, v ? "ON (BIG TYPE)" : "OFF"); break;
+        case G_MLEARN: str_cat(b, ml_state == 1u ? "TURN A KNOB" : ml_state == 2u ? "SEND A CC" : "OFF"); break;
+        case G_MMAP: if (v) { b = fmt_u(b, (uint32_t)v, 0); str_cat(b, v > 1 ? " CCS \xB7 LEFT: CLEAR" : " CC \xB7 LEFT: CLEAR"); } else str_cat(b, "EMPTY"); break;
+        case G_MSTART: str_cat(b, v ? "PLAYS THE SEQ" : "IGNORED"); break;
+        case G_MPROG: str_cat(b, v ? "LOADS A PRESET" : "IGNORED"); break;
+        case G_MCLK: str_cat(b, v ? "SENT (INTERNAL)" : "OFF"); break;
+        case I_ABMIX:
+            if (v == 64) { str_cat(b, "A = B"); break; }
+            b = str_cat(b, "A "); b = fmt_u(b, (uint32_t)(v <= 64 ? 100 : (127 - v) * 100 / 63), 0);
+            b = str_cat(b, "% B "); b = fmt_u(b, (uint32_t)(v >= 64 ? 100 : v * 100 / 64), 0); str_cat(b, "%"); break;
         case G_FONT: { static const char *const FN[4] = {"SANS", "MONO", "HYPER", "PIXEL"}; str_cat(b, FN[v & 3]); break; }
         case G_CPU:                             /* each core's share of a block, and the governor's step */
             b = str_cat(b, "C0 "); b = fmt_u(b, ks_load[0], 0); b = str_cat(b, "%");
@@ -765,7 +806,7 @@ static void item_text(uint32_t id, char *b)
     case FM_SEMI: b = v && PD[rid].lo < 0 ? fmt_s(b, v) : fmt_u(b, (uint32_t)(v < 0 ? -v : v), 0); str_cat(b, " st"); break;
     case FM_CENT: b = v ? fmt_s(b, v) : fmt_u(b, 0, 0); str_cat(b, " ct"); break;
     case FM_TIME: {
-        uint32_t t = KS_ENV_MS10[v];
+        uint32_t t = rid == V_GLIDE ? KS_GLIDE_MS10[v] : KS_ENV_MS10[v];
         if (rid == V_GLIDE && !v) { str_cat(b, "OFF"); break; }
         if (t < 100u) { b = fmt_u(b, t / 10u, 0); *b++ = '.'; b = fmt_u(b, t % 10u, 0); str_cat(b, " ms"); }
         else if (t < 10000u) { b = fmt_u(b, t / 10u, 0); str_cat(b, " ms"); }
@@ -921,6 +962,7 @@ static void edit_item(uint32_t id, int32_t d)
     int32_t lo, hi, v = item_get(id), step = 1;
     uint32_t k;
     if (id == I_NONE || id == G_CPU || id == G_FW) return;
+    if (ml_state == 1u && id != G_MLEARN && id != G_MMAP) { ml_id = (uint8_t)id; ml_state = 2; toast("LEARN: SEND A CC"); }
     k = fx_on_of(id);                           /* an effect (or STEP) that is off comes on when its setting goes up */
     if (k && !patch[k] && d > 0) {
         char t[24];
@@ -1333,8 +1375,32 @@ static void ui_input(void)
     prev_keys = now;
 }
 
-/* ---- MIDI in: notes, CC, bend, pressure, the clock */
+/* ---- MIDI in: notes, CC (learnt ones first), bend, pressure, the clock, start / stop, program change */
 static uint32_t clk_last, clk_per, clk_n;
+static int midi_learnt(uint32_t cc, uint32_t v)  /* 1: a CC learnt (it moves its setting) */
+{
+    uint32_t k;
+    if (perf.cc_magic != 0x43u) return 0;
+    if (ml_state == 2u) {                       /* (learning: this CC goes to the setting turned) */
+        char t[24], *p;
+        for (k = 0; k < 16u && perf.cc_num[k] != cc && perf.cc_num[k] != 0xFFu; k++) {}
+        if (k == 16u) k = 15u;
+        perf.cc_num[k] = (uint8_t)cc; perf.cc_id[k] = ml_id;
+        ml_state = 0;
+        perf_touch();
+        p = str_cat(t, "CC "); p = fmt_u(p, cc, 0); p = str_cat(p, " > "); str_cat(p, item_name(ml_id));
+        toast(t);
+        return 1;
+    }
+    for (k = 0; k < 16u; k++)
+        if (perf.cc_num[k] == cc) {
+            int32_t lo, hi;
+            item_range(perf.cc_id[k], &lo, &hi);
+            item_set(perf.cc_id[k], lo + (int32_t)v * (hi - lo) / 127);
+            return 1;
+        }
+    return 0;
+}
 static void midi_in(void)
 {
     uint8_t st, d1, d2;
@@ -1351,14 +1417,22 @@ static void midi_in(void)
             clk_last = t;
             continue;
         }
-        if (st == 0xFA) { clk_n = 0; ev_push(EV_SYNC, 0, 0); continue; }
+        if (st == 0xFA) { clk_n = 0; ev_push(EV_SYNC, 0, 0); if (set.mstart) seq_play(1); continue; }
+        if (st == 0xFB) { if (set.mstart) ev_push(EV_SEQ, 1, 0); continue; }   /* (continue: from where it is) */
+        if (st == 0xFC) { if (set.mstart) seq_play(0); continue; }
         if (st >= 0xF0) continue;
         if (set.midich && ch != set.midich) continue;
         if (ty == 0x90 && d2) ev_push(EV_ON, d1, d2);
         else if (ty == 0x80 || ty == 0x90) ev_push(EV_OFF, d1, 0);
         else if (ty == 0xE0) ks_bend = (((int32_t)d2 << 7 | d1) - 8192) * 4;
         else if (ty == 0xD0) ks_press = d1 * 258;
+        else if (ty == 0xC0) {                  /* program change: bank A, then the user's B */
+            if (!set.mprog) continue;
+            if (d1 < NFACTORY) { load_preset(0, d1); toast(pname); }
+            else if (up_valid(d1 - NFACTORY)) { load_preset(1, d1 - NFACTORY); toast(pname); }
+        }
         else if (ty == 0xB0) {
+            if (midi_learnt(d1, d2)) continue;
             switch (d1) {
             case 1: ks_wheel = d2 * 258; break;
             case 74: patch[F_CUT] = (int8_t)d2; pdirty = 1; break;
@@ -1371,7 +1445,20 @@ static void midi_in(void)
     }
 }
 
-static void app_poll(void) { midi_in(); }
+static void midi_clock_out(void)                /* CLOCK OUT (internal clock): 24 a beat, start and stop with the SEQ */
+{
+    static uint32_t last = 0xFFFFFFFFu;
+    static uint8_t was;
+    uint32_t now = (uint32_t)(((uint64_t)ks_beats * 24u) >> 24), n;
+    if (!set.mclk || set.clock) { last = 0xFFFFFFFFu; return; }
+    if (sq_play != was) { was = sq_play; midi_send(sq_play ? 0xFAu : 0xFCu, 0, 0); }
+    if (last == 0xFFFFFFFFu) last = now;
+    n = (now + 1152u - last) % 1152u;           /* (ks_beats: 48 beats round) */
+    if (n > 8u) n = 1u;                         /* (the main loop was away: no burst) */
+    while (n--) midi_send(0xF8u, 0, 0);
+    last = now;
+}
+static void app_poll(void) { midi_in(); midi_clock_out(); }
 static int app_sysex(const uint8_t *p, uint32_t n) { (void)p; (void)n; return 0; }
 
 /* ================================================================ the main loop */
@@ -1381,14 +1468,14 @@ static void app_init(void)
     uint32_t i;
     int ok;
     {                                           /* (a save from before a field was added: the fields it has, the rest as is) */
-        const uint32_t LEN[4] = {sizeof set, (uint32_t)((uint8_t *)&set.zoom - (uint8_t *)&set), (uint32_t)((uint8_t *)&set.ui - (uint8_t *)&set),
-                                 (uint32_t)((uint8_t *)&set.accel - (uint8_t *)&set)};
-        for (ok = 0, i = 0; i < 4u && !ok; i++) ok = !settings_load(&set, LEN[i]) && set.ver == 6u;
+        const uint32_t LEN[5] = {sizeof set, (uint32_t)((uint8_t *)&set.mstart - (uint8_t *)&set), (uint32_t)((uint8_t *)&set.zoom - (uint8_t *)&set),
+                                 (uint32_t)((uint8_t *)&set.ui - (uint8_t *)&set), (uint32_t)((uint8_t *)&set.accel - (uint8_t *)&set)};
+        for (ok = 0, i = 0; i < 5u && !ok; i++) ok = !settings_load(&set, LEN[i]) && set.ver == 6u;
     }
     if (!ok) {
         set.theme = set.pal = set.font = set.grid = set.browse = 0;
         memset(set.fav, 0, sizeof set.fav);
-        set.ver = 6; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1; set.accel = 1; set.c3col = 0; set.ui = KS_B; set.ask = 1; set.zoom = 0;
+        set.ver = 6; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1; set.accel = 1; set.c3col = 0; set.ui = KS_B; set.ask = 1; set.zoom = 0; set.mstart = 1; set.mprog = 1; set.mclk = 0;
     }
     set.cores = set.cores ? 1u : 0u;
     theme_set(set.theme, set.pal);
@@ -1403,6 +1490,7 @@ static void app_init(void)
     if (perf.magic != PF_MAGIC || perf.sum != perf_sum()) perf_defaults();
     perf.ar_on = 0;                             /* (the ARP starts off: a key does what it says) */
     if (perf.mc_magic != MC_MAGIC) mc_defaults();
+    if (perf.cc_magic != 0x43u) { memset(perf.cc_num, 0xFF, sizeof perf.cc_num); perf.cc_magic = 0x43u; }
     load_preset(set.bank, set.idx);
     if (set.bank && !up_valid(set.idx)) load_preset(0, 0);
     pre_cur[set.bank] = set.idx;

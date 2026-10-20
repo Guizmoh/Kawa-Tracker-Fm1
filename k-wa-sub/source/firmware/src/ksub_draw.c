@@ -11,7 +11,7 @@ enum { VZ_NONE, VZ_SCOPE, VZ_OSCA, VZ_OSCB, VZ_SUB, VZ_MIX, VZ_ENV0, VZ_ENV1, VZ
        VZ_SEQ, VZ_SMP, VZ_DRIVE, VZ_CRUSH, VZ_CHORUS, VZ_DELAY, VZ_REVERB, VZ_MASTER, VZ_COMP, VZ_PHASER, VZ_CPU };
 static const uint8_t VZ_OF[] = {VZ_SCOPE, VZ_SCOPE, VZ_OSCA, VZ_OSCB, VZ_SMP, VZ_SUB, VZ_MIX, VZ_ENV0, VZ_ENV1, VZ_ENV2, VZ_FILT, VZ_FILT,
                                 VZ_SEQ, VZ_LFO1, VZ_LFO2, VZ_STEP, VZ_NONE, VZ_DRIVE, VZ_COMP, VZ_CRUSH, VZ_CHORUS, VZ_PHASER,
-                                VZ_DELAY, VZ_REVERB, VZ_MASTER, VZ_NONE, VZ_NONE, VZ_NONE, VZ_NONE, VZ_CPU};
+                                VZ_DELAY, VZ_REVERB, VZ_MASTER, VZ_NONE, VZ_NONE, VZ_NONE, VZ_NONE, VZ_CPU, VZ_NONE};
 static const char *const PAGE_SHORT[NPAGE] = {"PLAY", "BASS", "ENV", "FILT", "LFO", "FX", "PRE", "SYS"};
 static const uint16_t KNOB_RGB[4] = {RGB(255, 92, 92), RGB(255, 204, 64), RGB(92, 226, 116), RGB(84, 164, 255)};
 static int16_t live[224];
@@ -70,6 +70,7 @@ static int32_t dest_of(uint32_t id)             /* the destination that moves th
     case DL_FB: return D_DLFB; case DL_TONE: return D_DLTONE; case DL_MIX: return D_DLMIX; case RV_SIZE: return D_RVSIZE;
     case RV_DAMP: return D_RVDAMP; case RV_MIX: return D_RVMIX; case MS_GLUE: return D_GLUE; case MS_SUB: return D_SUBB;
     case MS_VOL: return D_VOL; case I_L1RATE: return D_L1RATE; case I_L2RATE: return D_L2RATE;
+    case CP_AMT: return D_CPAMT; case PH_RATE: return D_PHRATE; case PH_DEP: return D_PHDEP; case PH_MIX: return D_PHMIX;
     default: return -1;
     }
 }
@@ -499,7 +500,9 @@ static const char *view_title(uint32_t vi, char *t, char *sub)
         str_cat(p, " \xB7 K3 LOADS");
         return "SELECT PATCH";
     case LY_SAVE: p = str_cat(sub, "TO USER SLOT B"); fmt_u(p, save_slot + 1u, 2); return pname;
-    case LY_SYS: str_cat(sub, "DNB / DUB / DUBSTEP / TECHNO EDITION"); return "DEVICE SETUP";
+    case LY_SYS:
+        if (vi != PAGE_V0[PG_SYS]) { str_cat(sub, "LEARN \xB7 CHANNEL \xB7 CLOCK \xB7 START / STOP \xB7 PROGRAM"); return "MIDI"; }
+        str_cat(sub, "DNB / DUB / DUBSTEP / TECHNO EDITION"); return "DEVICE SETUP";
     case LY_LFO: {
         uint32_t k = vi - PAGE_V0[PG_LFO];
         const int8_t *q = patch + k * LFO_2;

@@ -19,7 +19,7 @@ function run(until) {
     ms += 256 / 44.1;
   }
 }
-for (const [t, cmd, a, b] of script) {
+for (const [t, cmd, a, b, ...rest] of script) {
   run(+t);
   if (cmd === "btn") { x.ksub_button(+a, 1); x.ksub_step(); x.ksub_button(+a, 0); }
   else if (cmd === "down") x.ksub_button(+a, 1);
@@ -27,6 +27,7 @@ for (const [t, cmd, a, b] of script) {
   else if (cmd === "on") { keys |= 1 << +a; x.ksub_keys(keys); }
   else if (cmd === "off") { keys &= ~(1 << +a); x.ksub_keys(keys); }
   else if (cmd === "enc") x.ksub_turn(+a, +b);
+  else if (cmd === "midi") x.ksub_midi(+a, +b, +rest[0]);
   else if (cmd === "shot") { run(ms + 80); fs.writeFileSync(`build/shots/${a}.raw`, Buffer.from(new Uint8Array(x.memory.buffer, x.ksub_screen(), 115200))); }
   else if (cmd === "end") break;
 }

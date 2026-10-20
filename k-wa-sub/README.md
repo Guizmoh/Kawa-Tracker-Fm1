@@ -55,7 +55,7 @@ droite, le genre et les moteurs de chaque patch.
 | `LFO` | 05 LFO | LFO 1 WOBBLE · LFO 2 · STEP FX · matrice |
 | `FX` | 06 FX | saturation · compresseur · crush · chorus · phaser · delay · reverb · master |
 | `ARP` | 07 PRESETS | banque A (usine) · banque B (utilisateur) · **ARP** |
-| `GLO` | 08 SYSTEM | canal MIDI, mode de voix, glide, bend, vélocité, tempo, horloge, octave, style |
+| `GLO` | 08 SYSTEM · MIDI | canal MIDI, mode de voix, glide, bend, vélocité, tempo, horloge, octave, style |
 
 Les points en haut à droite de l'écran montrent les vues de la page (la vue affichée est allumée). **Banques et presets.** L'encodeur `PRESETS` ne marche que sur `HOME` et `EDIT` (pour ne rien changer par erreur
 ailleurs) ; il parcourt la banque A puis les patches enregistrés de la banque B, en boucle. Si le son a été modifié
@@ -103,7 +103,7 @@ sur le tempo, 1/4, 1/8, 1/2 ou 1 mesure, sur toute la sortie, reverb comprise), 
 étages par côté, RATE, DEPTH, FEEDBACK, MIX. **DELAY › TYPE** : PING-PONG, TAPE (pleurage, saturé, plus sombre),
 DIGITAL (net, stéréo), DUB (plus sombre, plus long). **REVERB › TYPE** : ROOM, HALL (celle d'avant), PLATE (dense,
 claire), SPRING (ressort : bande médium dans des peignes courts, pour le dub). Réglages modulables par les LFO :
-COMP AMOUNT, PHASER RATE / DEPTH / MIX. **GLIDE** (durée) : `EDIT › COMBINE` (5e ligne) et `SYSTEM`. Les patches
+COMP AMOUNT, PHASER RATE / DEPTH / MIX. **GLIDE** (durée, 5 ms à 2 s ; vers 40 ms à mi-course basse, 350 ms aux trois quarts ; une voix qui ne jouait plus glisse depuis la dernière note, sauf en LEGATO) : `EDIT › COMBINE` et `SYSTEM`. **A / B MIX** (`EDIT › COMBINE`, `K4`, à côté de MODE et des niveaux A et B) : la balance entre les deux oscillateurs, le plus fort des deux garde son niveau. Les patches
 utilisateur gardent ces nouveaux réglages (dans le 2e secteur du stockage) ; ceux d'avant les ont éteints.
 
 **Nouveaux presets** : SYNC SWEEP (dubstep, sync modulée), PUMP HOUSE, PHASE DUB (phaser, delay TAPE, reverb SPRING),
@@ -245,10 +245,24 @@ bouton de la page (ou `SEL`) passe ensuite aux vues détaillées habituelles, pu
 | LFO | wob rate, depth, destination, grille | LFO 1 : forme, phase, lissage, retrig | LFO 2 : forme, rate, depth, destination |
 | FX | delay temps, feedback, mix, reverb | saturation type, quantité, mix, bits | glue, sub boost, volume, crush mix |
 
+## MIDI
+
+`GLO` (SYSTEM), 2e vue : **MIDI**.
+
+| Ligne | Ce qu'elle fait |
+|---|---|
+| MIDI LEARN | tourner à droite : arme ; puis tourner n'importe quel réglage (potard, ALGO, fenêtres) ; puis bouger un CC sur le contrôleur : ce CC pilote ce réglage sur toute sa plage (16 CC au plus, gardés) |
+| CC MAP | combien de CC sont appris ; tourner à gauche : tout effacer |
+| MIDI CHANNEL, CLOCK | comme avant (OMNI ou 1-16 ; horloge interne ou MIDI) |
+| START / STOP | Start / Stop / Continue d'un séquenceur ou d'un DAW lancent et arrêtent le SEQ BASS |
+| PROGRAM CHANGE | 0 à 50 : la banque A ; au-delà : les patches de la banque B |
+| CLOCK OUT | l'horloge interne envoyée (24 par temps) avec Start/Stop quand le SEQ part ou s'arrête |
+
+Les CC fixes (1 molette, 71 résonance, 74 cutoff, 76 vitesse et 77 profondeur du LFO 1, 123 tout couper) restent,
+sauf s'ils ont été appris pour autre chose.
+
 ## À faire
 
-- **Page MIDI** (prévue, pas encore faite) : canal par fonction, start/stop du SEQ par l'horloge MIDI, envoi de
-  l'horloge, CC appris, réponse aux program change.
 - MACROS (4 macros × 4 destinations), MORPH / XY.
 
 ## Installer sur le FM-1

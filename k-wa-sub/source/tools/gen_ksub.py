@@ -118,6 +118,10 @@ def gen_tables():
     o.append(arr("uint32_t", "KS_ENV_MS10", [round(t * 10) for t in tms], 8))
     o.append(arr("uint32_t", "KS_ENV_ATK", [min(2 ** 30, round(2 ** 30 * CB / (t / 1000 * FS))) for t in tms], 8))
     o.append(arr("uint32_t", "KS_ENV_DEC", [round(math.exp(-CB * math.log(1000) / (t / 1000 * FS)) * 2 ** 24) for t in tms], 8))
+    # glide: 0 off, 1..127 -> 5 ms .. 2 s (to 1 % of the way left), its own curve: the usual times in the knob's middle
+    gms = [5 * 400 ** (i / 127) for i in range(128)]
+    o.append(arr("uint32_t", "KS_GLIDE_MS10", [round(t * 10) for t in gms], 8))
+    o.append(arr("uint32_t", "KS_GLIDE_DEC", [round(math.exp(-CB * math.log(100) / (t / 1000 * FS)) * 2 ** 24) for t in gms], 8))
     # free LFO: 0..127 -> 0.02 .. 40 Hz, phase step per control block; Hz x 100 for the screen
     lf = [0.02 * (2000 ** (i / 127)) for i in range(128)]
     o.append(arr("uint32_t", "KS_LFO_INC", [round(f * CB / FS * 2 ** 32) for f in lf], 8))

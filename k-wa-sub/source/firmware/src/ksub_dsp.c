@@ -45,6 +45,7 @@ static struct {                                 /* stored (the store's second se
     seqpat_t pat[SQ_NPAT];                      /* (sum: up to here) */
     uint8_t mc_magic, mc_dst[16];               /* MACROS: four targets each (a destination, an amount) */
     int8_t mc_amt[16];
+    uint8_t cc_magic, cc_num[16], cc_id[16];    /* MIDI LEARN: a CC (0xFF: none) and what it moves */
 } perf;
 static volatile uint8_t mc_val[4];              /* the four macros now, 0..127 (K1..K4 in the MACROS window; not stored) */
 /* FX LIVE (not stored, all off at the start): DJ filter (- low pass, + high pass) and its resonance, PUMP (the
@@ -443,6 +444,7 @@ static voice_t vo[NVOICE];
 static uint8_t held[16], nheld;                 /* the keys held, the last on top (mono) */
 static uint32_t vage;
 static uint8_t ks_slide;                        /* (SEQ BASS) the next note_on slides: no new attack, a glide */
+static int32_t glide_from = -1;                 /* the last note started (Q8): where the next one glides from */
 
 static void voice_start(voice_t *v, uint32_t note, uint32_t vel, int legato)
 {
@@ -450,8 +452,11 @@ static void voice_start(voice_t *v, uint32_t note, uint32_t vel, int legato)
     v->vel = (uint8_t)vel;
     v->target = (int32_t)note << 8;
     v->slide = ks_slide && v->on && v->gate;
-    if (!v->on || (!patch[V_GLIDE] && !v->slide) || (patch[V_MODE] == VM_LEGATO && !legato && !v->slide))
+    if (!v->on && patch[V_GLIDE] && glide_from >= 0 && patch[V_MODE] != VM_LEGATO)
+        v->pitch = glide_from;              /* (a voice that was silent glides from the last note played) */
+    else if (!v->on || (!patch[V_GLIDE] && !v->slide) || (patch[V_MODE] == VM_LEGATO && !legato && !v->slide))
         v->pitch = v->target;               /* (MONO and POLY glide always, LEGATO only between held keys) */
+    glide_from = v->target;
     v->age = ++vage;
     if (legato && (patch[V_MODE] == VM_LEGATO || v->slide) && v->on && v->gate) return;   /* legato: no new attack */
     if (patch[X_RESET] && (!v->on || !v->ea.lv)) {
@@ -623,7 +628,7 @@ static void voice_block(voice_t *v, int32_t *acc)
     amp = env_run(&v->ea, (uint32_t)P[AE_A], (uint32_t)P[AE_D], P[AE_S] << 23, (uint32_t)P[AE_R]);
     if (!v->ea.st && !v->ea.lv) { v->on = 0; v->amp = 0; return; }
     if (P[V_GLIDE] || v->slide)                 /* (a SEQ slide without GLIDE: ~60 ms) */
-        v->pitch = v->target + (int32_t)(((int64_t)(v->pitch - v->target) * KS_ENV_DEC[(P[V_GLIDE] ? P[V_GLIDE] : 34) >> 1]) >> 24);
+        v->pitch = v->target + (int32_t)(((int64_t)(v->pitch - v->target) * KS_GLIDE_DEC[P[V_GLIDE] ? P[V_GLIDE] : 50]) >> 24);   /* (the time shown) */
     else v->pitch = v->target;
     voice_mods(v, m, fenv, menv);
     if (P[X_DRIFT]) {                           /* slow wandering of each oscillator */
