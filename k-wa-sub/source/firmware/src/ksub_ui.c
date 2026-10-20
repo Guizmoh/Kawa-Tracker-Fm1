@@ -6,11 +6,15 @@
  *   the page's button again, or SEL: its next view (OSC A, OSC B, SUB, COMBINE...)
  *   SELECT: the row   ALGORITHM: the row's value   K1..K4: what the footer says   PRESETS: the next patch
  *   PLAY: HOLD (the notes stay)   REC: TAP tempo   OCT- / OCT+: octave (both: all notes off)
- *   SAVE: save; held: UNDO (and again every 0.4 s while it stays held) */
+ *   SAVE: save; held: UNDO (and again every 0.4 s while it stays held)
+ * Held buttons (a loading bar says what comes): a page button 1.2 s: RANDOM on that page; with K1..K4: that page's
+ * knobs from anywhere (SHIFT); LFO or ENV held + a knob or ALGO: assigns LFO 1 / the mod envelope to it (QUICK ASSIGN);
+ * SEL held: hear the saved sound (COMPARE); ARP held: FAVORITE. Page buttons and SEL act on release. */
 enum { PG_PLAY, PG_BASS, PG_ENV, PG_FILT, PG_LFO, PG_FX, PG_PRE, PG_SYS, NPAGE };
 static const uint8_t PAGE_BTN[NPAGE] = {BTN_HOME, BTN_EDIT, BTN_ENV, BTN_SEQ, BTN_LFO, BTN_FX, BTN_ARP, BTN_GLO};
 enum { LY_PLAY, LY_LIST, LY_BOX, LY_STEP, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
-enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, I_NONE = 255 };
+enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE,
+       I_NONE = 255 };
 
 typedef struct {
     uint8_t lay;
@@ -46,7 +50,7 @@ static const view_t VIEWS[] = {
     {LY_PRESET, "PRESET BANK A", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_PRESET, "PRESET BANK B", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_SAVE, "SAVE PATCH", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
-    {LY_SYS, "GLOBAL SETUP", 13, {G_THEME, G_PAL, G_FONT, G_GRID, G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_CORES, G_CPU},
+    {LY_SYS, "GLOBAL SETUP", 14, {G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_CORES, G_CPU},
      {G_THEME, G_PAL, G_FONT, G_BPM}, "SYSTEM"},
 };
 static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 11, 15, 21, 24, 25};   /* each page's first view */
@@ -70,7 +74,8 @@ static struct {
     uint8_t bank, idx, cores;                   /* cores 1: both (the voices on core 1) */
     uint8_t theme, pal, font;                   /* CLASSIC STUDIO PURE RACK; its palettes; the font */
     uint8_t grid;                               /* LFO GRID: 0 ALL, 1 STRAIGHT (round divisions only) */
-} set = {5, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0};
+    uint8_t browse, fav[12];                    /* PRESETS: 0 all, 1 favorites only; the favorites (A then B) */
+} set = {6, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0, 0, {0}};
 static char pname[14];
 static uint8_t page, vcur[NPAGE], cursor[sizeof VIEWS / sizeof VIEWS[0]], pre_cur[2], save_slot, save_pos, hold;
 static uint8_t key_note[27], latched[128], phys[128];
@@ -188,6 +193,27 @@ static void undo(void)
     toast(t);
 }
 
+/* ---- favorites: a bit for each preset (A, then the user's B) */
+static uint32_t fav_i(uint32_t bank, uint32_t k) { return bank ? NFACTORY + k : k; }
+static int fav_is(uint32_t bank, uint32_t k) { uint32_t i = fav_i(bank, k); return i < 96u && (set.fav[i >> 3] >> (i & 7u) & 1u); }
+static int fav_any(void) { uint32_t i; for (i = 0; i < sizeof set.fav; i++) if (set.fav[i]) return 1; return 0; }
+
+/* ---- compare: SEL held plays the saved sound, released the edited one comes back */
+static int8_t cmp_buf[NP_MAX];
+static uint8_t cmp_on;
+
+/* ---- the value being turned, big, for a second (before -> after) */
+static uint8_t vpop_id;
+static uint32_t vpop_ms;
+static char vpop_before[24], vpop_pre[12];
+static uint32_t splash_until;
+static struct { uint8_t b, used, fired; uint32_t at, next; } hb = {0xFF, 0, 0, 0, 0};   /* the button held */
+static uint32_t hold_time(uint32_t b);
+#define PRE_BROWSING (page == PG_PRE && vcur[PG_PRE] < 2u)   /* (SAVE held there: a favorite) */
+static const char *hold_label(uint32_t b);
+static uint32_t ui_rng = 0x2545F491u;
+static uint32_t ui_rnd(void) { ui_rng ^= ui_rng << 13; ui_rng ^= ui_rng >> 17; ui_rng ^= ui_rng << 5; return ui_rng; }
+
 static void load_preset(uint32_t bank, uint32_t k)
 {
     int8_t p[NP_MAX];
@@ -235,7 +261,7 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
     if (item_patch(id)) { *lo = PD[id].lo; *hi = PD[id].hi; return; }
     *lo = 0;
-    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID ? 1 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
+    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE ? 1 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
 }
 static int32_t item_get(uint32_t id)
@@ -252,6 +278,7 @@ static int32_t item_get(uint32_t id)
     case G_PAL: return set.pal;
     case G_FONT: return set.font;
     case G_GRID: return set.grid;
+    case G_BROWSE: return set.browse;
     default: return 0;
     }
 }
@@ -278,6 +305,7 @@ static void item_set(uint32_t id, int32_t v)
     case G_PAL: set.pal = (uint8_t)v; theme_set(set.theme, set.pal); g_force = 1; break;
     case G_FONT: set.font = (uint8_t)v; font_set(set.font); g_force = 1; break;
     case G_GRID: set.grid = (uint8_t)v; ks_straight = set.grid; break;
+    case G_BROWSE: set.browse = (uint8_t)v; break;
     default: return;
     }
     set_dirty = 1;
@@ -309,6 +337,7 @@ static const char *item_name(uint32_t id)
     case G_PAL: return "PALETTE";
     case G_FONT: return "FONT";
     case G_GRID: return "LFO GRID";
+    case G_BROWSE: return "PRESETS";
     case G_FW: return "FIRMWARE";
     default: return "";
     }
@@ -320,7 +349,7 @@ static const char *item_sname(uint32_t id)
     if (k) return ENG_P[e][k - 1];
     if (id == I_L1RATE || id == I_L2RATE) return "RATE";
     if (item_patch(id)) return PD[id].sname;
-    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : "";
+    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : "";
 }
 static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
 {
@@ -398,6 +427,7 @@ static void item_text(uint32_t id, char *b)
         case G_THEME: { static const char *const TN[4] = {"CLASSIC", "STUDIO", "PURE", "RACK"}; str_cat(b, TN[v & 3]); break; }
         case G_PAL: { static const char *const PN[4] = {"SYNTHWAVE", "MINT", "BLACK / WHITE", "INVERTED"}; str_cat(b, v < 2 ? PAL_NAME[set.theme & 3][v] : PN[(v - 2) & 3]); break; }
         case G_GRID: str_cat(b, v ? "STRAIGHT" : "ALL (T, D)"); break;
+        case G_BROWSE: str_cat(b, v ? "FAVORITES" : "ALL"); break;
         case G_FONT: { static const char *const FN[4] = {"SANS", "MONO", "HYPER", "PIXEL"}; str_cat(b, FN[v & 3]); break; }
         case G_CPU:                             /* each core's share of a block, and the governor's step */
             b = str_cat(b, "C0 "); b = fmt_u(b, ks_load[0], 0); b = str_cat(b, "%");
@@ -553,10 +583,14 @@ static void edit_item(uint32_t id, int32_t d)
     if (item_patch(id) && PD[id].fmt == FM_DEST) { item_set(id, dst_step(v, d)); dpop_id = (uint8_t)id; dpop_ms = fm1_ms | 1u; return; }
     if (set.grid && (rate_like(id) == L1_DIV || rate_like(id) == L2_DIV)) {   /* STRAIGHT: from round to round */
         int32_t i, at = 0;
+        if (vpop_id != (uint8_t)id || !vpop_ms) { item_text(id, vpop_before); vpop_id = (uint8_t)id; }
+        vpop_ms = fm1_ms | 1u;
         for (i = 0; i < 9; i++) if (DIV_STRAIGHT[i] == DIV_NEAR[v & 15]) at = i;
         item_set(id, DIV_STRAIGHT[clampi(at + d, 0, 8)]);
         return;
     }
+    if (id != G_CPU && (vpop_id != (uint8_t)id || !vpop_ms)) { item_text(id, vpop_before); vpop_id = (uint8_t)id; }
+    vpop_ms = fm1_ms | 1u;
     item_range(id, &lo, &hi);
     if (hi - lo > 40 && fm1_ms - last_turn_ms < 45u) step = id == G_BPM ? 10 : 3;   /* fast: bigger steps */
     last_turn_ms = fm1_ms;
@@ -574,8 +608,9 @@ static void preset_step(int32_t d)              /* bank A then the user's saved 
 {
     uint32_t n = NFACTORY + NUSER, at = pend_on ? (pend_bank ? NFACTORY + pend_k : pend_k) : (set.bank ? NFACTORY + set.idx : set.idx);
     uint32_t st = d < 0 ? n - 1u : 1u, cnt = (uint32_t)(d < 0 ? -d : d);
+    int fo = set.browse && fav_any();          /* (FAVORITES: only those) */
     while (cnt--)
-        do at = (at + st) % n; while (at >= NFACTORY && !up_valid(at - NFACTORY));
+        do at = (at + st) % n; while ((at >= NFACTORY && !up_valid(at - NFACTORY)) || (fo && !fav_is(at >= NFACTORY, at >= NFACTORY ? at - NFACTORY : at)));
     ask_load(at >= NFACTORY, at >= NFACTORY ? at - NFACTORY : at);
 }
 static void save_open(void)
@@ -662,6 +697,7 @@ static void on_enc(uint32_t e, int32_t d)
     if (v->lay == LY_PRESET) {
         uint32_t bank = vi - PAGE_V0[PG_PRE], n = bank ? NUSER : NFACTORY;
         if (e == ENC_SELECT || e == ENC_KNOB1) pre_cur[bank] = (uint8_t)clampi(pre_cur[bank] + d, 0, (int32_t)n - 1);
+        else if (e == ENC_KNOB2) { item_set(G_BROWSE, d > 0); toast(set.browse ? "BROWSE: FAVORITES" : "BROWSE: ALL"); }
         else if (e == ENC_KNOB3 || e == ENC_ALGORITHM) ask_load(bank, pre_cur[bank]);
         return;
     }
@@ -692,19 +728,146 @@ static void on_enc(uint32_t e, int32_t d)
     }
 }
 
+static int page_of_btn(uint32_t b) { uint32_t i; for (i = 0; i < NPAGE; i++) if (PAGE_BTN[i] == b) return (int)i; return -1; }
+static int holdable(uint32_t b) { return page_of_btn(b) >= 0 || b == BTN_SAVE || b == BTN_SEL; }
+static uint32_t hold_time(uint32_t b)           /* how long until the held action (0: none, only combos) */
+{
+    if (b == BTN_SAVE) return PRE_BROWSING ? 700u : 600u;
+    if (b == BTN_SEL) return 400u;
+    if (b == BTN_ARP) return 0u;
+    if (b == BTN_LFO || b == BTN_ENV) return 0u;   /* (they wait for a knob: QUICK ASSIGN) */
+    return 1200u;
+}
+static const char *hold_label(uint32_t b)
+{
+    static char t[32];
+    int pg = page_of_btn(b);
+    if (b == BTN_SAVE && PRE_BROWSING) { uint32_t bk = vcur[PG_PRE] ? 1u : 0u;
+        return fav_is(bk, pre_cur[bk]) ? "REMOVE FROM FAVORITES" : "ADD TO FAVORITES"; }
+    if (b == BTN_SAVE) return "UNDO";
+    if (b == BTN_SEL) return "COMPARE: THE SAVED SOUND";
+    if (b == BTN_LFO) return "TURN A KNOB: LFO 1 ON IT";
+    if (b == BTN_ENV) return "TURN A KNOB: MOD ENV ON IT";
+    str_cat(str_cat(t, "RANDOM "), PAGE_SHORT[pg >= 0 ? pg : 0]);
+    return t;
+}
+
+/* QUICK ASSIGN (as Pure SUB's drag and drop): LFO 1 (or the mod envelope) onto what this knob moves, the turn
+ * sets how much */
+static void quick_assign(uint32_t src, uint32_t id, int32_t d)
+{
+    int32_t dst = dest_of(id);
+    uint32_t pd = src == BTN_LFO ? L1_DST : ME_DST, pa = src == BTN_LFO ? L1_DEP : ME_AMT;
+    char t[32], *p;
+    if (dst < 0) { toast("NOT A DESTINATION"); return; }
+    if (patch[pd] != dst) { undo_mark(pd); patch[pd] = (int8_t)dst; patch[pa] = 0; }
+    undo_mark(pa);
+    patch[pa] = (int8_t)clampi(patch[pa] + d * 2, -64, 63);
+    if ((dst == D_DRAMT || dst == D_DRMIX) && !patch[DR_ON]) patch[DR_ON] = 1;
+    p = str_cat(t, src == BTN_LFO ? "LFO1 > " : "ENV > ");
+    p = str_cat(p, dst_name((uint32_t)dst));
+    *p++ = ' ';
+    item_text(pa, p);
+    toast(t);
+}
+/* RANDOM: the page's view shaken by about a quarter (lists move one time in five; switches and destinations stay) */
+static void randomize(uint32_t pg)
+{
+    static const uint8_t PLAYR[] = {A_P1, A_P2, A_P3, B_P1, B_P2, B_P3, F_CUT, F_RES, X_AMT, L1_DIV, L1_SHP, L1_DEP};
+    const view_t *v = &VIEWS[PAGE_V0[pg] + vcur[pg]];
+    const uint8_t *it = pg == PG_PLAY ? PLAYR : v->it;
+    uint32_t n = pg == PG_PLAY ? sizeof PLAYR : v->n, i;
+    undo_push();
+    undo_id = 0xFFFFu;
+    for (i = 0; i < n; i++) {
+        uint32_t id = it[i];
+        int32_t lo, hi, r;
+        if (id >= NP || PD[id].fmt == FM_DEST || PD[id].list == L_ONOFF || id == V_MODE || id == P_STYLE) continue;
+        lo = PD[id].lo; hi = PD[id].hi;
+        if (PD[id].fmt == FM_LIST || PD[id].fmt == FM_DIV) {
+            if (ui_rnd() % 5u == 0u) patch[id] = (int8_t)(lo + (int32_t)(ui_rnd() % (uint32_t)(hi - lo + 1)));
+            continue;
+        }
+        r = (hi - lo) / 4 + 1;
+        patch[id] = (int8_t)clampi(patch[id] + (int32_t)(ui_rnd() % (uint32_t)(2 * r + 1)) - r, lo, hi);
+    }
+    pdirty = 1;
+    prev_dirty = 1;
+    toast("RANDOM \xB7 SAVE HELD = UNDO");
+}
+static void compare(int on)
+{
+    if (on) {
+        int8_t p[NP_MAX];
+        char nm[14];
+        if (!pdirty) { toast("UNCHANGED"); return; }
+        memcpy(cmp_buf, patch, NP_MAX);
+        if (set.bank) { memcpy(p, ustore[set.idx].p, NP_MAX); patch_sanitize(p); }
+        else preset_factory(set.idx, p, nm);
+        memcpy(patch, p, NP_MAX);
+        cmp_on = 1;
+    } else if (cmp_on) {
+        memcpy(patch, cmp_buf, NP_MAX);
+        cmp_on = 0;
+    }
+    prev_dirty = 1;
+}
+static void favorite(void)                       /* the preset under the PRESETS cursor */
+{
+    uint32_t bk = vcur[PG_PRE] ? 1u : 0u, k = pre_cur[bk], i = fav_i(bk, k);
+    if (i >= 96u || (bk && !up_valid(k))) { toast("EMPTY SLOT"); return; }
+    set.fav[i >> 3] ^= (uint8_t)(1u << (i & 7u));
+    set_dirty = 1;
+    set_ms = fm1_ms;
+    toast(fav_is(bk, k) ? "* FAVORITE" : "NOT A FAVORITE");
+}
+
 static void ui_input(void)
 {
     uint32_t rel, pr = fm1_input_edges(&rel), b, k, now = fm1_in.notes, ne = fm1_input_note_edges();
     int32_t d;
-    for (b = 0; b < 14u; b++) if ((pr & (1u << b)) && b != BTN_SAVE) on_button(b);
-    {                                           /* SAVE: a tap saves (on release), held 0.6 s undoes, and on */
-        static uint32_t at, next;
-        static uint8_t down, undone;
-        if (pr & (1u << BTN_SAVE)) { down = 1; undone = 0; at = fm1_ms; next = 600u; }
-        if (down && (fm1_in.buttons & (1u << BTN_SAVE)) && fm1_ms - at >= next) { undo(); undone = 1; next += 400u; }
-        if (rel & (1u << BTN_SAVE)) { if (down && !undone) on_button(BTN_SAVE); down = 0; }
+    for (b = 0; b < 14u; b++) {
+        if (!(pr & (1u << b))) continue;
+        splash_until = 0;
+        if (holdable(b) && hb.b == 0xFF && !pend_on) { hb.b = (uint8_t)b; hb.used = hb.fired = 0; hb.at = fm1_ms; hb.next = hold_time(b); }
+        else if (!holdable(b) || pend_on) on_button(b);
     }
-    for (b = 0; b < 7u; b++) if ((d = fm1_enc_take(b)) != 0) on_enc(b, d);
+    if (hb.b != 0xFF) {                         /* a button held: its action when the bar is full */
+        uint32_t held = (fm1_in.buttons >> hb.b) & 1u;
+        if (held && !hb.used && hb.next && fm1_ms - hb.at >= hb.next) {
+            if (hb.b == BTN_SAVE && PRE_BROWSING) { favorite(); hb.next = 0; }
+            else if (hb.b == BTN_SAVE) { undo(); hb.next += 400u; }
+            else if (hb.b == BTN_SEL) { compare(1); hb.next = 0; }
+            else { randomize((uint32_t)page_of_btn(hb.b)); hb.next = 0; }
+            hb.fired = 1;
+        }
+        if ((rel >> hb.b) & 1u || !held) {
+            uint32_t bb = hb.b;
+            hb.b = 0xFF;
+            if (cmp_on) compare(0);
+            else if (!hb.used && !hb.fired) on_button(bb);
+        }
+    }
+    for (b = 0; b < 7u; b++) if ((d = fm1_enc_take(b)) != 0) {
+        if (cmp_on) continue;                   /* (comparing: nothing changes) */
+        if (hb.b != 0xFF && (hb.b == BTN_LFO || hb.b == BTN_ENV) && ((b >= ENC_KNOB1 && b <= ENC_KNOB4) || b == ENC_ALGORITHM)) {
+            const view_t *v = view();
+            uint32_t id = b == ENC_ALGORITHM ? (v->n ? v->it[cursor[vidx()]] : I_NONE) : v->k[b - ENC_KNOB1];
+            hb.used = 1;
+            if (id != I_NONE) quick_assign(hb.b, rate_like(id), d);
+            continue;
+        }
+        if (hb.b != 0xFF && page_of_btn(hb.b) >= 0 && b >= ENC_KNOB1 && b <= ENC_KNOB4) {   /* SHIFT: that page's knobs */
+            uint32_t pg = (uint32_t)page_of_btn(hb.b), id = VIEWS[PAGE_V0[pg] + vcur[pg]].k[b - ENC_KNOB1];
+            hb.used = 1;
+            if (id == I_NONE || VIEWS[PAGE_V0[pg] + vcur[pg]].lay >= LY_PRESET) continue;
+            str_cat(str_cat(vpop_pre, PAGE_SHORT[pg]), " \xB7 ");
+            edit_item(id, d);
+            continue;
+        }
+        vpop_pre[0] = 0;
+        on_enc(b, d);
+    }
     for (k = 0; k < 27u; k++) {
         uint32_t m = 1u << k;
         if ((ne & m) || ((now & m) && !(prev_keys & m))) {
@@ -764,9 +927,10 @@ static uint32_t ui_frame_ms, prev_ms;
 static void app_init(void)
 {
     uint32_t i;
-    if (settings_load(&set, sizeof set) || set.ver != 5u) {
-        set.theme = set.pal = set.font = set.grid = 0;
-        set.ver = 5; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1;
+    if (settings_load(&set, sizeof set) || set.ver != 6u) {
+        set.theme = set.pal = set.font = set.grid = set.browse = 0;
+        memset(set.fav, 0, sizeof set.fav);
+        set.ver = 6; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1;
     }
     set.cores = set.cores ? 1u : 0u;
     theme_set(set.theme, set.pal);
@@ -801,6 +965,7 @@ static void app_init(void)
     if (!set.cores) dual_mark[0] = dual_mark[1] = 0;
 #endif
     booted = 1;
+    splash_until = fm1_ms + 2200u;            /* the start screen: the last patch, the cores */
     g_force = 1;
 }
 
@@ -809,7 +974,8 @@ static void app_step(void)
     ui_input();
     if (toast_ms && (int32_t)(fm1_ms - toast_ms) > 1400) toast_ms = 0;
     if (pend_on && fm1_ms - pend_ms > 6000u) { pend_on = 0; toast("KEPT"); }
-    if (dpop_ms && (int32_t)(fm1_ms - dpop_ms) > 1500) dpop_ms = 0;   /* (toast_ms can be 1 ms ahead: | 1) */
+    if (dpop_ms && (int32_t)(fm1_ms - dpop_ms) > 1500) dpop_ms = 0;
+    if (vpop_ms && (int32_t)(fm1_ms - vpop_ms) > 1000) vpop_ms = 0;   /* (toast_ms can be 1 ms ahead: | 1) */
     if (prev_dirty && fm1_ms - prev_ms > 60u) { prev_dirty = 0; prev_ms = fm1_ms; preview_make(); }
     if (fm1_ms - ui_frame_ms >= 33u) {          /* ~30 frames a second, only what changed is sent */
         ui_frame_ms = fm1_ms;
@@ -821,6 +987,12 @@ static void app_step(void)
         settings_write();
     }
 #if KS_DUAL
+    if (c1_failed) {                            /* core 1 stalled (no sound, frozen LFOs): one core, kept */
+        c1_failed = 0;
+        set.cores = 0; set_dirty = 1; set_ms = fm1_ms;
+        dual_mark[0] = dual_mark[1] = 0;
+        toast("CORE 1 STUCK: ONE CORE");
+    }
     if (dual_on && dual_mark[0] && fm1_ms - dual_ms > 10000u) dual_mark[0] = dual_mark[1] = 0;   /* 10 s on two cores: it holds */
 #endif
 }

@@ -468,7 +468,7 @@ static void presets_g(uint32_t bank, int32_t x, int32_t y0, int32_t w, int32_t h
         const char *nm = bank ? (up_valid(k) ? ustore[k].name : "- EMPTY -") : FACTORY[k].name;
         if (!g_vis(y, h)) continue;
         p = fmt_u(b, k + 1u, 2);
-        *p++ = ' '; *p++ = ' ';
+        *p++ = fav_is(bank, k) ? '*' : ' '; *p++ = ' ';
         str_cat(p, nm);
         g_box(x, y, w, h, k == c ? K_LIMED : K_PANEL, k == c ? K_LIME : K_LINE);
         g_text(f, x + 8, y + (h >= 30 ? 4 : (h - f->h) / 2 + 1), b, k == c ? K_LIME : K_WHITE);
@@ -792,6 +792,39 @@ static void draw_all(void)
         g_text_c(T_XS, 120, 168, e, K_CYAN);
         g_text_c(T_XS, 120, 188, "SEL = LOAD \xB7 OTHER BUTTON = KEEP", K_LIME);
         g_text_c(T_XS, 120, 200, "PRESETS: ANOTHER ONE", K_GREY);
+    }
+    if (vpop_ms && !dpop_ms && !pend_on && g_vis(72, 66)) {   /* the value turned, big: before -> now */
+        char now[24], t[40];
+        str_cat(str_cat(t, vpop_pre), item_name(vpop_id));
+        item_text(vpop_id, now);
+        g_box(20, 72, 200, 66, K_PANEL, K_LIME);
+        g_text_c(T_XS, 120, 77, t, K_GREY);
+        g_text_c(g_text_w(T_L, now) > 190 ? T_B : T_L, 120, 92, now, K_WHITE);
+        if (!str_eq(now, vpop_before)) { str_cat(str_cat(t, "WAS "), vpop_before); g_text_c(T_XS, 120, 124, t, K_MOD); }
+    }
+    if (cmp_on && g_vis(0, 18)) {               /* A/B: the saved sound is playing */
+        g_rect(0, 0, 240, 18, K_ORANGE);
+        g_text_c(T_XS, 120, 4, "A/B \xB7 SAVED SOUND \xB7 RELEASE SEL", K_INK);
+    }
+    if (hb.b != 0xFF && !hb.used && !hb.fired && fm1_ms - hb.at > 180u && g_vis(178, 42)) {   /* a button held: what comes */
+        uint32_t el = fm1_ms - hb.at, fr = hb.next ? (el >= hb.next ? 256u : el * 256u / hb.next) : 0u;
+        g_box(14, 180, 212, 38, K_PANEL, hb.next ? K_LIME : K_MOD);
+        g_text_c(T_XS, 120, 186, hold_label(hb.b), hb.next ? K_WHITE : K_MOD);
+        if (hb.next) g_bar(24, 202, 192, 7, fr, K_LIME);
+        else g_text_c(T_XS, 120, 202, "WAITING FOR A KNOB...", K_GREY);
+    }
+    if (splash_until && (int32_t)(splash_until - fm1_ms) > 0) {   /* the start: the last patch, the cores */
+        char b[40], *p;
+        g_rect(0, g_y0, 240, (int32_t)BAND_H, K_BG);
+        g_text_c(T_L, 120, 52, "K-WA SUB", K_LIME);
+        g_text_c(T_XS, 120, 80, "BASS SYNTH FOR THE FM-1 \xB7 V" APP_VER, K_GREY);
+        g_text_c(T_B, 120, 112, pname, K_WHITE);
+        p = str_cat(b, L_STYLE[clampi(patch[P_STYLE], 0, NSTYLE - 1)]);
+        p = str_cat(p, " \xB7 ");
+        eng_str(p, patch);
+        g_text_c(T_XS, 120, 134, b, K_CYAN);
+        g_text_c(T_S, 120, 170, dual_on ? "TWO CORES \xB7 VOICES ON CORE 1" : KS_DUAL && set.cores ? "ONE CORE (CORE 1 OFF)" : "ONE CORE", dual_on ? K_LIME : K_ORANGE);
+        g_text_c(T_XS, 120, 200, "ANY BUTTON TO START", K_GREY);
     }
     if (toast_ms && g_vis(196, 22)) {
         g_box(30, 196, 180, 22, K_PANEL, K_LIME);

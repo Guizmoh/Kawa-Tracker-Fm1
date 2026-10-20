@@ -5,7 +5,7 @@ Un synthétiseur de basses pour le **M-VAVE FM-1** : drum & bass, dub, dubstep, 
 séquenceur, sans pistes, sans samples ni batteries : tout le processeur va au son.
 
 **Essayer sans rien installer :** ouvrez [`emulator/index.html`](emulator/index.html) dans un navigateur
-(un seul fichier, fonctionne hors ligne), cliquez sur « Allumer le son ». **L'installer :** voir
+(un seul fichier, fonctionne hors ligne) : le son démarre au premier appui (touche, bouton ou clavier). **L'installer :** voir
 [Installer sur le FM-1](#installer-sur-le-fm-1).
 
 ## Le son
@@ -86,6 +86,21 @@ et demie comptent pour une seule ; un chargement de preset aussi), puis une de p
 reste appuyé, jusqu'à 16 en arrière.
 `OCT-` / `OCT+` : octave du clavier ; les deux ensemble : tout couper.
 
+**Boutons maintenus.** Une barre de chargement apparaît en bas de l'écran avec ce qui va se passer écrit au-dessus ;
+relâcher avant la fin annule (le bouton fait alors son action normale) :
+
+| Maintenir | Effet |
+|---|---|
+| `SAVE` | UNDO (sur la page PRESETS : ajoute ou retire le preset sélectionné des favoris, marqué `*`) |
+| `SEL` | A/B : on entend le son enregistré tant que `SEL` reste appuyé |
+| `LFO` + tourner un potard | assignation rapide « à la Pure SUB » : le LFO 1 va sur ce que règle le potard, le tour règle la quantité |
+| `ENV` + tourner un potard | pareil avec l'enveloppe de modulation |
+| un bouton de page + `K1`–`K4` | couche Shift : les potards de cette page, sans la quitter |
+| un bouton de page, 1,2 s | aléatoire contrôlé de la page (environ un quart de la plage ; `SAVE` maintenu annule) |
+
+Tourner un réglage l'affiche en grand une seconde, avec l'ancienne valeur. Au démarrage, un écran montre le dernier
+patch et l'état du second cœur. Sur PRESETS, `K2` fait défiler tous les presets ou seulement les favoris.
+
 ## Installer sur le FM-1
 
 Le paquet est [`install/k-wa-sub-0.8.fwsc`](install/k-wa-sub-0.8.fwsc) (identité `FM-1_978` ; les anciens dans `install/older/`). Il s'installe exactement
@@ -115,6 +130,7 @@ Il y a un bloc de latence (5,8 ms). Le démarrage du cœur 1 reprend la séquenc
 `cpu1_start`, voir `source/firmware/hal/fm1_cpu1.h`), avec des sécurités :
 
 - si le cœur 1 ne répond pas, tout tourne sur le cœur 0 (même son) ;
+- si le cœur 1 cesse de rendre ses blocs (3 blocs de suite), le cœur 0 reprend les voix aussitôt, `CORE 1 STUCK: ONE CORE` s'affiche et `AUDIO CORES` passe à `SINGLE` (à remettre sur `DUAL` dans SYSTEM pour réessayer) ;
 - si le FM-1 redémarre dans les 10 s d'un démarrage à deux cœurs, le démarrage suivant se fait sur un seul cœur ;
   `SYSTEM › AUDIO CORES` permet de réessayer ;
 - pendant chaque écriture en flash (patch, réglages), le cœur 1 attend dans une boucle en RAM ;

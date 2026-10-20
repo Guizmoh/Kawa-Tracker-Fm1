@@ -84,12 +84,11 @@ label.vol { display: flex; align-items: center; gap: 8px; color: var(--mute); fo
       <div class="tag">FM-1 bass synthesizer &middot; emulator &middot; v__KSUB_VER__</div>
     </div>
     <div class="bar">
-      <button id="power" class="primary" type="button">Allumer le son</button>
       <button id="midi" type="button">MIDI</button>
       <label class="vol" for="master">MASTER <input id="master" type="range" min="0" max="100" value="70"></label>
     </div>
   </header>
-  <div id="status" role="status">Écran actif. Le son démarre avec « Allumer le son ».</div>
+  <div id="status" role="status">Le son démarre au premier appui (touche, bouton ou clavier de l'ordinateur).</div>
 
   <div class="device">
     <div class="top">
@@ -157,9 +156,15 @@ class Engine {
   constructor(bytes, boot) {
     this.x = new WebAssembly.Instance(new WebAssembly.Module(bytes), {}).exports;
     const x = this.x;
-    if (boot.store) new Uint8Array(x.memory.buffer, x.ksub_store(), x.ksub_store_size()).set(boot.store);
-    if (boot.settings) new Uint8Array(x.memory.buffer, x.ksub_settings(), 260).set(boot.settings);
-    x.ksub_init();
+    if (boot.mem) {                                 /* the running engine handed over whole: same patch, same notes */
+      const grow = boot.mem.length - x.memory.buffer.byteLength;
+      if (grow > 0) x.memory.grow(Math.ceil(grow / 65536));
+      new Uint8Array(x.memory.buffer).set(boot.mem);
+    } else {
+      if (boot.store) new Uint8Array(x.memory.buffer, x.ksub_store(), x.ksub_store_size()).set(boot.store);
+      if (boot.settings) new Uint8Array(x.memory.buffer, x.ksub_settings(), 260).set(boot.settings);
+      x.ksub_init();
+    }
     this.pos = 256; this.buf = null; this.n = 0; this.sg = -1; this.stg = x.ksub_store_gen(); this.seg = x.ksub_settings_gen(); this.lab = "";
     this.emit = () => {};
   }
@@ -223,8 +228,9 @@ function onUi(m) {
   if (m.settings) LS.set("ksub.settings", b64enc(m.settings));
 }
 
-/* ---- the engine at rest (no sound yet: the screen works), then with sound */
-let send = () => {}, idle = null, running = false;
+/* ---- one engine runs from the start (screen, LFOs); the first touch or key adds the sound.
+   Browsers only open audio inside a gesture, so the context is created and resumed right there, before any await. */
+let send = () => {}, idle = null, eng = null, ac = null;
 function boot() {
   const b = {}, s = LS.get("ksub.store"), t = LS.get("ksub.settings");
   try { if (s) b.store = b64dec(s); if (t) b.settings = b64dec(t); } catch (e) {}
@@ -232,48 +238,55 @@ function boot() {
 }
 function startIdle() {
   try {
-    const e = new Engine(wasmBytes, boot()), L = new Float32Array(256), R = new Float32Array(256);
-    e.emit = onUi;
-    send = d => e.input(d);
-    idle = setInterval(() => { for (let k = 0; k < 4; k++) e.render(L, R); }, 23);
+    const L = new Float32Array(256), R = new Float32Array(256);
+    eng = new Engine(wasmBytes, boot());
+    eng.emit = onUi;
+    send = d => eng.input(d);
+    idle = setInterval(() => { for (let k = 0; k < 4; k++) eng.render(L, R); }, 23);
   } catch (err) {
     $("status").textContent = "Ce navigateur refuse WebAssembly ici : ouvrez emulator/index.html depuis le dépôt.";
   }
 }
-async function powerOn() {
-  if (running) return;
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) { $("status").textContent = "Pas d'audio Web dans ce navigateur."; return; }
-  const ac = new AC({ sampleRate: 44100, latencyHint: "interactive" });
+function onPage(why) {                              /* the worklet can't run here: the same engine feeds the speakers */
+  const sp = ac.createScriptProcessor(1024, 0, 2);
   clearInterval(idle);
-  const b = boot();
-  try {
-    const url = URL.createObjectURL(new Blob([WORKLET_SRC], { type: "application/javascript" }));
-    await ac.audioWorklet.addModule(url);
-    const node = new AudioWorkletNode(ac, "ksub", { numberOfInputs: 0, outputChannelCount: [2], processorOptions: { bytes: wasmBytes, boot: b } });
-    node.port.onmessage = ev => onUi(ev.data);
-    node.connect(ac.destination);
-    send = d => node.port.postMessage(d);
-    $("status").textContent = "Son actif (audio worklet, " + ac.sampleRate + " Hz).";
-  } catch (err) {                                   /* no worklet here: the engine on the page */
-    const e = new Engine(wasmBytes, b), sp = ac.createScriptProcessor(1024, 0, 2);
-    e.emit = onUi;
-    sp.onaudioprocess = ev => e.render(ev.outputBuffer.getChannelData(0), ev.outputBuffer.getChannelData(1));
-    sp.connect(ac.destination);
-    send = d => e.input(d);
-    $("status").textContent = "Son actif (moteur sur la page).";
-  }
-  await ac.resume();
-  running = true;
-  setMaster();
-  $("power").textContent = "Son actif";
-  $("power").classList.remove("primary");
+  sp.onaudioprocess = ev => eng.render(ev.outputBuffer.getChannelData(0), ev.outputBuffer.getChannelData(1));
+  sp.connect(ac.destination);
+  send = d => eng.input(d);
+  $("status").textContent = "Son actif (moteur sur la page, " + ac.sampleRate + " Hz).";
+  if (why) console.info("audio worklet unavailable:", why);
 }
+function startAudio() {
+  if (ac) { if (ac.state !== "running") ac.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC || !eng) { $("status").textContent = "Pas d'audio Web dans ce navigateur."; return; }
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}   /* iPhone: play even on silent */
+  try { ac = new AC({ sampleRate: 44100, latencyHint: "interactive" }); } catch (e) { ac = new AC(); }
+  ac.resume();
+  const one = ac.createBufferSource(); one.buffer = ac.createBuffer(1, 1, ac.sampleRate); one.connect(ac.destination); one.start();
+  (async () => {
+    try {
+      if (!ac.audioWorklet) throw new Error("no audioWorklet");
+      const url = URL.createObjectURL(new Blob([WORKLET_SRC], { type: "application/javascript" }));
+      await ac.audioWorklet.addModule(url);
+      const mem = new Uint8Array(eng.x.memory.buffer).slice();
+      const node = new AudioWorkletNode(ac, "ksub", { numberOfInputs: 0, outputChannelCount: [2], processorOptions: { bytes: wasmBytes, boot: { mem } } });
+      clearInterval(idle);                          /* same tick as the snapshot: no input lost */
+      node.port.onmessage = ev => onUi(ev.data);
+      node.onprocessorerror = () => { node.disconnect(); onPage("processor error"); };
+      node.connect(ac.destination);
+      send = d => node.port.postMessage(d);
+      $("status").textContent = "Son actif (audio worklet, " + ac.sampleRate + " Hz).";
+    } catch (err) { onPage(err && err.message); }
+    setMaster();
+  })();
+}
+["pointerdown", "keydown", "touchstart"].forEach(t => window.addEventListener(t, startAudio, { capture: true, passive: true }));
+document.addEventListener("visibilitychange", () => { if (!document.hidden && ac && ac.state !== "running") ac.resume(); });
 
 /* ---- the panel */
 function setMaster() { const v = $("master").value / 100; send({ t: "master", v: Math.round(v * v * 4096) }); }
 $("master").addEventListener("input", setMaster);
-$("power").addEventListener("click", powerOn);
 function press(id, down) { send({ t: "btn", id, down }); const b = btnEls[id]; if (b) b.el.classList.toggle("down", down); }
 for (const [name, fn] of BTN_LAYOUT) {
   const id = BTN[name], el = document.createElement("button");

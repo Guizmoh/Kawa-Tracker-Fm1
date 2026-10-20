@@ -948,6 +948,7 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
 static int32_t vbus[2][HALF_FRAMES], vzero[HALF_FRAMES];
 static volatile uint32_t c1_req, c1_done, c1_park_req, c1_parked;
 static volatile uint8_t dual_on;                /* the second core runs (fm1_cpu1_start said yes) */
+static volatile uint8_t c1_failed;              /* core 1 stopped answering: back on one core (the UI saves it) */
 static volatile uint32_t ks_load[2];            /* % of a block, per core (the SYSTEM page) */
 
 /* the load governor (as KAWA's, after Felucca's shed_check): two blocks in a row over 70 % and the sound thins
@@ -1003,10 +1004,12 @@ static void app_flash_busy(void)                /* an update, UBOOT, a crash: co
 static void c1_pause(void) {}
 static void c1_resume(void) {}
 static void app_flash_busy(void) {}
+static void fm1_cpu1_stop(void) {}
 #endif
 
 static void app_audio(int32_t *out, uint32_t n)
 {
+    static uint32_t miss;
     uint32_t t0 = fm1_ticks(), l1 = 0;
     if (dual_on && !c1_park_req) {              /* core 1 did this block's voices during the last one */
         uint32_t cur = c1_req;
@@ -1016,9 +1019,17 @@ static void app_audio(int32_t *out, uint32_t n)
             c1_req = cur + 1u;                  /* core 1 starts the next block now */
             KS_SYNC();
             fx_render(vbus[cur & 1u], out, n);
-        } else {
+            miss = 0;
+        } else if (++miss < 3u) {
             ks_late++;                          /* (core 1 late: a silent block, it goes on) */
             fx_render(vzero, out, n);
+        } else {                                /* three blocks without core 1: it is stuck, one core from here */
+            fm1_cpu1_stop();
+            dual_on = 0;
+            c1_failed = 1;
+            miss = 0;
+            voices_render(vbus[0], n, t0, BLOCK_TICKS * 4u / 10u);
+            fx_render(vbus[0], out, n);
         }
         l1 = ks_load[1];
     } else if (dual_on)
