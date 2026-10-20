@@ -12,7 +12,7 @@ static uint8_t g_force = 1, g_tx;
 /* the colours: six palettes for each theme (ksub_draw.c): its own, another, SYNTHWAVE, MINT, black and white, inverted */
 enum { KC_BG, KC_PANEL, KC_LINE, KC_LIME, KC_LIMED, KC_CYAN, KC_WHITE, KC_GREY, KC_TRACK, KC_ORANGE, KC_WAVE, KC_INK, KC_MOD, KC_N };
 #define C3(r, g, b) RGB(r, g, b)
-static const uint16_t PALS[12][KC_N] = {
+static const uint16_t PALS[14][KC_N] = {
     /* CLASSIC: NEON, AMBER */
     {C3(11,18,20), C3(17,27,30), C3(40,56,60), C3(200,240,60), C3(30,40,20), C3(80,216,208), C3(236,242,242), C3(130,146,148), C3(36,52,56), C3(240,140,60), C3(200,240,60), C3(11,18,20), C3(170,140,250)},
     {C3(18,12,6), C3(30,20,10), C3(66,44,20), C3(255,170,40), C3(52,34,10), C3(255,214,140), C3(250,238,220), C3(170,140,110), C3(60,40,20), C3(255,90,60), C3(255,170,40), C3(18,12,6), C3(255,214,140)},
@@ -31,15 +31,19 @@ static const uint16_t PALS[12][KC_N] = {
     /* MONO: white on black (classic); INVERT: greys, dark on light, the cards a shade darker (as through a tint) */
     {C3(0,0,0), C3(16,16,16), C3(70,70,70), C3(255,255,255), C3(48,48,48), C3(200,200,200), C3(255,255,255), C3(140,140,140), C3(50,50,50), C3(255,255,255), C3(255,255,255), C3(0,0,0), C3(200,200,200)},
     {C3(206,209,212), C3(184,188,192), C3(156,160,165), C3(34,38,44), C3(160,164,170), C3(74,80,88), C3(22,24,28), C3(92,98,104), C3(166,170,175), C3(52,56,62), C3(40,44,50), C3(222,224,226), C3(100,104,116)},
+    /* RED (the STUDIO look in red), ICE */
+    {C3(14,8,9), C3(30,14,16), C3(66,30,34), C3(255,64,72), C3(62,14,18), C3(255,150,120), C3(248,236,236), C3(170,130,132), C3(58,26,30), C3(255,190,60), C3(255,64,72), C3(14,8,9), C3(255,140,170)},
+    {C3(8,14,22), C3(16,26,40), C3(38,56,80), C3(150,220,255), C3(20,44,66), C3(220,240,255), C3(236,246,255), C3(130,156,180), C3(34,52,74), C3(255,180,90), C3(150,220,255), C3(8,14,22), C3(190,170,255)},
 };
 static const char *const PAL_NAME[4][2] = {{"NEON", "AMBER"}, {"STUDIO", "OCEAN"}, {"PURE", "PURE RED"}, {"RACK", "MAGMA"}};
 static uint16_t kc[KC_N];
 static uint8_t theme, theme_pal;
+#define PAL_BW (theme_pal == 4u || theme_pal == 5u)   /* black and white, inverted: no colours of their own */
 static void theme_set(uint32_t t, uint32_t pal)
 {
     uint32_t i, k;
     theme = (uint8_t)(t < 4u ? t : 0u);
-    theme_pal = (uint8_t)(pal < 6u ? pal : 0u);
+    theme_pal = (uint8_t)(pal < 8u ? pal : 0u);
     k = theme_pal < 2u ? theme * 2u + theme_pal : 6u + theme_pal;
     for (i = 0; i < KC_N; i++) kc[i] = PALS[k][i];
 }

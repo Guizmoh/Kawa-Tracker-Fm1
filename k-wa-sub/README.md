@@ -49,7 +49,7 @@ droite, le genre et les moteurs de chaque patch.
 | Bouton | Page | Vues (le même bouton à nouveau) |
 | --- | --- | --- |
 | `HOME` | 01 PLAY | patch courant + macros live · mix live |
-| `EDIT` | 02 BASS | OSC A · OSC B · SUB + NOISE · COMBINE |
+| `EDIT` | 02 BASS | OSC A · OSC B · OSC C (SAMPLE) · SUB + NOISE · COMBINE |
 | `ENV` | 03 ENVELOPE | AMP · FILTER · MOD |
 | `SEQ` | 04 FILTER | cutoff / résonance / drive · modulations du filtre · **SEQ BASS** |
 | `LFO` | 05 LFO | LFO 1 WOBBLE · LFO 2 · STEP FX · matrice |
@@ -70,7 +70,8 @@ La page `ARP` › PRESETS montre la banque A, `ARP` encore la banque B (`K1` dé
 - RACK : rail des pages à gauche, gros caractères.
 
 `SYSTEM › PALETTE` donne 6 palettes par thème : la sienne, une variante (AMBER, OCEAN, PURE RED, MAGMA), SYNTHWAVE,
-MINT, noir et blanc, et INVERTED (tons de gris : fond gris clair, cases un peu plus foncées, texte sombre). `SYSTEM › FONT` : SANS (DejaVu Sans Bold), MONO (IBM Plex Mono),
+MINT, noir et blanc, INVERTED (tons de gris : fond gris clair, cases un peu plus foncées, texte sombre), RED (le
+style STUDIO en rouge) et ICE (bleu glacier) : 8 palettes par thème. `SYSTEM › FONT` : SANS (DejaVu Sans Bold), MONO (IBM Plex Mono),
 HYPER (Atkinson Hyperlegible Mono, faite pour être lue par tous) ou PIXEL (Press Start 2P, nette à 8 px).
 `SYSTEM › LOUPE` (juste sous FONT) : les lignes et les valeurs passent à la plus grande taille qui tient dans leurs
 cases (SANS 9 → 11, MONO et HYPER 10 → 12, valeurs 11-12 → 13-14) ; un texte qui toucherait le bord de sa case repasse
@@ -85,6 +86,17 @@ profondeur, celle qui est lue en clair (elle avance quand on tourne POSITION) ; 
 des scies selon le detune ; **ANALOG** sa place sur l'échelle SIN TRI SAW SQR. Le compresseur dessine sa courbe, ce
 qu'il retire et un tour de son PUMP ; le phaser ses creux qui bougent ; delay et reverb changent de dessin avec leur
 type. La grande valeur qui s'affiche quand on tourne se place sous le dessin, pour le voir changer.
+
+**OSC C · SAMPLE** (`EDIT`, juste après OSC B ; dans OSC A et B, ENGINE est maintenant la 1re ligne, donc `K1`) :
+une couche de sample par-dessus les deux oscillateurs, mélangée après le filtre (comme le SUB en DIRECT), avant
+l'enveloppe d'amplitude. 10 sons très différents, faits par le générateur (rien d'enregistré, 8 bits µ-law) : 808 BOOM,
+KICK, SNARE, OI VOX, REESE LOOP, GROWL LOOP, PLUCK, FM BELL, METAL HIT, BRASS STAB ; et 5 textures en boucle : VINYL,
+TAPE HISS, RAIN, WIND, DATA. Réglages : SAMPLE, LEVEL, TUNE (±24 demi-tons), PITCH (AUTO : les sons suivent le
+clavier, les textures non ; KEYS ; FIXED). La vue montre la forme du sample et où en est la dernière note. PHASE DUB
+(VINYL), TAPE TECHNO (TAPE HISS) et FM 808 (KICK) s'en servent.
+
+**Listes déroulantes** : choisir une SOURCE de la matrice ou une cible de MACRO (fenêtre SEL › MACROS) ouvre la liste,
+comme pour les destinations des LFO.
 
 **Effets.** **COMPRESSEUR** : AMOUNT (seuil et ratio ensemble, avec gain de rattrapage), PUMP (le creux du sidechain
 sur le tempo, 1/4, 1/8, 1/2 ou 1 mesure, sur toute la sortie, reverb comprise), ATTACK, RELEASE. **PHASER** : 4

@@ -37,6 +37,7 @@
 #endif
 #include "ksub_tables.h"
 #include "ksub_fonts.h"
+#include "ksub_samples.h"
 #include "ksub_data.c"
 #include "ksub_dsp.c"
 #include "ksub_gfx.c"

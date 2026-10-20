@@ -22,6 +22,7 @@ enum {
     CP_ON, CP_AMT, CP_ATK, CP_REL, CP_PUMP, CP_PRATE,            /* the compressor and its PUMP (from 111: the store's 2nd sector) */
     RV_TYPE, DL_TYPE,                                            /* ROOM HALL PLATE SPRING; PING-PONG TAPE DIGITAL DUB */
     PH_ON, PH_RATE, PH_DEP, PH_FB, PH_MIX,                       /* the phaser */
+    SM_SEL, SM_LVL, SM_TUNE, SM_KEY,                             /* OSC C, the SAMPLE layer: which, level, tune, keys */
     NP
 };
 #define NP_MAX 128u                             /* a patch in memory */
@@ -100,6 +101,9 @@ static const char *const L_DRT[] = {"SOFT", "TUBE", "HARD", "FOLD"};
 static const char *const L_PRATE[] = {"1/4", "1/8", "1/2", "1 BAR"};
 static const char *const L_RVT[] = {"ROOM", "HALL", "PLATE", "SPRING"};
 static const char *const L_DLT[] = {"PING-PONG", "TAPE", "DIGITAL", "DUB"};
+static const char *const L_SMP[16] = {"OFF", "808 BOOM", "KICK", "SNARE", "OI VOX", "REESE LOOP", "GROWL LOOP", "PLUCK", "FM BELL",
+                                      "METAL HIT", "BRASS STAB", "VINYL", "TAPE HISS", "RAIN", "WIND", "DATA"};   /* (KS_SMP's) */
+static const char *const L_SMK[3] = {"AUTO", "KEYS", "FIXED"};
 static const char *const L_VM[] = {"MONO", "LEGATO", "POLY"};
 static const char *const L_STYLE[] = {"DNB", "DUB", "DUBSTEP", "TECHNO", "JUNGLE", "UK GARAGE", "TRAP", "HOUSE", "NEUROFUNK",
                                       "DUB TECHNO", "BREAKS", "MINIMAL"};   /* the music a preset is for */
@@ -190,6 +194,8 @@ static const pdesc_t PD[NP] = {
     {"EFFECT", "ON", 0, 1, 0, FM_LIST, L_ONOFF}, {"RATE", "RATE", 0, 127, 40, FM_LFOHZ, 0},
     {"DEPTH", "DEPTH", 0, 127, 80, FM_PCT, 0}, {"FEEDBACK", "FDBK", 0, 127, 50, FM_PCT, 0},
     {"MIX", "MIX", 0, 127, 64, FM_PCT, 0},
+    {"SAMPLE", "SAMPLE", 0, 15, 0, FM_LIST, L_SMP}, {"LEVEL", "LEVEL", 0, 127, 90, FM_PCT, 0},
+    {"TUNE", "TUNE", -24, 24, 0, FM_SEMI, 0}, {"PITCH", "PITCH", 0, 2, 0, FM_LIST, L_SMK},
 };
 
 /* ---- the factory presets: the defaults, then (parameter, value) pairs, -1 ends */
@@ -359,15 +365,15 @@ static const preset_t FACTORY[] = {
        DR_ON, 1, DR_TYPE, 1, DR_AMT, 40, CP_ON, 1, CP_AMT, 50),
     PR("PUMP HOUSE", MS_VOL, 127, P_STYLE, 7, A_ENG, E_ANALOG, A_P1, 100, A_P2, 60, S_LVL, 80, F_CUT, 60, F_RES, 35, F_ENV, 35, FE_D, 40,
        FE_S, 10, AE_D, 60, AE_S, 60, AE_R, 25, CP_ON, 1, CP_AMT, 45, CP_PUMP, 90, RV_ON, 1, RV_TYPE, 0, RV_MIX, 15),
-    PR("PHASE DUB", P_STYLE, 1, A_ENG, E_ANALOG, A_P1, 42, S_LVL, 110, F_CUT, 55, PH_ON, 1, PH_RATE, 30, PH_DEP, 90,
+    PR("PHASE DUB", SM_SEL, 11, SM_LVL, 45, P_STYLE, 1, A_ENG, E_ANALOG, A_P1, 42, S_LVL, 110, F_CUT, 55, PH_ON, 1, PH_RATE, 30, PH_DEP, 90,
        PH_FB, 70, PH_MIX, 80, DL_ON, 1, DL_TYPE, 1, DL_TIME, 7, DL_FB, 80, DL_MIX, 35, RV_ON, 1, RV_TYPE, 3, RV_MIX, 30,
        V_MODE, VM_LEGATO, V_GLIDE, 30),
-    PR("TAPE TECHNO", MS_VOL, 127, P_STYLE, 3, A_ENG, E_ANALOG, A_P1, 85, N_LVL, 20, S_LVL, 90, F_CUT, 45, F_RES, 45, F_ENV, 30, FE_D, 45,
+    PR("TAPE TECHNO", SM_SEL, 12, SM_LVL, 35, MS_VOL, 127, P_STYLE, 3, A_ENG, E_ANALOG, A_P1, 85, N_LVL, 20, S_LVL, 90, F_CUT, 45, F_RES, 45, F_ENV, 30, FE_D, 45,
        FE_S, 0, AE_D, 55, AE_S, 50, DL_ON, 1, DL_TYPE, 1, DL_TIME, 8, DL_FB, 75, DL_MIX, 30, RV_ON, 1, RV_SIZE, 100,
        RV_MIX, 25, CP_ON, 1, CP_AMT, 60, CP_PUMP, 50),
     PR("REESE PHASER", P_STYLE, 0, A_ENG, E_SUPER, A_P1, 50, A_P2, 90, A_P3, 64, S_LVL, 80, F_CUT, 70, F_RES, 25, PH_ON, 1,
        PH_RATE, 20, PH_DEP, 100, PH_FB, 60, PH_MIX, 70, X_DRIFT, 25, CP_ON, 1, CP_AMT, 40),
-    PR("FM 808", P_STYLE, 6, A_ENG, E_FM, A_P1, 30, A_P2, 8, A_LVL, 120, S_LVL, 60, AE_D, 100, AE_S, 30, AE_R, 60, ME_AMT, 30,
+    PR("FM 808", SM_SEL, 2, SM_LVL, 70, P_STYLE, 6, A_ENG, E_FM, A_P1, 30, A_P2, 8, A_LVL, 120, S_LVL, 60, AE_D, 100, AE_S, 30, AE_R, 60, ME_AMT, 30,
        ME_DST, D_PITCH, ME_D, 25, DR_ON, 1, DR_TYPE, 0, DR_AMT, 50, CP_ON, 1, CP_AMT, 60, F_CUT, 127, F_RES, 0),
     PR("WAVE MORPH", MS_VOL, 110, P_STYLE, 9, A_ENG, E_WAVE, A_P1, 0, A_P2, 32, S_LVL, 85, F_CUT, 65, F_RES, 30, L2_SHP, 1, L2_SYNC, 1,
        L2_DIV, 1, L2_DEP, 60, L2_DST, D_AP1, DL_ON, 1, DL_TYPE, 3, DL_TIME, 7, DL_FB, 85, DL_MIX, 35, RV_ON, 1, RV_TYPE, 2,

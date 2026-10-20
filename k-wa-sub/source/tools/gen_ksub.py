@@ -173,8 +173,121 @@ def gen_fonts():
     return "\n".join(o)
 
 
+# ---------------------------------------------------------------- the SAMPLE layer (OSC C): 10 sounds, 5 textures
+# all made here (nothing recorded): 8-bit mu-law, the sounds at 22050 Hz (root C3, played from the keys), the
+# textures at 11025 Hz (loops, not played from the keys)
+def mulaw_enc(x):
+    x = np.clip(x, -1, 1)
+    y = np.sign(x) * np.log1p(255 * np.abs(x)) / np.log1p(255)
+    return np.clip(np.round((y + 1) * 127.5), 0, 255).astype(np.uint8)
+
+
+def mulaw_dec_table():
+    y = np.arange(256) / 127.5 - 1
+    x = np.sign(y) * ((1 + 255) ** np.abs(y) - 1) / 255
+    return [int(round(v * 32767)) for v in x]
+
+
+def norm(x, peak=0.95):
+    return x / (np.max(np.abs(x)) + 1e-9) * peak
+
+
+def loopify(x, n=300):                     # a loop with no click: its end faded into its start
+    y = x[:-n].copy(); r = np.linspace(0, 1, n)
+    y[:n] = y[:n] * r + x[-n:] * (1 - r)
+    return y
+
+
+def gen_samples():
+    rng = np.random.default_rng(7)
+    S1, S2 = 22050, 11025
+    t = lambda d, sr=S1: np.arange(int(d * sr)) / sr
+    f0 = 130.81                                # C3
+    out = []                                   # (name, data, rate, loop start or -1, keys)
+
+    def env(tt, a, d):
+        return np.minimum(1, tt / max(a, 1e-4)) * np.exp(-tt / d)
+
+    tt = t(0.6)                                # 808: a sine falling from 2 octaves above, long
+    ph = 2 * np.pi * np.cumsum(f0 / 2 * (1 + 3 * np.exp(-tt / 0.03))) / S1
+    out.append(("808 BOOM", norm(np.tanh(1.6 * np.sin(ph)) * env(tt, .002, .35)), S1, -1, 1))
+    tt = t(0.25)                               # KICK: a click and a fast drop
+    ph = 2 * np.pi * np.cumsum(55 * (1 + 6 * np.exp(-tt / 0.012))) / S1
+    k = np.sin(ph) * env(tt, .001, .09) + rng.standard_normal(len(tt)) * np.exp(-tt / .004) * .4
+    out.append(("KICK", norm(k), S1, -1, 1))
+    tt = t(0.25)                               # SNARE: a tone and noise
+    n = rng.standard_normal(len(tt)); n = n - np.convolve(n, np.ones(4) / 4, "same")
+    sn = np.sin(2 * np.pi * 190 * tt) * env(tt, .001, .05) + n * env(tt, .001, .09) * .8
+    out.append(("SNARE", norm(sn), S1, -1, 1))
+    tt = t(0.4)                                # OI: a voice saying "oi" (formants sliding O -> I)
+    k = np.clip(tt / 0.4, 0, 1)
+    src = sum(np.sin(2 * np.pi * f0 * h * tt) / h for h in range(1, 40))
+    vox = np.zeros_like(tt)
+    for (fa, fb, g) in ((500, 300, 1.0), (900, 2300, .6), (2500, 3000, .3)):
+        fr = fa + (fb - fa) * k
+        for h in range(1, 40):
+            w = np.exp(-((f0 * h - fr) / 120) ** 2)
+            vox += g * w * np.sin(2 * np.pi * f0 * h * tt) / 1.0
+    out.append(("OI VOX", norm(vox * env(tt, .02, .3)), S1, -1, 1))
+    tt = t(0.25)                               # REESE: detuned saws, a loop
+    saw = lambda f: 2 * ((tt * f) % 1) - 1
+    rz = saw(f0) + saw(f0 * 1.012) + saw(f0 * 0.989)
+    out.append(("REESE LOOP", norm(loopify(rz)), S1, 0, 1))
+    tt = t(0.25)                               # GROWL: FM with a wobbling index, a loop
+    ix = 3 + 2.5 * np.sin(2 * np.pi * 4 * tt)
+    gr = np.sin(2 * np.pi * f0 * tt + ix * np.sin(2 * np.pi * f0 * 2 * tt))
+    out.append(("GROWL LOOP", norm(loopify(np.tanh(2 * gr))), S1, 0, 1))
+    tt = t(0.5)                                # PLUCK: Karplus-Strong
+    L = int(S1 / f0); buf = rng.uniform(-1, 1, L); pl = np.zeros(len(tt))
+    for i in range(len(tt)):
+        pl[i] = buf[i % L]; buf[i % L] = 0.5 * (buf[i % L] + buf[(i + 1) % L]) * 0.996
+    out.append(("PLUCK", norm(pl), S1, -1, 1))
+    tt = t(0.6)                                # BELL: FM at 1 : 3.5
+    bl = np.sin(2 * np.pi * f0 * 2 * tt + 3 * np.exp(-tt / .2) * np.sin(2 * np.pi * f0 * 7 * tt)) * env(tt, .001, .25)
+    out.append(("FM BELL", norm(bl), S1, -1, 1))
+    tt = t(0.35)                               # METAL: partials that are not harmonic
+    mt = sum(np.sin(2 * np.pi * f0 * r * tt) * np.exp(-tt / (.08 + .05 * i)) for i, r in enumerate((1, 2.76, 5.4, 8.93, 13.3)))
+    out.append(("METAL HIT", norm(mt), S1, -1, 1))
+    tt = t(0.35)                               # BRASS STAB: saws through a closing low pass
+    x = saw(f0) + saw(f0 * 1.005); y = np.zeros_like(x); c = 0.0
+    for i in range(len(x)):
+        g = 0.05 + 0.5 * np.exp(-tt[i] / .06); c += g * (x[i] - c); y[i] = c
+    out.append(("BRASS STAB", norm(y * env(tt, .005, .2)), S1, -1, 1))
+    # the textures: loops, 1 s
+    tt = t(1.0, S2)
+    vin = np.zeros(len(tt)); idx = rng.integers(0, len(tt), 90); vin[idx] = rng.uniform(-1, 1, 90)
+    vin = np.convolve(vin, np.exp(-np.arange(12) / 2), "same") + rng.standard_normal(len(tt)) * .03
+    out.append(("VINYL", norm(loopify(vin, 150), .7), S2, 0, 0))
+    hs = rng.standard_normal(len(tt)); hs = hs - np.convolve(hs, np.ones(3) / 3, "same")
+    out.append(("TAPE HISS", norm(loopify(hs * (1 + .2 * np.sin(2 * np.pi * 3 * tt)), 150), .5), S2, 0, 0))
+    rn = np.zeros(len(tt)); idx = rng.integers(0, len(tt), 400); rn[idx] = rng.uniform(.2, 1, 400)
+    rn = np.convolve(rn, np.sin(np.arange(30) * .9) * np.exp(-np.arange(30) / 6), "same") + rng.standard_normal(len(tt)) * .08
+    out.append(("RAIN", norm(loopify(rn, 150), .8), S2, 0, 0))
+    wn = rng.standard_normal(len(tt)); lp = np.zeros(len(tt)); c = 0.0
+    for i in range(len(tt)):
+        g = .02 + .05 * (1 + np.sin(2 * np.pi * 1 * tt[i])); c += g * (wn[i] - c); lp[i] = c
+    out.append(("WIND", norm(loopify(lp, 150), .8), S2, 0, 0))
+    dg = np.zeros(len(tt))
+    for k in range(16):
+        a, b = k * len(tt) // 16, (k + 1) * len(tt) // 16
+        f = rng.choice([0, 220, 440, 880, 1760, 3520]); dg[a:b] = np.sign(np.sin(2 * np.pi * f * tt[a:b])) * (f > 0) * .6
+    out.append(("DATA", norm(loopify(dg, 150), .6), S2, 0, 0))
+
+    o = ["/* K-WA SUB: generated by tools/gen_ksub.py (the SAMPLE layer: made here, nothing recorded) -- do not edit */\n#pragma once\n#include <stdint.h>\n"]
+    o.append(arr("int16_t", "KS_MULAW", mulaw_dec_table(), 16))
+    data, rows = [], []
+    for name, x, sr, loop, keys in out:
+        off = len(data); enc = mulaw_enc(x); data += [int(v) for v in enc]
+        rows.append(f'    {{"{name}", {off}u, {len(enc)}u, {loop if loop >= 0 else len(enc)}u, {round(sr * 65536 / 130.8128)}u, {keys}}},')
+    o.append(arr("uint8_t", "KS_SMP_DATA", data, 32))
+    o.append("typedef struct { const char *name; uint32_t off, len, loop, k; uint8_t keys; } ks_smp_t;   /* loop = len: one shot; k: its rate / C3, Q16 */\n"
+             f"#define KS_NSMP {len(out)}u\nstatic const ks_smp_t KS_SMP[KS_NSMP] = {{\n" + "\n".join(rows) + "\n};\n")
+    return "\n".join(o)
+
+
 if __name__ == "__main__":
     GEN.mkdir(parents=True, exist_ok=True)
     (GEN / "ksub_tables.h").write_text(gen_tables())
     (GEN / "ksub_fonts.h").write_text(gen_fonts())
+    (GEN / "ksub_samples.h").write_text(gen_samples())
     print("ksub_tables.h", (GEN / "ksub_tables.h").stat().st_size, "B; ksub_fonts.h", (GEN / "ksub_fonts.h").stat().st_size, "B")

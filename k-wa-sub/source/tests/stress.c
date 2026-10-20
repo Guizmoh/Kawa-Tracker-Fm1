@@ -88,6 +88,12 @@ int main(void)
             play(low, 1, 30);
         }
         lfx_flt = 0; lfx_pump = 0;
+        for (j = 1; j < 16u; j++) {             /* OSC C: every sample, from the keys and fixed, tuned to the ends */
+            load_preset(0, 0);
+            patch[SM_SEL] = (int8_t)j; patch[SM_LVL] = 127; patch[SM_KEY] = (int8_t)(j % 3u); patch[SM_TUNE] = j & 1u ? 24 : -24;
+            play(chord, 4, 40);
+            play(low, 1, 20);
+        }
         for (j = 0; j < 4u; j++) {              /* every delay and reverb type, the compressor hard with its pump, the phaser */
             load_preset(0, j);
             patch[DL_ON] = patch[RV_ON] = patch[CP_ON] = patch[PH_ON] = patch[CH_ON] = patch[DR_ON] = 1;

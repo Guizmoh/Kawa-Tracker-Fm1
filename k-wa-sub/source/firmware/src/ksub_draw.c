@@ -8,8 +8,8 @@
  * Every visual is drawn with integers only (no FPU), from the patch and what the voices say (ksub_dsp.c). */
 enum { TH_CLASSIC, TH_STUDIO, TH_PURE, TH_RACK, NTHEMES };
 enum { VZ_NONE, VZ_SCOPE, VZ_OSCA, VZ_OSCB, VZ_SUB, VZ_MIX, VZ_ENV0, VZ_ENV1, VZ_ENV2, VZ_FILT, VZ_LFO1, VZ_LFO2, VZ_STEP,
-       VZ_SEQ, VZ_DRIVE, VZ_CRUSH, VZ_CHORUS, VZ_DELAY, VZ_REVERB, VZ_MASTER, VZ_COMP, VZ_PHASER, VZ_CPU };
-static const uint8_t VZ_OF[] = {VZ_SCOPE, VZ_SCOPE, VZ_OSCA, VZ_OSCB, VZ_SUB, VZ_MIX, VZ_ENV0, VZ_ENV1, VZ_ENV2, VZ_FILT, VZ_FILT,
+       VZ_SEQ, VZ_SMP, VZ_DRIVE, VZ_CRUSH, VZ_CHORUS, VZ_DELAY, VZ_REVERB, VZ_MASTER, VZ_COMP, VZ_PHASER, VZ_CPU };
+static const uint8_t VZ_OF[] = {VZ_SCOPE, VZ_SCOPE, VZ_OSCA, VZ_OSCB, VZ_SMP, VZ_SUB, VZ_MIX, VZ_ENV0, VZ_ENV1, VZ_ENV2, VZ_FILT, VZ_FILT,
                                 VZ_SEQ, VZ_LFO1, VZ_LFO2, VZ_STEP, VZ_NONE, VZ_DRIVE, VZ_COMP, VZ_CRUSH, VZ_CHORUS, VZ_PHASER,
                                 VZ_DELAY, VZ_REVERB, VZ_MASTER, VZ_NONE, VZ_NONE, VZ_NONE, VZ_NONE, VZ_CPU};
 static const char *const PAGE_SHORT[NPAGE] = {"PLAY", "BASS", "ENV", "FILT", "LFO", "FX", "PRE", "SYS"};
@@ -297,6 +297,24 @@ static void vis_analog(const int8_t *o, const int16_t *wv, int32_t x, int32_t y,
     }
     g_rect(mk - 1, y + h - 13, 3, 9, K_LIME);
 }
+static void vis_smp(int32_t x, int32_t y, int32_t w, int32_t h)   /* OSC C: the sample's shape, where the newest note is in it */
+{
+    const ks_smp_t *sm;
+    int32_t W = w - 8, cy = y + h / 2, H = h / 2 - 3, i;
+    uint32_t at;
+    if (!patch[SM_SEL]) { g_text_c(T_XS, x + w / 2, cy - 4, "OFF \xB7 TURN SAMPLE", K_GREY); return; }
+    sm = &KS_SMP[(uint32_t)(patch[SM_SEL] - 1) % KS_NSMP];
+    for (i = 0; i < W; i++) {                   /* its peaks, column by column */
+        uint32_t a = (uint32_t)i * sm->len / (uint32_t)W, b = (uint32_t)(i + 1) * sm->len / (uint32_t)W, j;
+        int32_t pk = 0;
+        for (j = a; j < b; j += 4u) { int32_t v = KS_MULAW[KS_SMP_DATA[sm->off + j]]; if (v < 0) v = -v; if (v > pk) pk = v; }
+        g_rect(x + 4 + i, cy - pk * H / 32768, 1, 1 + 2 * (pk * H / 32768), sm->loop < sm->len && a >= sm->loop ? K_WAVE : g_mix(K_LINE, K_WAVE, 170));
+    }
+    if (ks_sounding) {                          /* (the newest note) */
+        at = (sm_show >> 16) % sm->len;
+        g_rect(x + 4 + (int32_t)(at * (uint32_t)W / sm->len), y + 2, 2, h - 4, K_LIME);
+    }
+}
 static void vis_osc(uint32_t k, int32_t x, int32_t y, int32_t w, int32_t h)
 {
     const int8_t *o = patch + k * OSC_B;
@@ -448,6 +466,7 @@ static void draw_visual(uint32_t kind, int32_t x, int32_t y, int32_t w, int32_t 
             draw_poly(x + 3, y + 2, w - 6, h - 4, prev_wave, 224, K_WAVE);
         break;
     case VZ_OSCA: vis_osc(0, x, y, w, h); break;
+    case VZ_SMP: vis_smp(x, y, w, h); break;
     case VZ_OSCB: vis_osc(1, x, y, w, h); break;
     case VZ_SUB: draw_poly(x + 3, y + 2, w - 6, h - 4, prev_s, 112, K_WAVE); break;
     case VZ_MIX: draw_poly(x + 3, y + 2, w - 6, h - 4, prev_wave, 224, K_WAVE); break;
@@ -523,7 +542,18 @@ static const char *view_title(uint32_t vi, char *t, char *sub)
         return t;
     }
     if (page == PG_BASS && vi <= 3u) { uint32_t e = (uint32_t)patch[vi == 2u ? A_ENG : B_ENG] & 7u; str_cat(sub, ENG_SUB[e]); return ENG_TITLE[e]; }
-    if (page == PG_BASS && vi == 4u) { str_cat(sub, "LOW END CHARACTER"); return "SUB / NOISE"; }
+    if (page == PG_BASS && vi == 4u) {          /* OSC C: the sample, how it plays */
+        if (!patch[SM_SEL]) { str_cat(sub, "10 SOUNDS \xB7 5 TEXTURES"); return "NO SAMPLE"; }
+        {
+            const ks_smp_t *sm = &KS_SMP[(uint32_t)(patch[SM_SEL] - 1) % KS_NSMP];
+            int keys = patch[SM_KEY] == 1 || (patch[SM_KEY] == 0 && sm->keys);
+            p = str_cat(sub, sm->keys ? "SOUND" : "TEXTURE");
+            p = str_cat(p, sm->loop < sm->len ? " \xB7 LOOP" : " \xB7 ONCE");
+            str_cat(p, keys ? " \xB7 FROM THE KEYS" : " \xB7 FIXED PITCH");
+            return sm->name;
+        }
+    }
+    if (page == PG_BASS && vi == 5u) { str_cat(sub, "LOW END CHARACTER"); return "SUB / NOISE"; }
     if (page == PG_BASS) { str_cat(sub, "TWO ENGINES, ONE BASS"); return patch[X_MODE] == 0 ? "A + B" : patch[X_MODE] == 1 ? "A x B  RING" : "B > A  X-MOD"; }
     if (page == PG_ENV) {
         if (vi == PAGE_V0[PG_ENV] + 2u) str_cat(sub, dst_name((uint32_t)patch[ME_DST]));
@@ -600,7 +630,7 @@ static void draw_cell(const view_t *v, int32_t x, int32_t y, int32_t w, int32_t 
     g_box(x, y, w, h, sel ? K_LIMED : K_PANEL, sel ? K_LIME : K_LINE);
     if (k >= 0) {
         char kn[3] = {'K', (char)('1' + k), 0};
-        g_rect(x + 5, y + 5, 5, 5, theme_pal >= 4u ? K_WHITE : KNOB_RGB[k]);
+        g_rect(x + 5, y + 5, 5, 5, PAL_BW ? K_WHITE : KNOB_RGB[k]);
         g_text(T_XS, x + 13, y + 4, kn, K_GREY);
     }
     if (tag) {
@@ -609,7 +639,12 @@ static void draw_cell(const view_t *v, int32_t x, int32_t y, int32_t w, int32_t 
         g_text(T_XS, x + w - tw, y + 4, tag, K_INK);
     }
     g_text(T_XS, x + 5, y + 16, item_sname(id), K_GREY);
-    g_text(g_fit(T_M, b, w - 9), x + 5, y + 27, b, sel ? K_LIME : K_WHITE);
+    {                                           /* (too long even small: cut, with a dot) */
+        const ks_font_t *f = g_fit(T_M, b, w - 9);
+        uint32_t n = str_len(b);
+        while (n > 2u && g_text_w(f, b) > w - 9) { b[--n] = 0; b[n - 1u] = '.'; }
+        g_text(f, x + 5, y + 27, b, sel ? K_LIME : K_WHITE);
+    }
     g_vbar(x + 5, y + h - 9, w - 10, 4, item_frac(id), sel ? K_LIME : K_CYAN);
 }
 
@@ -790,10 +825,10 @@ static void th_studio(const view_t *v, uint32_t vi)
             char b[24];
             if (!g_vis(y, 24)) continue;
             item_text(id, b);
-            g_rect(5, y + 5, 6, 6, theme_pal >= 4u ? K_WHITE : KNOB_RGB[i]);
+            g_rect(5, y + 5, 6, 6, PAL_BW ? K_WHITE : KNOB_RGB[i]);
             g_text(T_S, 16, y + 3, id == I_L1RATE ? "WOB RATE" : id == L1_DEP ? "WOB DEPTH" : item_name(id), i == c ? K_LIME : K_GREY);
             g_text_r(T_M, 235, y + 2, b, K_WHITE);
-            g_vbar(16, y + 17, 219, 4, item_frac(id), theme_pal >= 4u ? K_WAVE : KNOB_RGB[i]);
+            g_vbar(16, y + 17, 219, 4, item_frac(id), PAL_BW ? K_WAVE : KNOB_RGB[i]);
         }
     } else if (v->lay == LY_PRESET) presets_g(vi - PAGE_V0[PG_PRE], 3, 70, 234, 28, 31, 5, T_S);
     else if (v->lay == LY_SAVE) save_g(6, 98, 228, 70);
@@ -932,7 +967,7 @@ static void th_rack(const view_t *v, uint32_t vi)
 static const uint16_t C3_RGB[3] = {RGB(96, 255, 64), RGB(255, 224, 48), RGB(255, 144, 48)};
 static uint16_t c3c(uint32_t k)
 {
-    if (set.c3col && theme_pal < 4u) return C3_RGB[k];
+    if (set.c3col && !PAL_BW) return C3_RGB[k];
     return k == 0u ? K_LIME : k == 1u ? g_mix(K_LIME, K_WHITE, 80) : g_mix(K_LIME, K_CYAN, 80);
 }
 static void draw_c3(void)
@@ -1160,14 +1195,21 @@ static void draw_all(void)
                                          "CHORUS", "CHORUS", "DELAY", "DELAY", "DELAY", "REVERB", "REVERB", "REVERB", "MASTER",
                                          "MASTER", "MASTER", "COMP", "PHASER", "PHASER", "PHASER"};
         uint8_t ls[ND];
-        int32_t n = 0, at = 0, i, cur = patch[dpop_id], y;
+        int src = dpop_id < NP && PD[dpop_id].list == L_SRC, mc = dpop_id == G_MC_DST;
+        int32_t n = 0, at = 0, i, cur = mc ? perf.mc_dst[(mc_pos >> 1) & 15u] : patch[dpop_id], y;
         char hd[24], pos[12], *p;
-        for (i = 0; i < ND; i++)
-            if (dst_on(DST_ORDER[i]) || DST_ORDER[i] == cur) { if (DST_ORDER[i] == cur) at = n; ls[n++] = DST_ORDER[i]; }
+        if (src) for (i = 0; i < NSRC; i++) { if (i == cur) at = n; ls[n++] = (uint8_t)i; }
+        else
+            for (i = 0; i < ND; i++)
+                if (mc || dst_on(DST_ORDER[i]) || DST_ORDER[i] == cur) { if (DST_ORDER[i] == cur) at = n; ls[n++] = DST_ORDER[i]; }
         g_box(18, 22, 204, 198, K_PANEL, K_LIME);
-        p = str_cat(hd, dpop_id == ME_DST ? "MOD ENV" : dpop_id == ST_DST ? "STEP" : dpop_id == L2_DST ? "LFO 2" :
-                        dpop_id == L1_DST ? "LFO 1" : "MATRIX");
-        str_cat(p, " \xB7 DEST");
+        if (mc) { p = str_cat(hd, "MACRO "); *p++ = (char)('1' + ((mc_pos >> 3) & 3u)); *p = 0; p = str_cat(p, " \xB7 TARGET"); }
+        else if (src) { p = str_cat(hd, "MATRIX "); *p++ = (char)('1' + (dpop_id - M1_SRC) / 3); *p = 0; p = str_cat(p, " \xB7 SOURCE"); }
+        else {
+            p = str_cat(hd, dpop_id == ME_DST ? "MOD ENV" : dpop_id == ST_DST ? "STEP" : dpop_id == L2_DST ? "LFO 2" :
+                            dpop_id == L1_DST ? "LFO 1" : "MATRIX");
+            str_cat(p, " \xB7 DEST");
+        }
         g_text(T_XS, 26, 27, hd, K_LIME);
         p = fmt_u(pos, (uint32_t)at + 1u, 0);
         p = str_cat(p, "/");
@@ -1178,8 +1220,8 @@ static void draw_all(void)
             y = 112 + i * 16;
             if (k < 0 || k >= n) continue;
             if (!i) g_box(22, y - 2, 196, 16, K_LIME, K_LIME);
-            g_text(T_S, 30, y + 1, dst_name(ls[k]), !i ? K_INK : (i == -1 || i == 1) ? K_WHITE : K_GREY);
-            g_text_r(T_XS, 212, y + 2, GR[ls[k] < sizeof GR / sizeof GR[0] ? ls[k] : 0], !i ? K_INK : K_MOD);
+            g_text(T_S, 30, y + 1, src ? L_SRC[ls[k]] : ls[k] ? dst_name(ls[k]) : "OFF", !i ? K_INK : (i == -1 || i == 1) ? K_WHITE : K_GREY);
+            if (!src) g_text_r(T_XS, 212, y + 2, GR[ls[k] < sizeof GR / sizeof GR[0] ? ls[k] : 0], !i ? K_INK : K_MOD);
         }
         if (at > 5) g_text_c(T_XS, 120, 38, "\x5E", K_GREY);
         if (n - at > 6) g_text_c(T_XS, 120, 206, "v", K_GREY);

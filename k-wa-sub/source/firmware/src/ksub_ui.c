@@ -27,12 +27,13 @@ typedef struct {
     uint8_t n, it[20];                          /* the rows, in the order shown: K1..K4 are the first four */
     const char *tag;
 } view_t;
-#define OSCV(L, X) {LY_LIST, "OSCILLATOR " L, 8, {X##_P1, X##_P2, X##_P3, X##_LVL, X##_ENG, X##_OCT, X##_SEMI, X##_FINE}, "EDIT"}
+#define OSCV(L, X) {LY_LIST, "OSCILLATOR " L, 8, {X##_ENG, X##_P1, X##_P2, X##_P3, X##_LVL, X##_OCT, X##_SEMI, X##_FINE}, "EDIT"}
 #define FXV(...) {LY_LIST, "FX RACK", 4, {__VA_ARGS__}, "FX"}
 static const view_t VIEWS[] = {
     {LY_PLAY, "CURRENT PATCH", 4, {F_CUT, I_L1RATE, L1_DEP, F_RES}, "HOME"},
     {LY_PLAY, "LIVE MIX", 4, {S_LVL, DR_AMT, DL_MIX, MS_VOL}, "HOME"},
     OSCV("A", A), OSCV("B", B),
+    {LY_LIST, "OSCILLATOR C \xB7 SAMPLE", 4, {SM_SEL, SM_LVL, SM_TUNE, SM_KEY}, "EDIT"},
     {LY_LIST, "SUB + NOISE", 6, {S_LVL, S_OCT, S_WAVE, N_LVL, N_COL, S_ROUTE}, "EDIT"},
     {LY_LIST, "COMBINE A + B", 8, {X_AMT, X_MODE, A_LVL, B_LVL, V_GLIDE, V_MODE, X_DRIFT, X_RESET}, "EDIT"},
     {LY_BOX, "AMP ENVELOPE", 4, {AE_A, AE_D, AE_S, AE_R}, "ENV"},
@@ -62,9 +63,9 @@ static const view_t VIEWS[] = {
 /* what K1..K4 turn: the first four rows (the preset lists and SAVE have their own) */
 static uint32_t vknob(const view_t *v, uint32_t i) { return v->lay == LY_PRESET || v->lay == LY_SAVE || i >= v->n ? I_NONE : v->it[i]; }
 static const uint8_t FX_ON[7] = {DR_ON, CP_ON, CR_ON, CH_ON, PH_ON, DL_ON, RV_ON};   /* the FX page's views, in order */
-static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 12, 16, 24, 28, 29};   /* each page's first view */
-#define V_SEQ 11u                               /* SEQ BASS (the SEQ button's third view), ARP (the ARP button's last) */
-#define V_ARP 27u
+static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 7, 10, 13, 17, 25, 29, 30};   /* each page's first view */
+#define V_SEQ 12u                               /* SEQ BASS (the SEQ button's third view), ARP (the ARP button's last) */
+#define V_ARP 28u
 static const char *const FX_TITLE[8] = {"SATURATION", "COMPRESSOR", "BITCRUSH", "CHORUS", "PHASER", "DELAY", "REVERB", "MASTER"};
 static const char *const FT_TITLE[NFT] = {"DARK EDGE", "SOFT EDGE", "BAND RAZOR", "THIN AIR", "HOLLOW", "TALK BOX", "METAL COMB"};
 static const char *const FT_SUB[NFT] = {"LOW PASS \xB7 24 dB", "LOW PASS \xB7 12 dB", "BAND PASS \xB7 12 dB", "HIGH PASS \xB7 24 dB",
@@ -444,7 +445,7 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
     if (item_patch(id)) { *lo = PD[id].lo; *hi = PD[id].hi; return; }
     *lo = 0;
-    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE || id == G_C3COL || id == G_UI || id == G_ASK || id == G_ZOOM ? 1 : id == G_ACCEL ? 2 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
+    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE || id == G_C3COL || id == G_UI || id == G_ASK || id == G_ZOOM ? 1 : id == G_ACCEL ? 2 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 7 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
     if (id >= G_SQ_STEP && id <= G_AR_GATE) {
         static const int8_t LO[12] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1}, HI[12] = {15, 48, 4, 15, 16, 5, 50, 1, 4, 5, 3, 10};
@@ -712,7 +713,7 @@ static void item_text(uint32_t id, char *b)
         case G_OCT: fmt_s(b, v - 3); break;
         case G_CORES: str_cat(b, !v ? "SINGLE" : dual_on ? "DUAL \xB7 ON" : KS_DUAL ? "DUAL \xB7 OFF" : "DUAL (FM-1)"); break;
         case G_THEME: { static const char *const TN[4] = {"CLASSIC", "STUDIO", "PURE", "RACK"}; str_cat(b, TN[v & 3]); break; }
-        case G_PAL: { static const char *const PN[4] = {"SYNTHWAVE", "MINT", "BLACK / WHITE", "INVERTED"}; str_cat(b, v < 2 ? PAL_NAME[set.theme & 3][v] : PN[(v - 2) & 3]); break; }
+        case G_PAL: { static const char *const PN[6] = {"SYNTHWAVE", "MINT", "BLACK / WHITE", "INVERTED", "RED", "ICE"}; str_cat(b, v < 2 ? PAL_NAME[set.theme & 3][v] : PN[(v - 2) % 6]); break; }
         case G_GRID: str_cat(b, v ? "STRAIGHT" : "ALL (T, D)"); break;
         case G_BROWSE: str_cat(b, v ? "FAVORITES" : "ALL"); break;
         case G_ACCEL: str_cat(b, v == 2 ? "FAST" : v ? "ON" : "OFF"); break;
@@ -930,6 +931,7 @@ static void edit_item(uint32_t id, int32_t d)
         toast(t);
     }
     if (item_patch(id) && PD[id].fmt == FM_DEST) { item_set(id, dst_step(v, d)); dpop_id = (uint8_t)id; dpop_ms = fm1_ms | 1u; return; }
+    if (item_patch(id) && PD[id].list == L_SRC) { item_set(id, v + d); dpop_id = (uint8_t)id; dpop_ms = fm1_ms | 1u; return; }   /* (a source: the list too) */
     if (set.grid && (rate_like(id) == L1_DIV || rate_like(id) == L2_DIV)) {   /* STRAIGHT: from round to round */
         int32_t i, at = 0;
         if (vpop_id != (uint8_t)id || !vpop_ms) { item_text(id, vpop_before); vpop_id = (uint8_t)id; }
@@ -1082,6 +1084,7 @@ static void on_enc(uint32_t e, int32_t d)
                 int32_t i, at = 0, cur = perf.mc_dst[(mc_pos >> 1) & 15u];
                 for (i = 0; i < ND; i++) if (DST_ORDER[i] == cur) at = i;
                 item_set(G_MC_DST, DST_ORDER[clampi(at + d, 0, ND - 1)]);
+                dpop_id = G_MC_DST; dpop_ms = fm1_ms | 1u;
                 if (!perf.mc_amt[(mc_pos >> 1) & 15u] && perf.mc_dst[(mc_pos >> 1) & 15u]) item_set(G_MC_AMT, 32);
             }
         } else if (e >= ENC_KNOB1 && e <= ENC_KNOB4) edit_item(G_MC1 + (e - ENC_KNOB1), d);

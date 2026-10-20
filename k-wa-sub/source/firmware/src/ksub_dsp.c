@@ -60,6 +60,7 @@ static volatile uint32_t scope_w;
 static volatile uint32_t lfo_ph_show[2];        /* where the LFOs are (the LFO page's dot) */
 static volatile uint8_t env_st_show[3];         /* the newest voice's envelopes: stage, level Q15 (the ENV dots) */
 static volatile int32_t env_lv_show[3], cut_show; /* ... and its cutoff after the modulation (Q8 units) */
+static volatile uint32_t sm_show;               /* the newest voice's place in its sample (Q16; the SAMPLE view) */
 static volatile int32_t step_val;               /* the STEP effect: its level now (Q15), its step */
 static volatile uint8_t step_pos;
 static volatile uint8_t ks_straight;            /* LFO GRID: round divisions only */
@@ -426,6 +427,7 @@ static void lfo_run(uint32_t k, uint32_t beats)
 /* ================================================================ the voices */
 typedef struct {
     uint8_t on, note, vel, gate, slide;         /* slide: the SEQ BASS glides into this note */
+    uint32_t sm_pos;                            /* OSC C: where in its sample, Q16 */
     int32_t pitch, target;                      /* Q8 semitones (glide) */
     osc_t oa, ob;
     uint32_t phs;
@@ -460,6 +462,7 @@ static void voice_start(voice_t *v, uint32_t note, uint32_t vel, int legato)
         v->phs = 0;
     }
     if (!v->on) { v->y1 = v->y2 = v->y3 = v->y4 = 0; v->b1 = v->l1 = v->b2 = v->l2 = v->b3 = v->l3 = 0; }
+    v->sm_pos = 0;
     v->on = 1;
     v->gate = 1;
     v->rand = ((int32_t)(rnd() >> 17) - 16384) * 2;
@@ -609,7 +612,7 @@ static const int8_t FT_MIX[5][5] = {{0, 0, 0, 0, 1}, {0, 0, 1, 0, 0}, {0, 2, -2,
 /* one voice, one control block, added into acc */
 static void voice_block(voice_t *v, int32_t *acc)
 {
-    int32_t m[ND], fenv, menv, amp, p, bend, bufa[KS_CB], bufb[KS_CB], pmb[KS_CB], s[KS_CB], cut, res, drv, la, lb, lsub, ln, i;
+    int32_t m[ND], fenv, menv, amp, p, bend, bufa[KS_CB], bufb[KS_CB], pmb[KS_CB], s[KS_CB], smb[KS_CB], cut, res, drv, la, lb, lsub, ln, i;
     oscp_t qa, qb;
     const int8_t *P = patch;
     uint32_t inc_sub, rsub, ft = (uint32_t)P[F_TYPE];
@@ -673,6 +676,29 @@ static void voice_block(voice_t *v, int32_t *acc)
             }
             s[i] = x >> 1;
         }
+    }
+    for (i = 0; i < (int32_t)KS_CB; i++) smb[i] = 0;
+    if (P[SM_SEL] && P[SM_LVL]) {               /* OSC C: the sample (after the filter, as the sub), from the keys (C3 as made) or fixed */
+        const ks_smp_t *sm = &KS_SMP[(uint32_t)(P[SM_SEL] - 1) % KS_NSMP];
+        const uint8_t *d = KS_SMP_DATA + sm->off;
+        int keys = P[SM_KEY] == 1 || (P[SM_KEY] == 0 && sm->keys);
+        uint32_t st = (uint32_t)(((uint64_t)pitch_inc((keys ? p : 48 * 256) + P[SM_TUNE] * 256) * sm->k) >> 32);
+        int32_t lv = lvl15(pv(P[SM_LVL], 0) >> 8);
+        if (st > (8u << 16)) st = 8u << 16;
+        for (i = 0; i < (int32_t)KS_CB; i++) {
+            uint32_t ix = v->sm_pos >> 16, f = (v->sm_pos >> 1) & 32767u;
+            int32_t a, b;
+            if (ix >= sm->len) {
+                if (sm->loop >= sm->len) break;
+                v->sm_pos -= (sm->len - sm->loop) << 16;
+                ix = v->sm_pos >> 16;
+            }
+            a = KS_MULAW[d[ix]];
+            b = ix + 1u < sm->len ? KS_MULAW[d[ix + 1u]] : a;
+            smb[i] = mul15(a + mul15(b - a, (int32_t)f), lv) >> 1;
+            v->sm_pos += st;
+        }
+        if (v->age == vage) sm_show = v->sm_pos;
     }
 
     /* the filter */
@@ -749,7 +775,7 @@ static void voice_block(voice_t *v, int32_t *acc)
     if (amp_t < 0) amp_t = 0;
     da = (amp_t - v->amp) / (int32_t)KS_CB;
     for (i = 0; i < (int32_t)KS_CB; i++) {
-        int32_t x = s[i], sb;
+        int32_t x = s[i] + smb[i], sb;
         v->phs += inc_sub;
         if (lsub) {
             switch (P[S_WAVE]) {
