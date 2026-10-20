@@ -283,7 +283,7 @@ sauf s'ils ont été appris pour autre chose.
 
 ## À faire
 
-- MACROS (4 macros × 4 destinations), MORPH / XY.
+- MORPH / XY (les MACROS sont faites : fenêtre `SEL`).
 
 ## Installer sur le FM-1
 
