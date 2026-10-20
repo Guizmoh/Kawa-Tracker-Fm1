@@ -118,6 +118,17 @@ def gen_tables():
     o.append(arr("uint32_t", "KS_ENV_MS10", [round(t * 10) for t in tms], 8))
     o.append(arr("uint32_t", "KS_ENV_ATK", [min(2 ** 30, round(2 ** 30 * CB / (t / 1000 * FS))) for t in tms], 8))
     o.append(arr("uint32_t", "KS_ENV_DEC", [round(math.exp(-CB * math.log(1000) / (t / 1000 * FS)) * 2 ** 24) for t in tms], 8))
+    # the EQ (held FX): 4 bands of any type, 48 frequencies 20 Hz .. 18 kHz (log), gains -12..+12 dB (A = 10^(g/40),
+    # 1/A, sqrt(A), Q14), 8 widths (1/(2Q), Q14: Q 0.4 .. 5)
+    hz = [round(20 * (900 ** (i / 47))) for i in range(48)]
+    o.append(arr("uint16_t", "KS_EQ_HZ", hz, 16))
+    o.append(arr("uint32_t", "KS_EQ_INC", [round(f / FS * 2 ** 32) for f in hz], 8))
+    o.append(arr("int32_t", "KS_EQ_A", [round(10 ** (g / 40) * 16384) for g in range(-12, 13)], 13))
+    o.append(arr("int32_t", "KS_EQ_IA", [round(10 ** (-g / 40) * 16384) for g in range(-12, 13)], 13))
+    o.append(arr("int32_t", "KS_EQ_SQ", [round(10 ** (g / 80) * 16384) for g in range(-12, 13)], 13))
+    eqq = (0.4, 0.6, 0.8, 1.0, 1.4, 2.0, 3.0, 5.0)
+    o.append(arr("int32_t", "KS_EQ_IQ", [round(16384 / (2 * q)) for q in eqq], 8))
+    o.append(arr("uint16_t", "KS_EQ_Q10", [round(q * 10) for q in eqq], 8))
     # glide: 0 off, 1..127 -> 5 ms .. 2 s (to 1 % of the way left), its own curve: the usual times in the knob's middle
     gms = [5 * 400 ** (i / 127) for i in range(128)]
     o.append(arr("uint32_t", "KS_GLIDE_MS10", [round(t * 10) for t in gms], 8))

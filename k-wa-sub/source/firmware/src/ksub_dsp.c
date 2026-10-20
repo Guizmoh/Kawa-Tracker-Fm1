@@ -46,7 +46,15 @@ static struct {                                 /* stored (the store's second se
     uint8_t mc_magic, mc_dst[16];               /* MACROS: four targets each (a destination, an amount) */
     int8_t mc_amt[16];
     uint8_t cc_magic, cc_num[16], cc_id[16];    /* MIDI LEARN: a CC (0xFF: none) and what it moves */
+    uint8_t eq_magic, eq_t[4], eq_f[4], eq_q[4];   /* the EQ: each band's type, frequency, width */
+    int8_t eq_g[4];                             /* ... and gain (dB) */
 } perf;
+/* the EQ (held FX), on every sound: 4 biquads a side, Q24 (b0 b1 b2 a1 a2); the main loop works them out (eq_n),
+ * the audio takes them at the next block (eq_new) */
+enum { EQ_OFF, EQ_LOCUT, EQ_LOSH, EQ_BELL, EQ_NOTCH, EQ_HISH, EQ_HICUT, NEQT };
+static int32_t eq_c[4][5], eq_n[4][5], eq_st[2][4][4];
+static volatile uint8_t eq_new, eq_nmask;
+static uint8_t eq_mask;
 static volatile uint8_t mc_val[4];              /* the four macros now, 0..127 (K1..K4 in the MACROS window; not stored) */
 /* FX LIVE (not stored, all off at the start): DJ filter (- low pass, + high pass) and its resonance, PUMP (the
  * sidechain dip on the tempo) and its rate, STUTTER (the last slice played again and again), TAPE (slower, to a stop) */
@@ -1015,6 +1023,7 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
     int32_t vol = (mv * mv * 419) >> 10, boost = fpv(MS_SUB, D_SUBB) * 200, glue = fpv(MS_GLUE, D_GLUE);
     int32_t thr = 32767 - glue * 180, makeup = 4096 + glue * 24;
     int32_t dj_f = 0, dj_q = 0, dj_mix = 0;
+    if (eq_new) { memcpy(eq_c, eq_n, sizeof eq_c); if (eq_nmask & ~eq_mask) memset(eq_st, 0, sizeof eq_st); eq_mask = eq_nmask; eq_new = 0; }
     uint32_t pb = ks_beats, pinc = (ks_bpm10 * 41546u) >> 16;   /* (the beat, Q24, and its step a sample: PUMP) */
     int32_t cp_amt = fpv(CP_AMT, D_CPAMT), cp_thr = 32767 - cp_amt * 200, cp_r = 2 + cp_amt / 16, cp_mk = 32768 + cp_amt * 150;
     int32_t cp_atk = 32768 / (1 + P[CP_ATK] * 11), cp_rel = 1048576 / (441 + P[CP_REL] * 270), cp_pump = P[CP_ON] ? P[CP_PUMP] : 0;
@@ -1233,6 +1242,21 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
             if (lfx_pump) g = pump_gain(pos, lfx_prate, lfx_pump);
             if (cp_pump) g = mul15(g, pump_gain(pos, (uint32_t)P[CP_PRATE], cp_pump));
             L = mul15(L, g); R = mul15(R, g);
+        }
+        if (eq_mask) {                          /* the EQ: the bands in use, in turn */
+            int32_t c2[2] = {L, R};
+            uint32_t ch, b;
+            for (ch = 0; ch < 2u; ch++)
+                for (b = 0; b < 4u; b++) {
+                    const int32_t *q = eq_c[b];
+                    int32_t *z = eq_st[ch][b], y;
+                    if (!(eq_mask >> b & 1u)) continue;
+                    y = (int32_t)(((int64_t)q[0] * c2[ch] + (int64_t)q[1] * z[0] + (int64_t)q[2] * z[1] - (int64_t)q[3] * z[2] - (int64_t)q[4] * z[3]) >> 24);
+                    y = clip(y, 400000);
+                    z[1] = z[0]; z[0] = c2[ch]; z[3] = z[2]; z[2] = y;
+                    c2[ch] = y;
+                }
+            L = c2[0]; R = c2[1];
         }
         L = mul15(L, fx.gain);
         R = mul15(R, fx.gain);

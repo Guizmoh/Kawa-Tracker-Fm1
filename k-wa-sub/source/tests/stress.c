@@ -88,6 +88,14 @@ int main(void)
             play(low, 1, 30);
         }
         lfx_flt = 0; lfx_pump = 0;
+        for (j = 0; j < 7u; j++) {              /* the EQ: every type at both ends, narrow and wide, then off */
+            uint32_t b2;
+            for (b2 = 0; b2 < 4u; b2++) { perf.eq_t[b2] = (uint8_t)((j + b2) % 7u); perf.eq_f[b2] = (uint8_t)(b2 * 15u + j); perf.eq_g[b2] = (int8_t)(b2 & 1u ? 12 : -12); perf.eq_q[b2] = (uint8_t)((j + b2) & 7u); }
+            eq_dirty = 1; eq_update();
+            play(chord, 4, 40);
+            play(low, 1, 20);
+        }
+        eq_defaults(); eq_dirty = 1; eq_update();
         for (j = 1; j < 16u; j++) {             /* OSC C: every sample, from the keys and fixed, tuned to the ends */
             load_preset(0, 0);
             patch[SM_SEL] = (int8_t)j; patch[SM_LVL] = 127; patch[SM_KEY] = (int8_t)(j % 3u); patch[SM_TUNE] = j & 1u ? 24 : -24;

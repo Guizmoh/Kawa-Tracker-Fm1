@@ -145,6 +145,19 @@ Au départ : M1 FILTER (cutoff, résonance), M2 WOBBLE (profondeur et vitesse du
 bruit, saturation), M4 TONE (le 1er réglage des deux oscillateurs, X-MOD). `SELECT` choisit une cible (M1 cible 1,
 sa quantité, M1 cible 2…), `ALGO` la change ; une cible choisie sans quantité part à +50 %.
 
+## EQ (FX maintenu)
+
+`FX` maintenu 0,6 s ouvre l'**EQ** (et le referme). Il agit sur la sortie de tous les sons (comme un EQ de table de
+mixage, juste avant le master) et il est gardé avec SEQ BASS, ARP et MACROS.
+
+- En haut, la **courbe** (20 Hz à 18 kHz, ±12 dB, repères 100 Hz, 1 kHz, 10 kHz) et un point par bande, de la couleur
+  de son potard ; en dessous, les **4 bandes** : type, fréquence, gain, largeur.
+- `K1`–`K4` : la **fréquence** de chaque bande (20 Hz à 18 kHz) ; `OCT−` maintenu + potard : son **gain**
+  (−12 à +12 dB) ; `OCT+` maintenu + potard : son **type** ; `SELECT` choisit une bande, `ALGO` sa **largeur** (Q 0,4 à 5).
+- 7 types par bande : OFF, LOW CUT, LOW SHELF, BELL, NOTCH, HIGH SHELF, HIGH CUT (12 dB/oct pour les coupe-bas et
+  coupe-haut, la largeur donne leur résonance). Au départ : LOW SHELF 85 Hz, BELL 313 Hz, BELL 2 kHz, HIGH SHELF
+  7,5 kHz, tout à 0 dB (rien ne change tant qu'on ne monte ou ne baisse pas un gain).
+
 ## SEQ BASS et ARP
 
 **SEQ BASS** (`SEQ`, 3e vue) : 16 motifs de 1 à 16 pas, chacun une note (C1 à C5), un silence, un accent, un slide

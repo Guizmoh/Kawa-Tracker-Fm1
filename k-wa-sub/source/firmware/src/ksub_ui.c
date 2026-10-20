@@ -19,6 +19,7 @@ enum { I_L1RATE = 200, I_L2RATE, I_ABMIX, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_COR
        G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE,                          /* ARP */
        G_LV_FLT, G_LV_PUMP, G_LV_STUT, G_LV_TAPE, G_LV_PRATE, G_LV_FRES,             /* SEL: FX LIVE */
        G_MC1, G_MC2, G_MC3, G_MC4, G_MC_DST, G_MC_AMT,                               /* SEL: MACROS */
+       G_EQ_F, G_EQ_G, G_EQ_T, G_EQ_Q,                                               /* FX held: the EQ (the band eq_cur) */
        I_NONE = 255 };
 
 typedef struct {
@@ -87,6 +88,7 @@ static struct {                                 /* the user slots' settings past
     uint8_t magic, sum;
     int8_t p[NUSER][NP_MAX - NP_STORE];
 } uext;
+typedef char ids_fit[G_EQ_Q < I_NONE ? 1 : -1];
 typedef char perf_fits_before_uext[sizeof perf <= UX_AT ? 1 : -1];   /* (the 2nd sector: SEQ/ARP/MACROS, then the slots' rest) */
 static uint8_t ux_sum(void) { const uint8_t *b = (const uint8_t *)uext.p; uint32_t i, x = 0x77; for (i = 0; i < sizeof uext.p; i++) x = (x * 7u + b[i]) & 0xFFu; return (uint8_t)x; }
 static struct {
@@ -210,6 +212,90 @@ static void mc_defaults(void)
     perf.mc_magic = MC_MAGIC;
 }
 /* ---- the SEL windows: 1 FX LIVE, 2 MACROS (SEL again: the next, then back to the page) */
+
+/* ---- the EQ (FX held): K1..K4 the bands' frequencies, OCT- held their gains, OCT+ held their types, SELECT a band,
+ * ALGO its width; on every sound, kept with SEQ BASS */
+static const char *const L_EQT[NEQT] = {"OFF", "LOW CUT", "LOW SHELF", "BELL", "NOTCH", "HIGH SHELF", "HIGH CUT"};
+static const char *const L_EQS[NEQT] = {"OFF", "LCUT", "LSHF", "BELL", "NTCH", "HSHF", "HCUT"};
+static uint8_t eq_cur, eq_dirty = 1;
+static int16_t eq_curve[112];                   /* the response, dB x 16, 20 Hz .. 18 kHz (the EQ window) */
+static void eq_defaults(void)
+{
+    static const uint8_t T[4] = {EQ_LOSH, EQ_BELL, EQ_BELL, EQ_HISH}, F[4] = {10, 19, 32, 41};
+    uint32_t k;
+    for (k = 0; k < 4u; k++) { perf.eq_t[k] = T[k]; perf.eq_f[k] = F[k]; perf.eq_q[k] = 3; perf.eq_g[k] = 0; }
+    perf.eq_magic = 0x45u;
+}
+static int eq_live(uint32_t k)                  /* a band that does something */
+{
+    uint32_t t = perf.eq_t[k];
+    return t == EQ_LOCUT || t == EQ_HICUT || t == EQ_NOTCH || ((t == EQ_LOSH || t == EQ_BELL || t == EQ_HISH) && perf.eq_g[k]);
+}
+static void eq_coef(uint32_t k, int32_t *o)     /* RBJ's biquads, Q24, a0 taken out without a 64-bit division */
+{
+    const int64_t ONE = 1 << 24;
+    uint32_t ph = KS_EQ_INC[perf.eq_f[k] % 48u], gi = (uint32_t)clampi(perf.eq_g[k] + 12, 0, 24);
+    int64_t s = (int64_t)sin32(ph) << 9, c = (int64_t)sin32(ph + 0x40000000u) << 9;
+    int64_t al = (s * KS_EQ_IQ[perf.eq_q[k] & 7u]) >> 14, A = (int64_t)KS_EQ_A[gi] << 10, IA = (int64_t)KS_EQ_IA[gi] << 10;
+    int64_t Ap = A + ONE, Am = A - ONE, sa = ((int64_t)KS_EQ_SQ[gi] << 10) * al >> 23, b0, b1, b2, a0, a1, a2;
+    int32_t inv;
+    switch (perf.eq_t[k]) {
+    case EQ_LOCUT: b0 = (ONE + c) / 2; b1 = -(ONE + c); b2 = b0; a0 = ONE + al; a1 = -2 * c; a2 = ONE - al; break;
+    case EQ_HICUT: b0 = (ONE - c) / 2; b1 = ONE - c; b2 = b0; a0 = ONE + al; a1 = -2 * c; a2 = ONE - al; break;
+    case EQ_NOTCH: b0 = ONE; b1 = -2 * c; b2 = ONE; a0 = ONE + al; a1 = -2 * c; a2 = ONE - al; break;
+    case EQ_LOSH:
+        b0 = (A * (Ap - (Am * c >> 24) + sa)) >> 24; b1 = (2 * A * (Am - (Ap * c >> 24))) >> 24; b2 = (A * (Ap - (Am * c >> 24) - sa)) >> 24;
+        a0 = Ap + (Am * c >> 24) + sa; a1 = -2 * (Am + (Ap * c >> 24)); a2 = Ap + (Am * c >> 24) - sa; break;
+    case EQ_HISH:
+        b0 = (A * (Ap + (Am * c >> 24) + sa)) >> 24; b1 = (-2 * A * (Am + (Ap * c >> 24))) >> 24; b2 = (A * (Ap + (Am * c >> 24) - sa)) >> 24;
+        a0 = Ap - (Am * c >> 24) + sa; a1 = 2 * (Am - (Ap * c >> 24)); a2 = Ap - (Am * c >> 24) - sa; break;
+    default:                                    /* BELL */
+        b0 = ONE + (al * A >> 24); b1 = -2 * c; b2 = ONE - (al * A >> 24); a0 = ONE + (al * IA >> 24); a1 = -2 * c; a2 = ONE - (al * IA >> 24); break;
+    }
+    inv = (int32_t)((1 << 30) / (int32_t)(a0 >> 10));   /* (1/a0, Q16) */
+    o[0] = (int32_t)((b0 * inv) >> 16); o[1] = (int32_t)((b1 * inv) >> 16); o[2] = (int32_t)((b2 * inv) >> 16);
+    o[3] = (int32_t)((a1 * inv) >> 16); o[4] = (int32_t)((a2 * inv) >> 16);
+}
+static void p_eqhead(char *t)                  /* the band being set, its type and width (the EQ's top line) */
+{
+    char *p = str_cat(t, "BAND ");
+    *p++ = (char)('1' + (eq_cur & 3u)); *p = 0;
+    p = str_cat(p, " \xB7 ");
+    p = str_cat(p, L_EQT[perf.eq_t[eq_cur & 3u] % NEQT]);
+    p = str_cat(p, " \xB7 Q ");
+    p = fmt_u(p, KS_EQ_Q10[perf.eq_q[eq_cur & 3u] & 7u] / 10u, 0);
+    *p++ = '.'; fmt_u(p, KS_EQ_Q10[perf.eq_q[eq_cur & 3u] & 7u] % 10u, 0);
+}
+static void eq_update(void)                     /* the coefficients to the audio (once it took the last), the curve */
+{
+    int32_t q[4][5];
+    uint32_t k, x, mask = 0;
+    if (eq_new) return;                         /* (the audio has not taken the last ones yet: next time) */
+    for (k = 0; k < 4u; k++) if (eq_live(k)) { eq_coef(k, q[k]); mask |= 1u << k; }
+    memcpy(eq_n, q, sizeof q);
+    eq_nmask = (uint8_t)mask;
+    eq_new = 1;
+    eq_dirty = 0;
+    for (x = 0; x < 112u; x++) {                /* the curve: each band's shape in octaves from its frequency (the sound */
+        int32_t fq8 = (int32_t)(x * 47u * 256u / 111u), db = 0;   /* itself is the biquads: this is their picture) */
+        for (k = 0; k < 4u; k++) {
+            int32_t d = (fq8 - (int32_t)(perf.eq_f[k] % 48u) * 256) * 53 / 256, q2 = (int32_t)KS_EQ_Q10[perf.eq_q[k] & 7u] * 2 / 10 + 1;
+            int32_t g = perf.eq_g[k] * 16, u, sm, ad = d < 0 ? -d : d;   /* (d: octaves Q8, 0.209 octave a step) */
+            if (!(mask >> k & 1u)) continue;
+            u = d * q2;
+            sm = clampi(128 - d * 64 / 256, 0, 256);                   /* (a shelf's slope: 0 to 1 over 4 octaves) */
+            switch (perf.eq_t[k]) {
+            case EQ_BELL: db += g * 256 / (256 + (int32_t)(((int64_t)u * u) >> 8)); break;
+            case EQ_NOTCH: db += -24 * 16 * 256 / (256 + (int32_t)(((int64_t)u * u * 16) >> 8)); break;
+            case EQ_LOSH: db += g * sm / 256; break;
+            case EQ_HISH: db += g * (256 - sm) / 256; break;
+            case EQ_LOCUT: db += d < 0 ? -48 - 12 * 16 * ad / 256 : -48 * 256 / (256 + ((int32_t)(((int64_t)d * d) >> 8)) * 8); break;
+            default: db += d > 0 ? -48 - 12 * 16 * ad / 256 : -48 * 256 / (256 + ((int32_t)(((int64_t)d * d) >> 8)) * 8); break;   /* HIGH CUT */
+            }
+        }
+        eq_curve[x] = (int16_t)clampi(db, -24 * 16, 24 * 16);
+    }
+}
 static uint8_t ml_state, ml_id;                 /* MIDI LEARN: 1 waits for a setting, 2 for a CC; the setting */
 static uint32_t cc_count(void) { uint32_t k, n = 0; if (perf.cc_magic == 0x43u) for (k = 0; k < 16u; k++) n += perf.cc_num[k] != 0xFFu; return n; }
 static uint8_t win, win_cur, mc_pos;            /* the window, its row (FX LIVE), the target being edited (MACROS: 0..31) */
@@ -455,6 +541,10 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
         static const int8_t LO[12] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1}, HI[12] = {15, 48, 4, 15, 16, 5, 50, 1, 4, 5, 3, 10};
         *lo = LO[id - G_SQ_STEP]; *hi = HI[id - G_SQ_STEP];
     }
+    if (id >= G_EQ_F && id <= G_EQ_Q) {
+        static const int8_t LO[4] = {0, -12, 0, 0}, HI[4] = {47, 12, NEQT - 1, 7};
+        *lo = LO[id - G_EQ_F]; *hi = HI[id - G_EQ_F];
+    }
     if (id >= G_LV_FLT && id <= G_MC_AMT) {
         static const int8_t LO[12] = {-64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -64}, HI[12] = {63, 127, 5, 127, 3, 127, 127, 127, 127, 127, ND - 1, 63};
         *lo = LO[id - G_LV_FLT]; *hi = HI[id - G_LV_FLT];
@@ -513,6 +603,10 @@ static int32_t item_get(uint32_t id)
     case G_MC1: case G_MC2: case G_MC3: case G_MC4: return mc_val[id - G_MC1];
     case G_MC_DST: return perf.mc_dst[(mc_pos >> 1) & 15u];
     case G_MC_AMT: return perf.mc_amt[(mc_pos >> 1) & 15u];
+    case G_EQ_F: return perf.eq_f[eq_cur & 3u];
+    case G_EQ_G: return perf.eq_g[eq_cur & 3u];
+    case G_EQ_T: return perf.eq_t[eq_cur & 3u];
+    case G_EQ_Q: return perf.eq_q[eq_cur & 3u];
     default: return 0;
     }
 }
@@ -527,6 +621,16 @@ static void item_set(uint32_t id, int32_t v)
         patch[id] = (int8_t)v;
         if (PD[id].fmt == FM_DEST && (v == D_DRAMT || v == D_DRMIX) && !patch[DR_ON]) { patch[DR_ON] = 1; toast("SATURATION ON"); }
         if (id < N_LVL || id == S_LVL || id == S_WAVE || id == S_OCT) prev_dirty = 1;
+        return;
+    }
+    if (id >= G_EQ_F && id <= G_EQ_Q) {
+        uint32_t k = eq_cur & 3u;
+        if (id == G_EQ_F) perf.eq_f[k] = (uint8_t)v;
+        else if (id == G_EQ_G) { perf.eq_g[k] = (int8_t)v; if (!perf.eq_t[k]) perf.eq_t[k] = EQ_BELL; }   /* (a gain on an OFF band: a bell) */
+        else if (id == G_EQ_T) perf.eq_t[k] = (uint8_t)v;
+        else perf.eq_q[k] = (uint8_t)v;
+        eq_dirty = 1;
+        perf_touch();
         return;
     }
     if (id >= G_LV_FLT && id <= G_MC_AMT) {
@@ -657,6 +761,10 @@ static const char *item_name(uint32_t id)
     case G_MC4: return "MACRO 4";
     case G_MC_DST: return "TARGET";
     case G_MC_AMT: return "AMOUNT";
+    case G_EQ_F: return "FREQUENCY";
+    case G_EQ_G: return "GAIN";
+    case G_EQ_T: return "BAND TYPE";
+    case G_EQ_Q: return "WIDTH (Q)";
     default: return "";
     }
 }
@@ -794,6 +902,10 @@ static void item_text(uint32_t id, char *b)
             b = fmt_u(b, (uint32_t)v * 100u / 127u, 0); str_cat(b, "%"); break;
         case G_MC_DST: str_cat(b, v ? dst_name((uint32_t)v) : "-"); break;
         case G_MC_AMT: b = v ? fmt_s(b, v * 100 / 64) : fmt_u(b, 0, 0); str_cat(b, "%"); break;
+        case G_EQ_F: { uint32_t h = KS_EQ_HZ[v % 48]; if (h < 1000u) { b = fmt_u(b, h, 0); str_cat(b, " Hz"); } else { b = fmt_u(b, h / 1000u, 0); *b++ = '.'; b = fmt_u(b, h / 100u % 10u, 0); str_cat(b, " kHz"); } break; }
+        case G_EQ_G: b = v ? fmt_s(b, v) : fmt_u(b, 0, 0); str_cat(b, " dB"); break;
+        case G_EQ_T: str_cat(b, L_EQT[v % NEQT]); break;
+        case G_EQ_Q: { uint32_t q = KS_EQ_Q10[v & 7]; b = str_cat(b, "Q "); b = fmt_u(b, q / 10u, 0); *b++ = '.'; fmt_u(b, q % 10u, 0); break; }
         }
         return;
     }
@@ -1059,7 +1171,7 @@ static void on_button(uint32_t b)
         }
     switch (b) {
     case BTN_SEL:                               /* the windows: FX LIVE, MACROS, back (held: COMPARE) */
-        win = (uint8_t)((win + 1u) % 3u);
+        win = win == 3u ? 0u : (uint8_t)((win + 1u) % 3u);   /* (from the EQ: back to the page) */
         win_cur = 0;
         vpop_ms = 0;
         g_force = 1;
@@ -1111,6 +1223,17 @@ static void on_enc(uint32_t e, int32_t d)
 {
     const view_t *v = view();
     uint32_t vi = vidx();
+    if (win == 3u && e != ENC_PRESETS) {        /* the EQ: K1..K4 frequencies (OCT- held: gains, OCT+ held: types) */
+        vpop_pre[0] = 0;
+        if (e == ENC_SELECT) eq_cur = (uint8_t)clampi(eq_cur + d, 0, 3);
+        else if (e == ENC_ALGORITHM) edit_item(G_EQ_Q, d);
+        else if (e >= ENC_KNOB1 && e <= ENC_KNOB4) {
+            uint32_t col = c3_col();
+            eq_cur = (uint8_t)(e - ENC_KNOB1);
+            edit_item(col == 1u ? G_EQ_G : col == 2u ? G_EQ_T : G_EQ_F, d);
+        }
+        return;
+    }
     if (win && e != ENC_PRESETS) {              /* the SEL windows: K1..K4 their four, SELECT a row, ALGO its value */
         vpop_pre[0] = 0;
         if (win == 1u) {
@@ -1183,7 +1306,7 @@ static void on_enc(uint32_t e, int32_t d)
 }
 
 static int page_of_btn(uint32_t b) { uint32_t i; for (i = 0; i < NPAGE; i++) if (PAGE_BTN[i] == b) return (int)i; return -1; }
-static int holdable(uint32_t b) { return page_of_btn(b) >= 0 || b == BTN_SAVE || b == BTN_SEL || b == BTN_PLAY || (set.ui && b <= BTN_OCT_UP); }
+static int holdable(uint32_t b) { return page_of_btn(b) >= 0 || b == BTN_SAVE || b == BTN_SEL || b == BTN_PLAY || ((set.ui || win == 3u) && b <= BTN_OCT_UP); }
 static void hold_toggle(void)
 {
     uint32_t i;
@@ -1195,6 +1318,7 @@ static uint32_t hold_time(uint32_t b)           /* how long until the held actio
 {
     if (b == BTN_SAVE) return PRE_BROWSING ? 700u : 600u;
     if (b == BTN_SEL) return 400u;
+    if (b == BTN_FX) return 600u;
     if (b == BTN_PLAY) return 600u;
     if (b == BTN_ARP) return 0u;
     if (b == BTN_LFO || b == BTN_ENV || b <= BTN_OCT_UP) return 0u;   /* (they wait for a knob: QUICK ASSIGN, SHIFT) */
@@ -1208,6 +1332,7 @@ static const char *hold_label(uint32_t b)
         return fav_is(bk, pre_cur[bk]) ? "REMOVE FROM FAVORITES" : "ADD TO FAVORITES"; }
     if (b == BTN_SAVE) return "UNDO / REDO";
     if (b == BTN_SEL) return "COMPARE: THE SAVED SOUND";
+    if (b == BTN_FX) return win == 3u ? "CLOSE THE EQ" : "EQ";
     if (b == BTN_PLAY) return hold ? "HOLD OFF" : "HOLD: THE KEYS STAY ON";
     if (b == BTN_LFO) return "TURN A KNOB: LFO 1 ON IT";
     if (b == BTN_ENV) return "TURN A KNOB: MOD ENV ON IT";
@@ -1313,7 +1438,7 @@ static void ui_input(void)
             if (b == BTN_OCT_DOWN) undo(); else redo();
             continue;
         }
-        if (set.ui && b <= BTN_OCT_UP && (fm1_in.buttons & 3u) == 3u) {
+        if ((set.ui || win == 3u) && b <= BTN_OCT_UP && (fm1_in.buttons & 3u) == 3u) {
             notes_all_off(); ev_push(EV_PANIC, 0, 0); toast("ALL NOTES OFF");
             if (hb.b <= BTN_OCT_UP) hb.used = 1;
             continue;
@@ -1328,6 +1453,7 @@ static void ui_input(void)
             else if (hb.b == BTN_SAVE) { ur_on = 1; hb.next = 0; }   /* (then OCT- UNDO, OCT+ REDO) */
             else if (hb.b == BTN_SEL) { compare(1); hb.next = 0; }
             else if (hb.b == BTN_PLAY) { hold_toggle(); hb.next = 0; }
+            else if (hb.b == BTN_FX) { win = win == 3u ? 0u : 3u; vpop_ms = 0; g_force = 1; hb.next = 0; }
             else { randomize((uint32_t)page_of_btn(hb.b)); hb.next = 0; }
             hb.fired = 1;
         }
@@ -1491,6 +1617,8 @@ static void app_init(void)
     perf.ar_on = 0;                             /* (the ARP starts off: a key does what it says) */
     if (perf.mc_magic != MC_MAGIC) mc_defaults();
     if (perf.cc_magic != 0x43u) { memset(perf.cc_num, 0xFF, sizeof perf.cc_num); perf.cc_magic = 0x43u; }
+    if (perf.eq_magic != 0x45u) eq_defaults();
+    eq_dirty = 1;
     load_preset(set.bank, set.idx);
     if (set.bank && !up_valid(set.idx)) load_preset(0, 0);
     pre_cur[set.bank] = set.idx;
@@ -1522,6 +1650,7 @@ static void app_init(void)
 static void app_step(void)
 {
     ui_input();
+    if (eq_dirty) eq_update();
     if (toast_ms && (int32_t)(fm1_ms - toast_ms) > 1400) toast_ms = 0;
     if (pend_on && fm1_ms - pend_ms > 6000u) { pend_on = 0; toast("KEPT"); }
     if (dpop_ms && (int32_t)(fm1_ms - dpop_ms) > 1500) dpop_ms = 0;
@@ -1569,6 +1698,7 @@ WASM_EXPORT("ksub_knob_label") const char *ksub_knob_label(uint32_t i)
     if (i >= 4u) return "";
     if (v->lay == LY_PRESET) return i == 0u ? "SCROLL" : i == 2u ? "LOAD" : "";
     if (v->lay == LY_SAVE) return i == 0u ? "SLOT" : i == 1u ? "POSITION" : i == 2u ? "LETTER" : "STYLE";
+    if (win == 3u) return c3_col() == 1u ? "GAIN" : c3_col() == 2u ? "TYPE" : "FREQ";
     if (win) return item_sname(win == 1u ? LV_IT[i] : G_MC1 + i);
     if (C3_ON) return item_sname(COL3[page].id[c3_col()][i]);
     return vknob(v, i) == I_NONE ? "" : item_sname(vknob(v, i));

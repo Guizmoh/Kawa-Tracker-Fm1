@@ -1150,6 +1150,76 @@ static void draw_win(void)
     }
 }
 
+/* ---------------------------------------------------------------- the EQ (FX held): the curve on top, the 4 bands under it */
+static void draw_eq(void)
+{
+    const int32_t gx = 6, gy = 16, gw = 228, gh = 104, mid = gy + gh / 2;
+    uint32_t k, col = c3_col();
+    int32_t x, py = 0;
+    char t[24], b[16];
+    if (g_vis(0, 15)) {
+        g_text(T_S, 6, 2, "EQ", K_LIME);
+        p_eqhead(t);
+        g_text_r(T_XS, 234, 4, t, K_GREY);
+    }
+    if (g_vis(gy, gh)) {
+        static const uint16_t GRID[3] = {100, 1000, 10000};
+        static const char *const GL[3] = {"100", "1k", "10k"};
+        g_box(gx - 2, gy, gw + 4, gh, K_PANEL, K_LINE);
+        for (k = 0; k < 3u; k++) {              /* 100 Hz, 1 kHz, 10 kHz: log(f/20) / log(900) of the width */
+            int32_t lx = gx + (int32_t)((uint32_t)(ilog2q8(GRID[k]) - ilog2q8(20)) * (uint32_t)(gw - 1) / (uint32_t)(ilog2q8(18000) - ilog2q8(20)));
+            g_rect(lx, gy + 2, 1, gh - 4, K_LINE);
+            g_text(T_XS, lx + 2, gy + gh - 10, GL[k], K_GREY);
+        }
+        g_rect(gx, mid, gw, 1, K_LINE);         /* 0 dB, and +-12 */
+        g_text(T_XS, gx + 2, gy + 3, "+12", K_GREY);
+        g_text(T_XS, gx + 2, gy + gh - 20, "-12", K_GREY);
+        for (x = 0; x < gw; x++) {              /* the curve, filled to 0 dB */
+            uint32_t fi = (uint32_t)x * 111u * 256u / (uint32_t)(gw - 1), i0 = fi >> 8, i1 = i0 < 111u ? i0 + 1u : 111u;
+            int32_t db = eq_curve[i0] + (((eq_curve[i1] - eq_curve[i0]) * (int32_t)(fi & 255u)) >> 8);
+            int32_t y = mid - db * (gh / 2 - 6) / (16 * 14);
+            y = clampi(y, gy + 2, gy + gh - 3);
+            if (y != mid) g_rect(gx + x, y < mid ? y : mid, 1, y < mid ? mid - y : y - mid, g_mix(K_PANEL, K_WAVE, 60));
+            if (x) g_line(gx + x - 1, py, gx + x, y, K_WAVE);
+            py = y;
+        }
+        for (k = 0; k < 4u; k++) {              /* the bands: a dot each, in their knob's colour */
+            uint32_t f = perf.eq_f[k] % 48u, ci = f * 111u / 47u;
+            int32_t bx = gx + (int32_t)(f * (uint32_t)(gw - 1) / 47u), by = clampi(mid - eq_curve[ci] * (gh / 2 - 6) / (16 * 14), gy + 6, gy + gh - 7);
+            uint16_t c = PAL_BW ? K_WHITE : KNOB_RGB[k];
+            char n[2] = {(char)('1' + k), 0};
+            if (!perf.eq_t[k]) c = K_LINE;
+            if (k == eq_cur) g_box(bx - 6, by - 6, 13, 13, K_PANEL, K_WHITE);
+            g_rect(bx - 3, by - 3, 7, 7, c);
+            g_text_c(T_XS, bx, by - 15 < gy + 2 ? by + 6 : by - 15, n, c);
+        }
+    }
+    for (k = 0; k < 4u; k++) {                  /* the 4 bands: type (OCT+), frequency (the knob), gain (OCT-), width */
+        int32_t x0 = 4 + (int32_t)k * 58, y0 = 124;
+        uint32_t sv = eq_cur;
+        uint16_t c = PAL_BW ? K_WHITE : KNOB_RGB[k];
+        if (!g_vis(y0, 92)) continue;
+        g_box(x0, y0, 56, 92, k == eq_cur ? K_LIMED : K_PANEL, k == eq_cur ? K_WHITE : K_LINE);
+        g_rect(x0 + 4, y0 + 5, 5, 5, c);
+        t[0] = 'K'; t[1] = (char)('1' + k); t[2] = 0;
+        g_text(T_XS, x0 + 12, y0 + 4, t, K_GREY);
+        eq_cur = (uint8_t)k;                    /* (the items read the band eq_cur) */
+        item_text(G_EQ_T, b);
+        g_text(T_XS, x0 + 4, y0 + 18, L_EQS[perf.eq_t[k] % NEQT], col == 2u ? K_LIME : K_GREY);
+        item_text(G_EQ_F, b);
+        g_text(g_fit(T_M, b, 50), x0 + 4, y0 + 32, b, col == 0u ? K_LIME : K_WHITE);
+        item_text(G_EQ_G, b);
+        g_text(g_fit(T_S, b, 50), x0 + 4, y0 + 52, b, col == 1u ? K_LIME : K_WHITE);
+        item_text(G_EQ_Q, b);
+        g_text(T_XS, x0 + 4, y0 + 70, b, K_GREY);
+        eq_cur = (uint8_t)sv;
+        g_vbar(x0 + 4, y0 + 84, 48, 4, (uint32_t)(perf.eq_g[k] + 12) * 256u / 24u, col == 1u ? K_LIME : K_CYAN);
+    }
+    if (g_vis(220, 20)) {
+        g_text_c(T_XS, 120, 226, col == 1u ? "OCT- HELD: THE GAINS" : col == 2u ? "OCT+ HELD: THE TYPES" : "K FREQ  OCT- GAIN  OCT+ TYPE  FX HELD: OUT", col ? K_LIME : K_GREY);
+    }
+}
+
 /* the start's question: CLASSIC or SHIFT, what each is */
 static void draw_ask(void)
 {
@@ -1182,7 +1252,8 @@ static void draw_all(void)
     uint32_t vi = vidx();
     g_rect(0, g_y0, 240, (int32_t)BAND_H, K_BG);
     if (ask_on) { draw_ask(); return; }
-    if (win) draw_win();
+    if (win == 3u) draw_eq();
+    else if (win) draw_win();
     else if (C3_ON) draw_c3();
     else
     switch (theme) {
