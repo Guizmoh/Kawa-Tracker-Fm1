@@ -463,13 +463,10 @@ static void draw_play(const view_t *v)
     g_text_r(&F_XS, 232, ysub, sub, hold ? K_LIME : K_CYAN);
     sy = ysub + 12;
     sh = split > 0 ? 28 : 34;
-    if (ks_sounding) {                          /* the sound, from a rising zero crossing */
-        uint32_t s0 = scope_gen, k, at = 0;
-        int16_t buf[256];
-        (void)s0;
-        memcpy(buf, scope, sizeof buf);
-        for (k = 1; k < 32u; k++) if (buf[k - 1u] < 0 && buf[k] >= 0) { at = k; break; }
-        for (k = 0; k < 224u; k++) live[k] = buf[(at + k) & 255u];
+    if (ks_sounding) {                          /* the last ~20 ms of sound, from a rising zero crossing */
+        uint32_t w = scope_w - 512u, k, at = 0;
+        for (k = 1; k < 288u; k++) if (scope[(w + k - 1u) & 511u] < 0 && scope[(w + k) & 511u] >= 0) { at = k; break; }
+        for (k = 0; k < 224u; k++) live[k] = scope[(w + at + k) & 511u];
         draw_wave(sy, sh, live, 224, K_LIME);
     } else
         draw_wave(sy, sh, prev_wave, 224, K_LIME);
@@ -716,7 +713,8 @@ static void save_open(void)
     uint32_t i;
     if (set.bank) save_slot = set.idx;
     else for (save_slot = 0; save_slot < NUSER - 1u && up_valid(save_slot); save_slot++) {}
-    for (i = 0; i < 13u; i++) if (!pname[i]) pname[i] = ' ';   /* the name as 13 letters to edit */
+    for (i = 0; i < 13u && pname[i]; i++) {}
+    for (; i < 13u; i++) pname[i] = ' ';        /* the name as 13 letters to edit */
     pname[13] = 0;
     save_pos = 0;
     page = PG_PRE;

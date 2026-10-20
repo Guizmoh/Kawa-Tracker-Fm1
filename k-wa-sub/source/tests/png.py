@@ -5,7 +5,7 @@ from pathlib import Path
 from PIL import Image
 d = Path("build/shots")
 ims = []
-for f in sorted(d.glob("*.raw"), key=lambda p: p.stat().st_mtime):
+for f in sorted(d.glob("*.raw")):
     b = f.read_bytes()
     im = Image.new("RGB", (240, 240))
     px = [((v >> 11) * 255 // 31, ((v >> 5) & 63) * 255 // 63, (v & 31) * 255 // 31)

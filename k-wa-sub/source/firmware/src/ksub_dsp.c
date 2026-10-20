@@ -29,8 +29,8 @@ static volatile uint32_t ks_bpm10 = 1400;       /* tempo x 10 */
 static volatile int32_t ks_wheel, ks_press, ks_bend;   /* Q15 */
 static volatile uint32_t ks_beats;              /* Q24 beats, kept modulo 48 beats (every division fits) */
 static volatile uint8_t ks_sounding;
-static int16_t scope[256];                      /* the last block out (the PLAY page draws it) */
-static volatile uint32_t scope_gen;
+static int16_t scope[512];                      /* the output, one sample in 4 (the PLAY page draws it) */
+static volatile uint32_t scope_w;
 static volatile uint32_t lfo_ph_show[2];        /* where the LFOs are (the LFO page's dot) */
 #define BEATS_WRAP (48u << 24)
 
@@ -825,9 +825,8 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
         R = sat15((int32_t)(((int64_t)R * vol * makeup) >> 24));
         out[2u * i] += L;
         out[2u * i + 1u] += R;
-        scope[i & 255u] = (int16_t)((L + R) >> 1);
+        if (!(i & 3u)) scope[scope_w++ & 511u] = (int16_t)((L + R) >> 1);
     }
-    scope_gen++;
 }
 
 /* ================================================================ the two cores */
