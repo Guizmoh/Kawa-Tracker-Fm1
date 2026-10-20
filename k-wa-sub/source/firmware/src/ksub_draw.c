@@ -833,9 +833,8 @@ static void draw_c3(void)
             int32_t x = 12 + (int32_t)k * 76;
             uint16_t cc = c3c(k);
             p = t;
-            if (k == 1u) p = str_cat(p, "- ");
+            if (k) p = str_cat(p, k == 1u ? "(-) " : "(+) ");   /* (the sign first, both on the left) */
             p = str_cat(p, c->head[k]);
-            if (k == 2u) str_cat(p, " +");
             g_box(x, 46, 74, 12, k == act ? cc : K_BG, cc);
             g_text_c(T_XS, x + 37, 48, t, k == act ? K_INK : cc);
         }
