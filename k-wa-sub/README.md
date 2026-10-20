@@ -91,8 +91,10 @@ type. La grande valeur qui s'affiche quand on tourne se place sous le dessin, po
 une couche de sample par-dessus les deux oscillateurs, mélangée après le filtre (comme le SUB en DIRECT), avant
 l'enveloppe d'amplitude. 10 sons très différents, faits par le générateur (rien d'enregistré, 8 bits µ-law) : 808 BOOM,
 KICK, SNARE, OI VOX, REESE LOOP, GROWL LOOP, PLUCK, FM BELL, METAL HIT, BRASS STAB ; et 5 textures en boucle : VINYL,
-TAPE HISS, RAIN, WIND, DATA. Réglages : SAMPLE, LEVEL, TUNE (±24 demi-tons), PITCH (AUTO : les sons suivent le
-clavier, les textures non ; KEYS ; FIXED). La vue montre la forme du sample et où en est la dernière note. PHASE DUB
+TAPE HISS, RAIN, WIND, DATA. Réglages : SAMPLE, LEVEL, PLAY (AUTO : comme le sample est fait ; LOOP : en boucle ;
+ONCE : une fois), SPEED (100 % à 10 % : plus lent sans changer la hauteur, par deux grains qui se croisent ; la
+hauteur se règle avec TUNE), TUNE (±24 demi-tons), PITCH (AUTO : les sons suivent le clavier, les textures non ;
+KEYS ; FIXED). La vue montre la forme du sample et où en est la dernière note. PHASE DUB
 (VINYL), TAPE TECHNO (TAPE HISS) et FM 808 (KICK) s'en servent.
 
 **Listes déroulantes** : choisir une SOURCE de la matrice ou une cible de MACRO (fenêtre SEL › MACROS) ouvre la liste,
@@ -307,7 +309,9 @@ Il y a un bloc de latence (5,8 ms). Le démarrage du cœur 1 reprend la séquenc
 `cpu1_start`, voir `source/firmware/hal/fm1_cpu1.h`), avec des sécurités :
 
 - si le cœur 1 ne répond pas, tout tourne sur le cœur 0 (même son) ;
-- si le cœur 1 cesse de rendre ses blocs (3 blocs de suite), le cœur 0 reprend les voix aussitôt, `CORE 1 STUCK: ONE CORE` s'affiche et `AUDIO CORES` passe à `SINGLE` (à remettre sur `DUAL` dans SYSTEM pour réessayer) ;
+- si le cœur 1 ne suit pas (6 blocs en retard ou coupés sur les 32 derniers : ~0,2 s), le cœur 0 reprend les voix,
+  `CORE 1 TOO SLOW: 1 CORE` s'affiche et `AUDIO CORES` passe à `SINGLE` ;
+- (avant : seulement 3 blocs de suite), le cœur 0 reprend les voix aussitôt, `CORE 1 STUCK: ONE CORE` s'affiche et `AUDIO CORES` passe à `SINGLE` (à remettre sur `DUAL` dans SYSTEM pour réessayer) ;
 - si le FM-1 redémarre dans les 10 s d'un démarrage à deux cœurs, le démarrage suivant se fait sur un seul cœur ;
   `SYSTEM › AUDIO CORES` permet de réessayer ;
 - pendant chaque écriture en flash (patch, réglages), le cœur 1 attend dans une boucle en RAM ;

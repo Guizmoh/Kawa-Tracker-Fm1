@@ -98,7 +98,7 @@ int main(void)
         eq_defaults(); eq_dirty = 1; eq_update();
         for (j = 1; j < 16u; j++) {             /* OSC C: every sample, from the keys and fixed, tuned to the ends */
             load_preset(0, 0);
-            patch[SM_SEL] = (int8_t)j; patch[SM_LVL] = 127; patch[SM_KEY] = (int8_t)(j % 3u); patch[SM_TUNE] = j & 1u ? 24 : -24;
+            patch[SM_SEL] = (int8_t)j; patch[SM_LVL] = 127; patch[SM_KEY] = (int8_t)(j % 3u); patch[SM_TUNE] = j & 1u ? 24 : -24; patch[SM_MODE] = (int8_t)(j % 3u); patch[SM_SPEED] = (int8_t)(j * 9u);
             play(chord, 4, 40);
             play(low, 1, 20);
         }

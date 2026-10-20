@@ -23,9 +23,10 @@ enum {
     RV_TYPE, DL_TYPE,                                            /* ROOM HALL PLATE SPRING; PING-PONG TAPE DIGITAL DUB */
     PH_ON, PH_RATE, PH_DEP, PH_FB, PH_MIX,                       /* the phaser */
     SM_SEL, SM_LVL, SM_TUNE, SM_KEY,                             /* OSC C, the SAMPLE layer: which, level, tune, keys */
+    SM_MODE, SM_SPEED,                                           /* ... looped or once, slower (the same pitch) */
     NP
 };
-#define NP_MAX 128u                             /* a patch in memory */
+#define NP_MAX 132u                             /* a patch in memory */
 #define NP_STORE 112u                           /* ... in a user slot (sector 1); the rest beside SEQ BASS (sector 2) */
 #define OSC_B (B_ENG - A_ENG)
 #define LFO_2 (L2_SHP - L1_SHP)
@@ -104,6 +105,7 @@ static const char *const L_DLT[] = {"PING-PONG", "TAPE", "DIGITAL", "DUB"};
 static const char *const L_SMP[16] = {"OFF", "808 BOOM", "KICK", "SNARE", "OI VOX", "REESE LOOP", "GROWL LOOP", "PLUCK", "FM BELL",
                                       "METAL HIT", "BRASS STAB", "VINYL", "TAPE HISS", "RAIN", "WIND", "DATA"};   /* (KS_SMP's) */
 static const char *const L_SMK[3] = {"AUTO", "KEYS", "FIXED"};
+static const char *const L_SMM[3] = {"AUTO", "LOOP", "ONCE"};
 static const char *const L_VM[] = {"MONO", "LEGATO", "POLY"};
 static const char *const L_STYLE[] = {"DNB", "DUB", "DUBSTEP", "TECHNO", "JUNGLE", "UK GARAGE", "TRAP", "HOUSE", "NEUROFUNK",
                                       "DUB TECHNO", "BREAKS", "MINIMAL"};   /* the music a preset is for */
@@ -196,6 +198,7 @@ static const pdesc_t PD[NP] = {
     {"MIX", "MIX", 0, 127, 64, FM_PCT, 0},
     {"SAMPLE", "SAMPLE", 0, 15, 0, FM_LIST, L_SMP}, {"LEVEL", "LEVEL", 0, 127, 90, FM_PCT, 0},
     {"TUNE", "TUNE", -24, 24, 0, FM_SEMI, 0}, {"PITCH", "PITCH", 0, 2, 0, FM_LIST, L_SMK},
+    {"PLAY", "PLAY", 0, 2, 0, FM_LIST, L_SMM}, {"SPEED", "SPEED", 0, 127, 0, FM_PCT, 0},
 };
 
 /* ---- the factory presets: the defaults, then (parameter, value) pairs, -1 ends */

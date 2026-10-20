@@ -34,7 +34,7 @@ static const view_t VIEWS[] = {
     {LY_PLAY, "CURRENT PATCH", 4, {F_CUT, I_L1RATE, L1_DEP, F_RES}, "HOME"},
     {LY_PLAY, "LIVE MIX", 4, {S_LVL, DR_AMT, DL_MIX, MS_VOL}, "HOME"},
     OSCV("A", A), OSCV("B", B),
-    {LY_LIST, "OSCILLATOR C \xB7 SAMPLE", 4, {SM_SEL, SM_LVL, SM_TUNE, SM_KEY}, "EDIT"},
+    {LY_LIST, "OSCILLATOR C \xB7 SAMPLE", 6, {SM_SEL, SM_LVL, SM_MODE, SM_SPEED, SM_TUNE, SM_KEY}, "EDIT"},
     {LY_LIST, "SUB + NOISE", 6, {S_LVL, S_OCT, S_WAVE, N_LVL, N_COL, S_ROUTE}, "EDIT"},
     {LY_LIST, "COMBINE A + B", 9, {X_MODE, A_LVL, B_LVL, I_ABMIX, X_AMT, V_GLIDE, V_MODE, X_DRIFT, X_RESET}, "EDIT"},
     {LY_BOX, "AMP ENVELOPE", 4, {AE_A, AE_D, AE_S, AE_R}, "ENV"},
@@ -82,7 +82,7 @@ typedef struct {
 } upatch_t;                                     /* 128 B: 32 of them fill one 4 KiB sector of the store */
 #define UP_MAGIC 0xB5u
 static upatch_t ustore[NUSER];
-#define UX_MAGIC 0x58u
+#define UX_MAGIC 0x59u                          /* (0x58: the same with 16 a slot, before PLAY and SPEED) */
 #define UX_AT 0x400u                            /* (in the 2nd sector, after SEQ BASS / ARP / MACROS) */
 static struct {                                 /* the user slots' settings past NP_STORE (compressor, phaser, types) */
     uint8_t magic, sum;
@@ -91,6 +91,19 @@ static struct {                                 /* the user slots' settings past
 typedef char ids_fit[G_EQ_Q < I_NONE ? 1 : -1];
 typedef char perf_fits_before_uext[sizeof perf <= UX_AT ? 1 : -1];   /* (the 2nd sector: SEQ/ARP/MACROS, then the slots' rest) */
 static uint8_t ux_sum(void) { const uint8_t *b = (const uint8_t *)uext.p; uint32_t i, x = 0x77; for (i = 0; i < sizeof uext.p; i++) x = (x * 7u + b[i]) & 0xFFu; return (uint8_t)x; }
+static void ux_migrate(void)                    /* a store saved with 16 a slot: spread out, the new ones at 0 */
+{
+    uint8_t old[NUSER * 16u];
+    uint32_t i, x = 0x77, k;
+    if (uext.magic != 0x58u) return;
+    memcpy(old, uext.p, sizeof old);
+    for (i = 0; i < sizeof old; i++) x = (x * 7u + old[i]) & 0xFFu;
+    if (x != uext.sum) { uext.magic = 0; return; }
+    memset(uext.p, 0, sizeof uext.p);
+    for (k = 0; k < NUSER; k++) memcpy(uext.p[k], old + k * 16u, 16u);
+    uext.magic = UX_MAGIC;
+    uext.sum = ux_sum();
+}
 static struct {
     uint8_t ver, midich, clock, oct;            /* midich 0: omni; clock 0 internal, 1 MIDI */
     uint16_t bpm10;
@@ -909,6 +922,7 @@ static void item_text(uint32_t id, char *b)
         }
         return;
     }
+    if (rid == SM_SPEED) { b = fmt_u(b, (256u - (uint32_t)v * 230u / 127u) * 100u / 256u, 0); str_cat(b, v ? "% (SLOWER)" : "%"); return; }
     switch (PD[rid].fmt) {
     case FM_PCT: b = fmt_u(b, (uint32_t)v * 100u / 127u, 0); str_cat(b, "%"); break;
     case FM_BIP: b = v ? fmt_s(b, v * 100 / 64) : fmt_u(b, 0, 0); str_cat(b, "%"); break;
@@ -1612,6 +1626,7 @@ static void app_init(void)
     set.oct = (uint8_t)(int8_t)clampi(OCT, -3, 3);
     ks_bpm10 = set.bpm10;
     store_load();
+    ux_migrate();
     for (i = 0; i < NUSER; i++) if (!up_valid(i)) ustore[i].magic = 0;
     if (perf.magic != PF_MAGIC || perf.sum != perf_sum()) perf_defaults();
     perf.ar_on = 0;                             /* (the ARP starts off: a key does what it says) */
@@ -1672,7 +1687,7 @@ static void app_step(void)
         c1_failed = 0;
         set.cores = 0; set_dirty = 1; set_ms = fm1_ms;
         dual_mark[0] = dual_mark[1] = 0;
-        toast("CORE 1 STUCK: ONE CORE");
+        toast("CORE 1 TOO SLOW: 1 CORE");
     }
     if (dual_on && dual_mark[0] && fm1_ms - dual_ms > 10000u) dual_mark[0] = dual_mark[1] = 0;   /* 10 s on two cores: it holds */
 #endif

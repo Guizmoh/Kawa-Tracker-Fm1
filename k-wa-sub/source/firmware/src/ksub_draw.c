@@ -302,14 +302,15 @@ static void vis_smp(int32_t x, int32_t y, int32_t w, int32_t h)   /* OSC C: the 
 {
     const ks_smp_t *sm;
     int32_t W = w - 8, cy = y + h / 2, H = h / 2 - 3, i;
-    uint32_t at;
+    uint32_t at, lp;
     if (!patch[SM_SEL]) { g_text_c(T_XS, x + w / 2, cy - 4, "OFF \xB7 TURN SAMPLE", K_GREY); return; }
     sm = &KS_SMP[(uint32_t)(patch[SM_SEL] - 1) % KS_NSMP];
-    for (i = 0; i < W; i++) {                   /* its peaks, column by column */
+    lp = patch[SM_MODE] == 1 ? (sm->loop < sm->len ? sm->loop : 0u) : patch[SM_MODE] == 2 ? sm->len : sm->loop;
+    for (i = 0; i < W; i++) {                   /* its peaks, column by column (the looped part brighter) */
         uint32_t a = (uint32_t)i * sm->len / (uint32_t)W, b = (uint32_t)(i + 1) * sm->len / (uint32_t)W, j;
         int32_t pk = 0;
         for (j = a; j < b; j += 4u) { int32_t v = KS_MULAW[KS_SMP_DATA[sm->off + j]]; if (v < 0) v = -v; if (v > pk) pk = v; }
-        g_rect(x + 4 + i, cy - pk * H / 32768, 1, 1 + 2 * (pk * H / 32768), sm->loop < sm->len && a >= sm->loop ? K_WAVE : g_mix(K_LINE, K_WAVE, 170));
+        g_rect(x + 4 + i, cy - pk * H / 32768, 1, 1 + 2 * (pk * H / 32768), lp < sm->len && a >= lp ? K_WAVE : g_mix(K_LINE, K_WAVE, 170));
     }
     if (ks_sounding) {                          /* (the newest note) */
         at = (sm_show >> 16) % sm->len;
@@ -550,8 +551,10 @@ static const char *view_title(uint32_t vi, char *t, char *sub)
         {
             const ks_smp_t *sm = &KS_SMP[(uint32_t)(patch[SM_SEL] - 1) % KS_NSMP];
             int keys = patch[SM_KEY] == 1 || (patch[SM_KEY] == 0 && sm->keys);
+            int loops = patch[SM_MODE] == 1 || (patch[SM_MODE] == 0 && sm->loop < sm->len);
             p = str_cat(sub, sm->keys ? "SOUND" : "TEXTURE");
-            p = str_cat(p, sm->loop < sm->len ? " \xB7 LOOP" : " \xB7 ONCE");
+            p = str_cat(p, loops ? " \xB7 LOOP" : " \xB7 ONCE");
+            if (patch[SM_SPEED]) p = str_cat(p, " \xB7 SLOW");
             str_cat(p, keys ? " \xB7 FROM THE KEYS" : " \xB7 FIXED PITCH");
             return sm->name;
         }

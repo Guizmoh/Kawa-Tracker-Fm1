@@ -436,7 +436,7 @@ static void lfo_run(uint32_t k, uint32_t beats)
 /* ================================================================ the voices */
 typedef struct {
     uint8_t on, note, vel, gate, slide;         /* slide: the SEQ BASS glides into this note */
-    uint32_t sm_pos;                            /* OSC C: where in its sample, Q16 */
+    uint32_t sm_pos, sm_g[2], sm_age[2];        /* OSC C: where in its sample (Q16); SPEED: its two grains, their age */
     int32_t pitch, target;                      /* Q8 semitones (glide) */
     osc_t oa, ob;
     uint32_t phs;
@@ -451,6 +451,7 @@ typedef struct {
 static voice_t vo[NVOICE];
 static uint8_t held[16], nheld;                 /* the keys held, the last on top (mono) */
 static uint32_t vage;
+#define SM_GRAIN 1024u                          /* SPEED: a grain, in samples played (two, half a grain apart) */
 static uint8_t ks_slide;                        /* (SEQ BASS) the next note_on slides: no new attack, a glide */
 static int32_t glide_from = -1;                 /* the last note started (Q8): where the next one glides from */
 
@@ -476,6 +477,9 @@ static void voice_start(voice_t *v, uint32_t note, uint32_t vel, int legato)
     }
     if (!v->on) { v->y1 = v->y2 = v->y3 = v->y4 = 0; v->b1 = v->l1 = v->b2 = v->l2 = v->b3 = v->l3 = 0; }
     v->sm_pos = 0;
+    v->sm_g[0] = v->sm_g[1] = 0;
+    v->sm_age[0] = 0;
+    v->sm_age[1] = SM_GRAIN / 2u;
     v->on = 1;
     v->gate = 1;
     v->rand = ((int32_t)(rnd() >> 17) - 16384) * 2;
@@ -696,20 +700,43 @@ static void voice_block(voice_t *v, int32_t *acc)
         const uint8_t *d = KS_SMP_DATA + sm->off;
         int keys = P[SM_KEY] == 1 || (P[SM_KEY] == 0 && sm->keys);
         uint32_t st = (uint32_t)(((uint64_t)pitch_inc((keys ? p : 48 * 256) + P[SM_TUNE] * 256) * sm->k) >> 32);
+        uint32_t len = sm->len, lp = P[SM_MODE] == 1 ? (sm->loop < len ? sm->loop : 0u) : P[SM_MODE] == 2 ? len : sm->loop;   /* (lp = len: once) */
+        uint32_t sp = 256u - (uint32_t)P[SM_SPEED] * 230u / 127u;   /* SPEED, Q8: 1 .. 0.1 */
         int32_t lv = lvl15(pv(P[SM_LVL], 0) >> 8);
         if (st > (8u << 16)) st = 8u << 16;
         for (i = 0; i < (int32_t)KS_CB; i++) {
-            uint32_t ix = v->sm_pos >> 16, f = (v->sm_pos >> 1) & 32767u;
-            int32_t a, b;
-            if (ix >= sm->len) {
-                if (sm->loop >= sm->len) break;
-                v->sm_pos -= (sm->len - sm->loop) << 16;
-                ix = v->sm_pos >> 16;
+            uint32_t ix, f, h;
+            int32_t a, b, acc = 0;
+            if ((v->sm_pos >> 16) >= len) {     /* the end: again from the loop, or silence */
+                if (lp >= len) break;
+                v->sm_pos -= (len - lp) << 16;
             }
-            a = KS_MULAW[d[ix]];
-            b = ix + 1u < sm->len ? KS_MULAW[d[ix + 1u]] : a;
-            smb[i] = mul15(a + mul15(b - a, (int32_t)f), lv) >> 1;
-            v->sm_pos += st;
+            if (sp >= 256u) {                   /* (full speed: read straight) */
+                ix = v->sm_pos >> 16; f = (v->sm_pos >> 1) & 32767u;
+                a = KS_MULAW[d[ix]];
+                b = ix + 1u < len ? KS_MULAW[d[ix + 1u]] : a;
+                smb[i] = mul15(a + mul15(b - a, (int32_t)f), lv) >> 1;
+                v->sm_pos += st;
+                continue;
+            }
+            for (h = 0; h < 2u; h++) {          /* slower: two grains read at the pitch, each restarting where the play is */
+                uint32_t age = v->sm_age[h];
+                if (age >= SM_GRAIN) { v->sm_age[h] = age = 0; v->sm_g[h] = v->sm_pos; }
+                ix = v->sm_g[h] >> 16;
+                if (ix >= len) {
+                    if (lp >= len) { v->sm_age[h]++; continue; }
+                    ix = lp + (ix - lp) % (len - lp);
+                    v->sm_g[h] = ix << 16 | (v->sm_g[h] & 0xFFFFu);
+                }
+                f = (v->sm_g[h] >> 1) & 32767u;
+                a = KS_MULAW[d[ix]];
+                b = ix + 1u < len ? KS_MULAW[d[ix + 1u]] : a;
+                acc += mul15(a + mul15(b - a, (int32_t)f), (int32_t)((age < SM_GRAIN / 2u ? age : SM_GRAIN - age) << 6));   /* (a triangle) */
+                v->sm_g[h] += st;
+                v->sm_age[h]++;
+            }
+            smb[i] = mul15(acc, lv) >> 1;
+            v->sm_pos += (uint32_t)(((uint64_t)st * sp) >> 8);
         }
         if (v->age == vage) sm_show = v->sm_pos;
     }
@@ -1281,6 +1308,7 @@ static int32_t vbus[2][HALF_FRAMES], vzero[HALF_FRAMES];
 static volatile uint32_t c1_req, c1_done, c1_park_req, c1_parked;
 static volatile uint8_t dual_on;                /* the second core runs (fm1_cpu1_start said yes) */
 static volatile uint8_t c1_failed;              /* core 1 stopped answering: back on one core (the UI saves it) */
+static volatile uint32_t c1_cut;                /* blocks core 1 could not finish (too slow) */
 static volatile uint32_t ks_load[2];            /* % of a block, per core (the SYSTEM page) */
 
 /* the load governor (as KAWA's, after Felucca's shed_check): two blocks in a row over 70 % and the sound thins
@@ -1309,6 +1337,7 @@ static void core1_main(void)                    /* core 1: the voices of the nex
         t0 = fm1_ticks();
         voices_render(vbus[r & 1u], HALF_FRAMES, t0, BLOCK_TICKS * 9u / 10u);
         ks_load[1] = (fm1_ticks() - t0) / BLOCK_TICKS100;
+        if (ks_load[1] >= 90u) c1_cut++;        /* (out of time: the block's end silent) */
         KS_SYNC();
         c1_done = r;
     }
@@ -1341,25 +1370,29 @@ static void fm1_cpu1_stop(void) {}
 
 static void app_audio(int32_t *out, uint32_t n)
 {
-    static uint32_t miss;
+    static uint32_t hist, cut0, warm;
     uint32_t t0 = fm1_ticks(), l1 = 0;
     if (dual_on && !c1_park_req) {              /* core 1 did this block's voices during the last one */
-        uint32_t cur = c1_req;
+        uint32_t cur = c1_req, bad, k, nb = 0;
         while (c1_done != cur && fm1_ticks() - t0 < BLOCK_TICKS / 2u) { KS_SYNC(); }
         t0 = fm1_ticks();
-        if (c1_done == cur) {
+        bad = c1_done != cur || c1_cut != cut0; /* (late, or a block it cut short) */
+        cut0 = c1_cut;
+        if (warm < 64u) { warm++; bad = c1_done != cur; }   /* (its first blocks: only lateness counts) */
+        hist = hist << 1 | bad;
+        for (k = hist; k; k &= k - 1u) nb++;
+        if (c1_done == cur && nb < 6u) {        /* (6 bad blocks in the last 32: core 1 does not keep up) */
             c1_req = cur + 1u;                  /* core 1 starts the next block now */
             KS_SYNC();
             fx_render(vbus[cur & 1u], out, n);
-            miss = 0;
-        } else if (++miss < 3u) {
+        } else if (nb < 6u) {
             ks_late++;                          /* (core 1 late: a silent block, it goes on) */
             fx_render(vzero, out, n);
-        } else {                                /* three blocks without core 1: it is stuck, one core from here */
+        } else {                                /* it does not keep up (or is stuck): one core from here */
+            hist = 0;
             fm1_cpu1_stop();
             dual_on = 0;
             c1_failed = 1;
-            miss = 0;
             voices_render(vbus[0], n, t0, BLOCK_TICKS * 4u / 10u);
             fx_render(vbus[0], out, n);
         }
