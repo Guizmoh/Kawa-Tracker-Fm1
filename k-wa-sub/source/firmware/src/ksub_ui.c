@@ -14,7 +14,7 @@
 enum { PG_PLAY, PG_BASS, PG_ENV, PG_FILT, PG_LFO, PG_FX, PG_PRE, PG_SYS, NPAGE };
 static const uint8_t PAGE_BTN[NPAGE] = {BTN_HOME, BTN_EDIT, BTN_ENV, BTN_SEQ, BTN_LFO, BTN_FX, BTN_ARP, BTN_GLO};
 enum { LY_PLAY, LY_LIST, LY_BOX, LY_STEP, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
-enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE,
+enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_ACCEL, G_C3COL,
        G_SQ_STEP, G_SQ_NOTE, G_SQ_TYPE, G_SQ_PAT, G_SQ_LEN, G_SQ_RATE, G_SQ_SWING,   /* SEQ BASS */
        G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE,                          /* ARP */
        I_NONE = 255 };
@@ -22,43 +22,46 @@ enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU
 typedef struct {
     uint8_t lay;
     const char *cat;
-    uint8_t n, it[14], k[4];
+    uint8_t n, it[16];                          /* the rows, in the order shown: K1..K4 are the first four */
     const char *tag;
 } view_t;
-#define OSCV(L, X) {LY_LIST, "OSCILLATOR " L, 8, {X##_ENG, X##_LVL, X##_P1, X##_P2, X##_P3, X##_OCT, X##_SEMI, X##_FINE}, \
-                    {X##_LVL, X##_P1, X##_P2, X##_P3}, "EDIT"}
-#define FXV(C, ...) {LY_LIST, "FX RACK", 4, {__VA_ARGS__}, {__VA_ARGS__}, "FX"}
+#define OSCV(L, X) {LY_LIST, "OSCILLATOR " L, 8, {X##_P1, X##_P2, X##_P3, X##_LVL, X##_ENG, X##_OCT, X##_SEMI, X##_FINE}, "EDIT"}
+#define FXV(...) {LY_LIST, "FX RACK", 4, {__VA_ARGS__}, "FX"}
 static const view_t VIEWS[] = {
-    {LY_PLAY, "CURRENT PATCH", 4, {F_CUT, I_L1RATE, L1_DEP, F_RES}, {F_CUT, I_L1RATE, L1_DEP, F_RES}, "HOME"},
-    {LY_PLAY, "LIVE MIX", 4, {S_LVL, DR_AMT, DL_MIX, MS_VOL}, {S_LVL, DR_AMT, DL_MIX, MS_VOL}, "HOME"},
+    {LY_PLAY, "CURRENT PATCH", 4, {F_CUT, I_L1RATE, L1_DEP, F_RES}, "HOME"},
+    {LY_PLAY, "LIVE MIX", 4, {S_LVL, DR_AMT, DL_MIX, MS_VOL}, "HOME"},
     OSCV("A", A), OSCV("B", B),
-    {LY_LIST, "SUB + NOISE", 6, {S_LVL, S_WAVE, S_OCT, S_ROUTE, N_LVL, N_COL}, {S_LVL, S_WAVE, N_LVL, N_COL}, "EDIT"},
-    {LY_LIST, "COMBINE A + B", 6, {X_MODE, X_AMT, A_LVL, B_LVL, X_DRIFT, X_RESET}, {X_MODE, X_AMT, A_LVL, B_LVL}, "EDIT"},
-    {LY_BOX, "AMP ENVELOPE", 4, {AE_A, AE_D, AE_S, AE_R}, {AE_A, AE_D, AE_S, AE_R}, "ENV"},
-    {LY_BOX, "FILTER ENVELOPE", 4, {FE_A, FE_D, FE_S, FE_R}, {FE_A, FE_D, FE_S, FE_R}, "ENV"},
-    {LY_BOX, "MOD ENVELOPE", 4, {ME_A, ME_D, ME_AMT, ME_DST}, {ME_A, ME_D, ME_AMT, ME_DST}, "ENV"},
-    {LY_BOX, "FILTER / COLOUR", 4, {F_CUT, F_RES, F_DRV, F_TYPE}, {F_CUT, F_RES, F_DRV, F_TYPE}, "FX"},
-    {LY_LIST, "FILTER MOD", 6, {F_TYPE, F_ENV, F_KEY, F_VEL, F_CUT, F_RES}, {F_ENV, F_KEY, F_VEL, F_TYPE}, "FX"},
-    {LY_LIST, "SEQ BASS", 7, {G_SQ_STEP, G_SQ_NOTE, G_SQ_TYPE, G_SQ_PAT, G_SQ_LEN, G_SQ_RATE, G_SQ_SWING},
-     {G_SQ_STEP, G_SQ_NOTE, G_SQ_TYPE, G_SQ_PAT}, "SEQ"},
-    {LY_LFO, "LFO 1 \xB7 WOBBLE", 9, {L1_SHP, I_L1RATE, L1_DEP, L1_DST, G_GRID, L1_SYNC, L1_TRIG, L1_PH, L1_SMO},
-     {L1_SHP, I_L1RATE, L1_DEP, L1_DST}, "LFO"},
-    {LY_LFO, "LFO 2 \xB7 MOTION", 9, {L2_SHP, I_L2RATE, L2_DEP, L2_DST, G_GRID, L2_SYNC, L2_TRIG, L2_PH, L2_SMO},
-     {L2_SHP, I_L2RATE, L2_DEP, L2_DST}, "LFO"},
-    {LY_STEP, "STEP FX", 7, {ST_ON, ST_PAT, ST_RATE, ST_GATE, ST_DST, ST_DEP, ST_SMO}, {ST_PAT, ST_RATE, ST_GATE, ST_DEP}, "LFO"},
-    {LY_LIST, "MOD MATRIX", 12, {M1_SRC, M1_DST, M1_AMT, M2_SRC, M2_DST, M2_AMT, M3_SRC, M3_DST, M3_AMT, M4_SRC, M4_DST, M4_AMT},
-     {M1_AMT, M2_AMT, M3_AMT, M4_AMT}, "LFO"},
-    FXV(0, DR_ON, DR_TYPE, DR_AMT, DR_MIX), FXV(1, CR_ON, CR_BITS, CR_RATE, CR_MIX), FXV(2, CH_ON, CH_RATE, CH_DEP, CH_MIX),
-    {LY_LIST, "FX RACK", 5, {DL_ON, DL_TIME, DL_FB, DL_TONE, DL_MIX}, {DL_TIME, DL_FB, DL_TONE, DL_MIX}, "FX"},
-    FXV(4, RV_ON, RV_SIZE, RV_DAMP, RV_MIX),
-    {LY_LIST, "FX RACK", 3, {MS_GLUE, MS_SUB, MS_VOL}, {MS_GLUE, MS_SUB, MS_VOL, I_NONE}, "FX"},
-    {LY_PRESET, "PRESET BANK A", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
-    {LY_PRESET, "PRESET BANK B", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
-    {LY_SAVE, "SAVE PATCH", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
-    {LY_LIST, "ARPEGGIATOR", 5, {G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE}, {G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE}, "ARP"},
-    {LY_SYS, "GLOBAL SETUP", 14, {G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_CORES, G_CPU},
-     {G_THEME, G_PAL, G_FONT, G_BPM}, "SYSTEM"},
+    {LY_LIST, "SUB + NOISE", 6, {S_LVL, S_OCT, S_WAVE, N_LVL, N_COL, S_ROUTE}, "EDIT"},
+    {LY_LIST, "COMBINE A + B", 6, {X_AMT, X_MODE, A_LVL, B_LVL, X_DRIFT, X_RESET}, "EDIT"},
+    {LY_BOX, "AMP ENVELOPE", 4, {AE_A, AE_D, AE_S, AE_R}, "ENV"},
+    {LY_BOX, "FILTER ENVELOPE", 4, {FE_A, FE_D, FE_S, FE_R}, "ENV"},
+    {LY_BOX, "MOD ENVELOPE", 4, {ME_A, ME_D, ME_AMT, ME_DST}, "ENV"},
+    {LY_BOX, "FILTER / COLOUR", 4, {F_CUT, F_RES, F_DRV, F_TYPE}, "FX"},
+    {LY_LIST, "FILTER MOD", 6, {F_ENV, F_KEY, F_VEL, F_TYPE, F_CUT, F_RES}, "FX"},
+    {LY_LIST, "SEQ BASS", 7, {G_SQ_STEP, G_SQ_NOTE, G_SQ_TYPE, G_SQ_PAT, G_SQ_LEN, G_SQ_RATE, G_SQ_SWING}, "SEQ"},
+    {LY_LFO, "LFO 1 \xB7 WOBBLE", 9, {I_L1RATE, L1_DEP, L1_SHP, L1_DST, G_GRID, L1_SYNC, L1_TRIG, L1_PH, L1_SMO}, "LFO"},
+    {LY_LFO, "LFO 2 \xB7 MOTION", 9, {I_L2RATE, L2_DEP, L2_SHP, L2_DST, G_GRID, L2_SYNC, L2_TRIG, L2_PH, L2_SMO}, "LFO"},
+    {LY_STEP, "STEP FX", 7, {ST_PAT, ST_RATE, ST_GATE, ST_DEP, ST_ON, ST_DST, ST_SMO}, "LFO"},
+    {LY_LIST, "MOD MATRIX", 12, {M1_AMT, M2_AMT, M3_AMT, M4_AMT, M1_SRC, M1_DST, M2_SRC, M2_DST, M3_SRC, M3_DST, M4_SRC, M4_DST}, "LFO"},
+    FXV(DR_AMT, DR_MIX, DR_TYPE, DR_ON), FXV(CR_BITS, CR_RATE, CR_MIX, CR_ON), FXV(CH_RATE, CH_DEP, CH_MIX, CH_ON),
+    {LY_LIST, "FX RACK", 5, {DL_TIME, DL_FB, DL_MIX, DL_TONE, DL_ON}, "FX"},
+    FXV(RV_SIZE, RV_MIX, RV_DAMP, RV_ON),
+    {LY_LIST, "FX RACK", 3, {MS_VOL, MS_GLUE, MS_SUB}, "FX"},
+    {LY_PRESET, "PRESET BANK A", 0, {0}, "PRESET"},
+    {LY_PRESET, "PRESET BANK B", 0, {0}, "PRESET"},
+    {LY_SAVE, "SAVE PATCH", 0, {0}, "PRESET"},
+    {LY_LIST, "ARPEGGIATOR", 5, {G_AR_ON, G_AR_MODE, G_AR_RATE, G_AR_OCT, G_AR_GATE}, "ARP"},
+#if KS_B
+    {LY_SYS, "GLOBAL SETUP", 16, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_THEME, G_PAL, G_FONT, G_C3COL, G_GRID, G_BROWSE, G_MIDICH, V_BEND,
+                                  V_VEL, G_CLOCK, G_CORES, G_CPU}, "SYSTEM"},
+#else
+    {LY_SYS, "GLOBAL SETUP", 15, {G_BPM, V_MODE, V_GLIDE, G_ACCEL, G_THEME, G_PAL, G_FONT, G_GRID, G_BROWSE, G_MIDICH, V_BEND, V_VEL,
+                                  G_CLOCK, G_CORES, G_CPU}, "SYSTEM"},
+#endif
 };
+/* what K1..K4 turn: the first four rows (the preset lists and SAVE have their own) */
+static uint32_t vknob(const view_t *v, uint32_t i) { return v->lay == LY_PRESET || v->lay == LY_SAVE || i >= v->n ? I_NONE : v->it[i]; }
+static const uint8_t FX_ON[5] = {DR_ON, CR_ON, CH_ON, DL_ON, RV_ON};
 static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 12, 16, 22, 26, 27};   /* each page's first view */
 #define V_SEQ 11u                               /* SEQ BASS (the SEQ button's third view), ARP (the ARP button's last) */
 #define V_ARP 25u
@@ -83,7 +86,9 @@ static struct {
     uint8_t theme, pal, font;                   /* CLASSIC STUDIO PURE RACK; its palettes; the font */
     uint8_t grid;                               /* LFO GRID: 0 ALL, 1 STRAIGHT (round divisions only) */
     uint8_t browse, fav[12];                    /* PRESETS: 0 all, 1 favorites only; the favorites (A then B) */
-} set = {6, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0, 0, {0}};
+    uint8_t accel;                              /* the knobs' acceleration: 0 OFF, 1 ON, 2 FAST (appended: older saves load) */
+    uint8_t c3col;                              /* version B's three columns: 0 the theme's colour, 1 green / yellow / orange */
+} set = {6, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0, 0, {0}, 1, 0};
 static char pname[14];
 static uint8_t page, vcur[NPAGE], cursor[sizeof VIEWS / sizeof VIEWS[0]], pre_cur[2], save_slot, save_pos, hold;
 static uint8_t key_note[27], latched[128], phys[128];
@@ -366,7 +371,7 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
     if (item_patch(id)) { *lo = PD[id].lo; *hi = PD[id].hi; return; }
     *lo = 0;
-    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE ? 1 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
+    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID || id == G_BROWSE || id == G_C3COL ? 1 : id == G_ACCEL ? 2 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
     if (id >= G_SQ_STEP && id <= G_AR_GATE) {
         static const int8_t LO[12] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1}, HI[12] = {15, 48, 4, 15, 16, 5, 50, 1, 4, 5, 3, 10};
@@ -390,6 +395,8 @@ static int32_t item_get(uint32_t id)
     case G_FONT: return set.font;
     case G_GRID: return set.grid;
     case G_BROWSE: return set.browse;
+    case G_ACCEL: return set.accel;
+    case G_C3COL: return set.c3col;
     case G_SQ_STEP: return sq_cur_step;
     case G_SQ_NOTE: return sq_pat()->note[sq_cur_step & 15u];
     case G_SQ_TYPE: return (int32_t)sq_type(sq_pat()->fl[sq_cur_step & 15u]);
@@ -448,6 +455,8 @@ static void item_set(uint32_t id, int32_t v)
     case G_FONT: set.font = (uint8_t)v; font_set(set.font); g_force = 1; break;
     case G_GRID: set.grid = (uint8_t)v; ks_straight = set.grid; break;
     case G_BROWSE: set.browse = (uint8_t)v; break;
+    case G_ACCEL: set.accel = (uint8_t)v; break;
+    case G_C3COL: set.c3col = (uint8_t)v; break;
     default: return;
     }
     set_dirty = 1;
@@ -480,6 +489,8 @@ static const char *item_name(uint32_t id)
     case G_FONT: return "FONT";
     case G_GRID: return "LFO GRID";
     case G_BROWSE: return "PRESETS";
+    case G_ACCEL: return "KNOB ACCEL";
+    case G_C3COL: return "SHIFT COLOURS";
     case G_FW: return "FIRMWARE";
     case G_SQ_STEP: return "STEP";
     case G_SQ_NOTE: return "NOTE";
@@ -503,7 +514,7 @@ static const char *item_sname(uint32_t id)
     if (k) return ENG_P[e][k - 1];
     if (id == I_L1RATE || id == I_L2RATE) return "RATE";
     if (item_patch(id)) return PD[id].sname;
-    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : id == G_SQ_TYPE ? "TYPE" : id == G_SQ_PAT ? "PAT" : id == G_SQ_LEN ? "LEN" : id == G_AR_OCT ? "OCT" : item_name(id);
+    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : id == G_BROWSE ? "BROWSE" : id == G_ACCEL ? "ACCEL" : id == G_C3COL ? "COLOURS" : id == G_SQ_TYPE ? "TYPE" : id == G_SQ_PAT ? "PAT" : id == G_SQ_LEN ? "LEN" : id == G_AR_OCT ? "OCT" : item_name(id);
 }
 static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
 {
@@ -582,6 +593,8 @@ static void item_text(uint32_t id, char *b)
         case G_PAL: { static const char *const PN[4] = {"SYNTHWAVE", "MINT", "BLACK / WHITE", "INVERTED"}; str_cat(b, v < 2 ? PAL_NAME[set.theme & 3][v] : PN[(v - 2) & 3]); break; }
         case G_GRID: str_cat(b, v ? "STRAIGHT" : "ALL (T, D)"); break;
         case G_BROWSE: str_cat(b, v ? "FAVORITES" : "ALL"); break;
+        case G_ACCEL: str_cat(b, v == 2 ? "FAST" : v ? "ON" : "OFF"); break;
+        case G_C3COL: str_cat(b, v ? "GREEN YEL ORANGE" : "THEME"); break;
         case G_FONT: { static const char *const FN[4] = {"SANS", "MONO", "HYPER", "PIXEL"}; str_cat(b, FN[v & 3]); break; }
         case G_CPU:                             /* each core's share of a block, and the governor's step */
             b = str_cat(b, "C0 "); b = fmt_u(b, ks_load[0], 0); b = str_cat(b, "%");
@@ -752,10 +765,18 @@ static void key_up(uint32_t n)
 }
 
 static uint32_t rate_like(uint32_t id) { return id == I_L1RATE || id == I_L2RATE ? rate_id(id) : id; }
+static uint32_t turn_id = I_NONE;
 static void edit_item(uint32_t id, int32_t d)
 {
     int32_t lo, hi, v = item_get(id), step = 1;
+    uint32_t k;
     if (id == I_NONE || id == G_CPU || id == G_FW) return;
+    for (k = 5; k-- > 0;)                       /* an effect (or STEP) that is off comes on when its setting goes up */
+        if (id > FX_ON[k] && id < MS_GLUE) {
+            if (!patch[FX_ON[k]] && d > 0) { patch[FX_ON[k]] = 1; toast(k == 0 ? "SATURATION ON" : k == 1 ? "CRUSH ON" : k == 2 ? "CHORUS ON" : k == 3 ? "DELAY ON" : "REVERB ON"); }
+            break;
+        }
+    if (id > ST_ON && id <= ST_SMO && !patch[ST_ON] && d > 0) { patch[ST_ON] = 1; toast("STEP FX ON"); }
     if (item_patch(id) && PD[id].fmt == FM_DEST) { item_set(id, dst_step(v, d)); dpop_id = (uint8_t)id; dpop_ms = fm1_ms | 1u; return; }
     if (set.grid && (rate_like(id) == L1_DIV || rate_like(id) == L2_DIV)) {   /* STRAIGHT: from round to round */
         int32_t i, at = 0;
@@ -768,7 +789,14 @@ static void edit_item(uint32_t id, int32_t d)
     if (id != G_CPU && (vpop_id != (uint8_t)id || !vpop_ms)) { item_text(id, vpop_before); vpop_id = (uint8_t)id; }
     vpop_ms = fm1_ms | 1u;
     item_range(id, &lo, &hi);
-    if (hi - lo > 40 && fm1_ms - last_turn_ms < 45u) step = id == G_BPM ? 10 : 3;   /* fast: bigger steps */
+    if (set.accel && hi - lo > 24 && id == turn_id) {   /* ACCEL: the faster the turn, the bigger the step */
+        uint32_t dt = fm1_ms - last_turn_ms;
+        step = dt < 20u ? 6 : dt < 40u ? 4 : dt < 70u ? 2 : 1;
+        if (set.accel == 2u) step *= 2;
+        if (hi - lo <= 64 && step > 3) step = 3;   /* (short ranges: never past a few) */
+        if (hi - lo > 300) step *= (hi - lo) / 128;   /* (the tempo: tenths of a BPM) */
+    }
+    turn_id = id;
     last_turn_ms = fm1_ms;
     item_set(id, v + d * step);
 }
@@ -879,15 +907,8 @@ static void on_button(uint32_t b)
 }
 
 #if KS_B
-static void c3_edit(uint32_t id, int32_t d)     /* (an effect that is off comes on when its setting moves up) */
+static void c3_edit(uint32_t id, int32_t d)
 {
-    static const uint8_t ONS[5] = {DR_ON, CR_ON, CH_ON, DL_ON, RV_ON};
-    uint32_t k;
-    for (k = 5; k-- > 0;)
-        if (id > ONS[k] && id < MS_GLUE) {
-            if (!patch[ONS[k]] && d > 0) { patch[ONS[k]] = 1; toast(k == 0 ? "SATURATION ON" : k == 1 ? "CRUSH ON" : k == 2 ? "CHORUS ON" : k == 3 ? "DELAY ON" : "REVERB ON"); }
-            break;
-        }
     vpop_pre[0] = 0;
     edit_item(id, d);
 }
@@ -941,7 +962,7 @@ static void on_enc(uint32_t e, int32_t d)
         return;
     }
     if (e >= ENC_KNOB1 && e <= ENC_KNOB4) {
-        uint32_t id = v->k[e - ENC_KNOB1], i;
+        uint32_t id = vknob(v, e - ENC_KNOB1), i;
         if (id == I_NONE) return;
         edit_item(id, d);
         for (i = 0; i < v->n; i++) if (v->it[i] == id) cursor[vi] = (uint8_t)i;
@@ -1088,7 +1109,7 @@ static void ui_input(void)
         if (hb.b <= BTN_OCT_UP && b >= ENC_KNOB1 && b <= ENC_KNOB4) hb.used = 1;   /* (SHIFT: no octave on release) */
         if (hb.b != 0xFF && (hb.b == BTN_LFO || hb.b == BTN_ENV) && ((b >= ENC_KNOB1 && b <= ENC_KNOB4) || b == ENC_ALGORITHM)) {
             const view_t *v = view();
-            uint32_t id = b == ENC_ALGORITHM ? (v->n ? v->it[cursor[vidx()]] : I_NONE) : v->k[b - ENC_KNOB1];
+            uint32_t id = b == ENC_ALGORITHM ? (v->n ? v->it[cursor[vidx()]] : I_NONE) : vknob(v, b - ENC_KNOB1);
 #if KS_B
             if (C3_ON) id = b == ENC_ALGORITHM ? COL3[page].id[c3_cur >> 2][c3_cur & 3u] : COL3[page].id[0][b - ENC_KNOB1];
 #endif
@@ -1097,7 +1118,7 @@ static void ui_input(void)
             continue;
         }
         if (hb.b != 0xFF && page_of_btn(hb.b) >= 0 && b >= ENC_KNOB1 && b <= ENC_KNOB4) {   /* SHIFT: that page's knobs */
-            uint32_t pg = (uint32_t)page_of_btn(hb.b), id = VIEWS[PAGE_V0[pg] + vcur[pg]].k[b - ENC_KNOB1];
+            uint32_t pg = (uint32_t)page_of_btn(hb.b), id = vknob(&VIEWS[PAGE_V0[pg] + vcur[pg]], b - ENC_KNOB1);
             hb.used = 1;
             if (id == I_NONE || VIEWS[PAGE_V0[pg] + vcur[pg]].lay >= LY_PRESET) continue;
             str_cat(str_cat(vpop_pre, PAGE_SHORT[pg]), " \xB7 ");
@@ -1166,10 +1187,17 @@ static uint32_t ui_frame_ms, prev_ms;
 static void app_init(void)
 {
     uint32_t i;
-    if (settings_load(&set, sizeof set) || set.ver != 6u) {
+    int ok;
+    ok = !settings_load(&set, sizeof set) && set.ver == 6u;
+    if (!ok && !settings_load(&set, (uint32_t)((uint8_t *)&set.accel - (uint8_t *)&set)) && set.ver == 6u) {
+        set.accel = 1;                          /* (saved before KNOB ACCEL: the same, shorter) */
+        set.c3col = 0;
+        ok = 1;
+    }
+    if (!ok) {
         set.theme = set.pal = set.font = set.grid = set.browse = 0;
         memset(set.fav, 0, sizeof set.fav);
-        set.ver = 6; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1;
+        set.ver = 6; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1; set.accel = 1; set.c3col = 0;
     }
     set.cores = set.cores ? 1u : 0u;
     theme_set(set.theme, set.pal);
@@ -1260,7 +1288,10 @@ WASM_EXPORT("ksub_knob_label") const char *ksub_knob_label(uint32_t i)
     if (i >= 4u) return "";
     if (v->lay == LY_PRESET) return i == 0u ? "SCROLL" : i == 2u ? "LOAD" : "";
     if (v->lay == LY_SAVE) return i == 0u ? "SLOT" : i == 1u ? "POSITION" : i == 2u ? "LETTER" : "STYLE";
-    return v->k[i] == I_NONE ? "" : item_sname(v->k[i]);
+#if KS_B
+    if (C3_ON) return item_sname(COL3[page].id[c3_col()][i]);
+#endif
+    return vknob(v, i) == I_NONE ? "" : item_sname(vknob(v, i));
 }
 WASM_EXPORT("ksub_store") uint8_t *ksub_store(void) { return w_store; }
 WASM_EXPORT("ksub_store_size") uint32_t ksub_store_size(void) { return sizeof w_store; }

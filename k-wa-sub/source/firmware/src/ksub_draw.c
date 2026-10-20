@@ -87,7 +87,7 @@ static const char *mod_tag(uint32_t id)         /* what modulates it, in two or 
 static int32_t knob_of(const view_t *v, uint32_t id)
 {
     int32_t k;
-    for (k = 0; k < 4; k++) if (v->k[k] == id) return k;
+    for (k = 0; k < 4; k++) if (vknob(v, (uint32_t)k) == id) return k;
     return -1;
 }
 
@@ -389,7 +389,7 @@ static const char *view_title(uint32_t vi, char *t, char *sub)
         uint32_t f = vi - PAGE_V0[PG_FX];
         p = str_cat(sub, f == 0u ? L_DRT[patch[DR_TYPE]] : f == 3u ? L_DIV[patch[DL_TIME]] : "");
         if (p != sub) p = str_cat(p, " \xB7 ");
-        str_cat(p, f < 5u ? (patch[v->it[0]] ? "ON" : "OFF") : "ALWAYS ON");
+        str_cat(p, f < 5u ? (patch[FX_ON[f]] ? "ON" : "OFF") : "ALWAYS ON");
         return FX_TITLE[f < 6u ? f : 0u];
     }
 }
@@ -467,10 +467,10 @@ static void foot_text(const view_t *v, char *b, int32_t maxw)
         p = b;
         *p = 0;
         for (k = 0; k < n; k++) {
-            if (v->k[k] == I_NONE) continue;
+            if (vknob(v, k) == I_NONE) continue;
             if (p != b) p = str_cat(p, " \xB7 ");
             *p++ = 'K'; *p++ = (char)('1' + k); *p++ = ' ';
-            p = str_cat(p, item_sname(v->k[k]));
+            p = str_cat(p, item_sname(vknob(v, k)));
         }
         if (g_text_w(T_XS, b) < maxw || n <= 1u) break;
         n--;
@@ -482,7 +482,6 @@ static const char *foot_fixed(uint32_t vi)
     case LY_PLAY: return vi == 0u ? "KNOBS = LIVE MACROS" : 0;
     case LY_PRESET: return "K1 SCROLL \xB7 K3 LOAD";
     case LY_SAVE: return "K1 SLOT \xB7 SAVE = WRITE";
-    case LY_SYS: return "SELECT ROW \xB7 ALGO VALUE";
     default: return 0;
     }
 }
@@ -693,7 +692,7 @@ static void th_pure(const view_t *v, uint32_t vi)
     }
     draw_visual(vz, 6, 49, 228, 76, 1);
     for (i = 0; i < 4u; i++) {                  /* the four knobs as rings */
-        uint32_t id = v->lay == LY_PLAY ? v->it[i] : v->k[i];
+        uint32_t id = vknob(v, i);
         int32_t cx = 34 + (int32_t)i * 57;
         char b[24];
         if (id == I_NONE || !g_vis(128, 76)) continue;
@@ -772,10 +771,16 @@ static void th_rack(const view_t *v, uint32_t vi)
 
 #if KS_B
 /* ---------------------------------------------------------------- DOUBLE SHIFT (version B): three columns
- * fluo green the base (knobs alone), yellow OCT- held, orange OCT+ held; the column not played is dimmed. The name of a
- * setting shows in full only while it turns (at the top, with what it was), the cells keep their initials */
+ * the base (knobs alone) at the left, OCT- held in the middle, OCT+ held at the right; the column not played is dimmed.
+ * SYSTEM > SHIFT COLOURS: THEME (the theme's colour, a little lighter in the middle, a little towards its second colour
+ * at the right) or fluo green / yellow / orange. The name of a setting shows in full only while it turns (at the top,
+ * with what it was), the cells keep their initials */
 static const uint16_t C3_RGB[3] = {RGB(96, 255, 64), RGB(255, 224, 48), RGB(255, 144, 48)};
-static uint16_t c3c(uint32_t k) { return theme_pal >= 4u ? K_WHITE : C3_RGB[k]; }
+static uint16_t c3c(uint32_t k)
+{
+    if (set.c3col && theme_pal < 4u) return C3_RGB[k];
+    return k == 0u ? K_LIME : k == 1u ? g_mix(K_LIME, K_WHITE, 80) : g_mix(K_LIME, K_CYAN, 80);
+}
 static void draw_c3(void)
 {
     const col3_t *c = &COL3[page];

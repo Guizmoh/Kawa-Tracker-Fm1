@@ -78,13 +78,17 @@ point qui suit la note jouée), courbe du filtre (avec le cutoff modulé en dire
 grille STEP (avec le pas joué), courbe de saturation, crush, chorus, échos du delay, queue de la reverb, vu-mètre et
 compression du master, charge des cœurs.
 
-`SELECT` choisit la ligne, `ALGORITHM` change sa valeur, `K1`–`K4` font ce qu'indique le bas de l'écran (dans
+`SELECT` choisit la ligne, `ALGORITHM` change sa valeur, `K1`–`K4` règlent toujours **les 4 premières lignes de la vue, dans l'ordre** (les réglages les plus joués sont mis en tête ; le bas de l'écran les rappelle) (dans
 l'émulateur, leur fonction s'affiche sous chaque potard), `PRESETS` charge le patch suivant depuis n'importe quelle
 page. `SAVE` ouvre l'enregistrement (emplacement, nom lettre par lettre, style) ; `SAVE` à nouveau écrit.
 **`SAVE` maintenu = UNDO** : il annule la dernière modification (les tours d'un même bouton dans la même seconde
 et demie comptent pour une seule ; un chargement de preset aussi), puis une de plus toutes les 0,4 s tant qu'il
 reste appuyé, jusqu'à 16 en arrière.
 `OCT-` / `OCT+` : octave du clavier ; les deux ensemble : tout couper.
+
+**Accélération des potards.** Plus on tourne vite, plus le pas est grand (jusqu'à ×6, ×12 en FAST ; les petites
+plages restent fines, le tempo passe de 0,1 BPM à plusieurs BPM). `SYSTEM › KNOB ACCEL` : OFF, ON (par défaut),
+FAST. Monter un réglage d'un effet éteint (ou du STEP FX) l'allume.
 
 ## SEQ BASS et ARP
 
@@ -147,11 +151,14 @@ restent compatibles entre les deux versions.
 **Double Shift (version B seulement).** Sur PLAY, EDIT, ENV, FILTER, LFO et FX, le premier écran montre 12 réglages
 en 3 colonnes de 4 (une ligne par potard `K1`–`K4`) :
 
-| Colonne | Couleur | Pour la jouer |
-|---|---|---|
-| gauche : la base (MIX, AMP, WOBBLE, SPACE…) | vert fluo | les potards seuls |
-| milieu : OSC A, FILTER ENV, LFO 1, DRIVE… | jaune | `OCT−` maintenu + potard |
-| droite : OSC B, MOD ENV, LFO 2, MASTER… | orange | `OCT+` maintenu + potard |
+| Colonne | Pour la jouer |
+|---|---|
+| gauche : la base (MIX, AMP, WOBBLE, SPACE…) | les potards seuls |
+| milieu : OSC A, FILTER ENV, LFO 1, DRIVE… | `OCT−` maintenu + potard |
+| droite : OSC B, MOD ENV, LFO 2, MASTER… | `OCT+` maintenu + potard |
+
+`SYSTEM › SHIFT COLOURS` : THEME (par défaut : la couleur du thème, un peu plus claire au milieu, un peu vers sa
+2e couleur à droite) ou GREEN YEL ORANGE (vert fluo / jaune / orange).
 
 `OCT−` / `OCT+` tapés seuls changent toujours l'octave (tenus plus d'une demi-seconde sans potard : rien) ; les deux
 ensemble coupent tout. Les cases ne montrent que des initiales ; le nom complet, la valeur et l'ancienne valeur
