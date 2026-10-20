@@ -91,6 +91,8 @@ reste appuyé, jusqu'à 16 en arrière.
 Le paquet est [`install/k-wa-sub-0.8.fwsc`](install/k-wa-sub-0.8.fwsc) (identité `FM-1_978` ; les anciens dans `install/older/`). Il s'installe exactement
 comme KAWA, avec le même chargeur de mise à jour, et fonctionne depuis le firmware d'origine comme depuis KAWA :
 
+- **Installateur rapide** : ouvrir [`installer.html`](installer.html) dans Chrome ou Edge (un seul fichier, hors ligne,
+  le firmware est dedans), cliquer sur « Installer K-WA SUB », confirmer. Il accepte aussi un autre .fwsc (KAWA...).
 - **Dans le navigateur** (Chrome ou Edge, Web MIDI) : la page d'installation de KAWA ([`../index.html`](../index.html)),
   bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.8.fwsc`.
 - **Avec Python 3** : `INSTALL-Linux.sh`, `INSTALL-Mac.command` ou `INSTALL-Windows.bat` dans ce dossier (ou
