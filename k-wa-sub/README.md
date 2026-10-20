@@ -128,10 +128,10 @@ jusqu'à 16 en arrière ; relâcher `SAVE` ferme la fenêtre.
 plages restent fines, le tempo passe de 0,1 BPM à plusieurs BPM). `SYSTEM › KNOB ACCEL` : OFF, ON (par défaut),
 FAST. Monter un réglage d'un effet éteint (ou du STEP FX) l'allume.
 
-## Les fenêtres SEL : FX LIVE et MACROS
+## Les fenêtres SEL : FX LIVE, MACROS, MORPH
 
-`SEL` n'ouvre plus les vues de la page (c'est le bouton de la page qui les fait défiler) : il ouvre deux fenêtres,
-`SEL` une fois FX LIVE, deux fois MACROS, trois fois retour. Un bouton de page referme la fenêtre et va à sa page.
+`SEL` n'ouvre plus les vues de la page (c'est le bouton de la page qui les fait défiler) : il ouvre quatre fenêtres :
+`SEL` une fois FX LIVE, deux fois MACROS, trois fois MORPH X/Y, quatre fois MORPH A/B, cinq fois retour. Un bouton de page referme la fenêtre et va à sa page.
 `SEL` maintenu reste A/B (COMPARE).
 
 **FX LIVE** : des effets à jouer en direct (pas enregistrés, éteints à chaque démarrage).
@@ -151,6 +151,28 @@ les sons (elles ne sont pas dans le patch) ; leurs cibles sont enregistrées, le
 Au départ : M1 FILTER (cutoff, résonance), M2 WOBBLE (profondeur et vitesse du LFO 1), M3 GRIT (drive du filtre,
 bruit, saturation), M4 TONE (le 1er réglage des deux oscillateurs, X-MOD). `SELECT` choisit une cible (M1 cible 1,
 sa quantité, M1 cible 2…), `ALGO` la change ; une cible choisie sans quantité part à +50 %.
+
+## MORPH (SEL 3 et 4)
+
+Le son passe d'un son à un autre en continu. Les réglages qui ont une valeur glissent ; ceux qui sont un choix (moteur,
+type de filtre, destination, ON/OFF) prennent la valeur du son le plus proche. Un réglage identique dans tous les sons
+n'est pas touché (une modification faite à la main reste). Le calcul se fait dans la boucle principale, pas dans
+l'audio. « NOW » = le son qui jouait à l'ouverture de MORPH (recapturé à chaque ouverture tant qu'on n'a pas bougé le
+morph ; charger un preset relâche le morph). `SAVE` enregistre le résultat, `SAVE` maintenu annule.
+
+**MORPH X/Y** : quatre sons aux coins (A en haut à gauche = NOW au départ, B en haut à droite, C et D en bas).
+- `K1` X, `K2` Y : le point dans le carré ; à droite, la part de chaque son.
+- `K3` (ou `SELECT`) choisit un coin, `K4` (ou `ALGO`) lui donne un son : NOW, un preset d'usine ou un patch utilisateur.
+
+**MORPH A/B** : A = NOW, B = un son choisi.
+- `K1` MORPH 0–100 %, `K2` (ou `ALGO`) choisit B.
+- `K3` PARTS : ALL, OSC, FILTER, ENV, MOD, FX (seulement cette partie bouge).
+- `K4` TIME (1 temps à 16 mesures) ; `PLAY` (dans cette fenêtre) fait le trajet tout seul vers l'autre bout, sur le tempo.
+- La liste montre les réglages qui changent le plus : trait cyan = A, violet = B, blanc = maintenant.
+
+**MORPH X**, **MORPH Y** et **MORPH A/B** sont des destinations (LFO, matrice, STEP, MACROS, juste après RESO) : un LFO
+sur X et l'autre sur Y font tourner le son entre les quatre coins sur le tempo. Le LFO (ou le slot) qui pilote le morph
+n'est jamais lui-même morphé. Les choix de sons sont enregistrés (avec SEQ / MACROS) ; ~1 Ko de RAM.
 
 ## EQ (FX maintenu)
 
@@ -283,19 +305,19 @@ sauf s'ils ont été appris pour autre chose.
 
 ## À faire
 
-- MORPH / XY (les MACROS sont faites : fenêtre `SEL`).
+- Rien de la liste : MORPH X/Y et A/B sont faits (fenêtres `SEL` 3 et 4).
 
 ## Installer sur le FM-1
 
-Le paquet est [`install/k-wa-sub-0.9.9-6.fwsc`](install/k-wa-sub-0.9.9-6.fwsc) (identité `FM-1_979` ; les anciens dans `install/older/`). Il s'installe exactement
+Le paquet est [`install/k-wa-sub-0.9.9-7.fwsc`](install/k-wa-sub-0.9.9-7.fwsc) (identité `FM-1_979` ; les anciens dans `install/older/`). Il s'installe exactement
 comme KAWA, avec le même chargeur de mise à jour, et fonctionne depuis le firmware d'origine comme depuis KAWA :
 
 - **Installateur rapide** : ouvrir [`installer.html`](installer.html) dans Chrome ou Edge (un seul fichier, hors ligne,
   le firmware est dedans), cliquer sur « Installer K-WA SUB », confirmer. Il accepte aussi un autre .fwsc (KAWA...).
 - **Dans le navigateur** (Chrome ou Edge, Web MIDI) : la page d'installation de KAWA ([`../index.html`](../index.html)),
-  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.9.9-6.fwsc`.
+  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.9.9-7.fwsc`.
 - **Avec Python 3** : `INSTALL-Linux.sh`, `INSTALL-Mac.command` ou `INSTALL-Windows.bat` dans ce dossier (ou
-  `python3 install/fm1_install.py install/k-wa-sub-0.9.9-6.fwsc`).
+  `python3 install/fm1_install.py install/k-wa-sub-0.9.9-7.fwsc`).
 
 Un câble USB **de données**, aucun autre logiciel MIDI ouvert, rien à débrancher avant la fin. Pour revenir à KAWA :
 installer `kawa-0.5.fwsc` de la même façon. Pour le firmware officiel : M-UPGRADE, comme décrit pour KAWA. En cas de

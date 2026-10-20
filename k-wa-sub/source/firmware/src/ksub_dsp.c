@@ -48,6 +48,7 @@ static struct {                                 /* stored (the store's second se
     uint8_t cc_magic, cc_num[16], cc_id[16];    /* MIDI LEARN: a CC (0xFF: none) and what it moves */
     uint8_t eq_magic, eq_t[4], eq_f[4], eq_q[4];   /* the EQ: each band's type, frequency, width */
     int8_t eq_g[4];                             /* ... and gain (dB) */
+    uint8_t mx_magic, mx_pre[4], ab_pre, ab_parts, ab_time;   /* MORPH: the corners' sounds, A/B's B, its parts and time */
 } perf;
 /* the EQ (held FX), on every sound: 4 biquads a side, Q24 (b0 b1 b2 a1 a2); the main loop works them out (eq_n),
  * the audio takes them at the next block (eq_new) */

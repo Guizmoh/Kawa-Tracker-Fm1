@@ -1068,7 +1068,7 @@ static void win_head(const char *ti, const char *sub, const char *k)
 {
     if (!g_vis(0, 40)) return;
     g_text(T_XS, 6, 3, k, K_LIME);
-    g_text_r(T_XS, 234, 3, win == 1u ? "SEL: MACROS" : "SEL: BACK", K_GREY);
+    g_text_r(T_XS, 234, 3, win == 1u ? "SEL: MACROS" : win == 2u ? "SEL: MORPH X/Y" : win == 4u ? "SEL: MORPH A/B" : "SEL: BACK", K_GREY);
     g_text(T_B, 6, 13, ti, K_WHITE);
     g_text(T_XS, 6, 31, sub, K_GREY);
 }
@@ -1084,12 +1084,132 @@ static void win_row(int32_t y, const char *kn, uint32_t id, int sel, int on, int
     g_vbar(10, y + 26, 220, 5, item_frac(id), on ? K_LIME : K_CYAN);
     if (bip) g_rect(119, y + 24, 2, 9, K_GREY);  /* (the middle: off) */
 }
+/* MORPH X/Y: the pad (A B on top, C D below), the dot (where the LFO took it; the knobs' place in grey), each sound's share */
+static void mx_dot(int32_t x, int32_t y, int32_t r, uint16_t c) { g_rect(x - r + 1, y - r, 2 * r - 1, 2 * r + 1, c); g_rect(x - r, y - r + 1, 2 * r + 1, 2 * r - 1, c); }
+static void draw_mxy(void)
+{
+    static const char *const CN[4] = {"A", "B", "C", "D"};
+    const int32_t px = 4, py = 42, ps = 152;
+    uint16_t cc[4];
+    int32_t k, ex = mx_mode == MX_XY ? mx_ex : mx_x, ey = mx_mode == MX_XY ? mx_ey : mx_y, w[4];
+    char t[40], *p;
+    cc[0] = K_CYAN; cc[1] = K_MOD; cc[2] = K_LIME; cc[3] = K_ORANGE;
+    w[0] = (127 - ex) * ey; w[1] = ex * ey; w[2] = (127 - ex) * (127 - ey); w[3] = ex * (127 - ey);
+    p = str_cat(t, "X "); p = fmt_u(p, (uint32_t)ex * 100u / 127u, 0); p = str_cat(p, " \xB7 Y "); p = fmt_u(p, (uint32_t)ey * 100u / 127u, 0);
+    if (ex != mx_x || ey != mx_y) str_cat(p, " \xB7 MODULATED");
+    win_head("MORPH X/Y", t, "SEL 3/4");
+    if (g_vis(py, ps)) {
+        int32_t dx = px + 6 + ex * (ps - 12) / 127, dy = py + 6 + (127 - ey) * (ps - 12) / 127;
+        g_box(px, py, ps, ps, K_PANEL, K_LINE);
+        g_rect(px + ps / 2, py + 2, 1, ps - 4, K_LINE);
+        g_rect(px + 2, py + ps / 2, ps - 4, 1, K_LINE);
+        g_rect(dx, py + 1, 1, ps - 2, g_mix(K_PANEL, K_WHITE, 80));
+        g_rect(px + 1, dy, ps - 2, 1, g_mix(K_PANEL, K_WHITE, 80));
+        g_text(T_S, px + 5, py + 3, CN[0], cc[0]);
+        g_text_r(T_S, px + ps - 5, py + 3, CN[1], cc[1]);
+        g_text(T_S, px + 5, py + ps - 16, CN[2], cc[2]);
+        g_text_r(T_S, px + ps - 5, py + ps - 16, CN[3], cc[3]);
+        if (ex != mx_x || ey != mx_y) mx_dot(px + 6 + mx_x * (ps - 12) / 127, py + 6 + (127 - mx_y) * (ps - 12) / 127, 2, K_GREY);
+        mx_dot(dx, dy, 4, K_WHITE);
+    }
+    for (k = 0; k < 4; k++) {                   /* the four sounds and their share */
+        int32_t x = 160, y = 42 + k * 38;
+        const char *nm = mx_name(perf.mx_pre[k]);
+        if (!g_vis(y, 36)) continue;
+        g_box(x, y, 76, 36, K_PANEL, mx_corner == k ? K_WHITE : K_LINE);
+        p = str_cat(t, CN[k]); p = str_cat(p, " \xB7 "); p = fmt_u(p, (uint32_t)w[k] * 100u / 16129u, 0); str_cat(p, " %");
+        g_text(T_XS, x + 5, y + 3, t, cc[k]);
+        g_text(g_fit(T_XS, nm, 68), x + 5, y + 14, nm, K_WHITE);
+        g_bar(x + 5, y + 27, 66, 4, (uint32_t)w[k] * 256u / 16129u, cc[k]);
+    }
+    if (g_vis(198, 42)) {
+        const char *nm = mx_name(perf.mx_pre[mx_corner & 3u]);
+        g_box(4, 198, 232, 40, K_PANEL, cc[mx_corner & 3u]);
+        p = str_cat(t, "CORNER "); str_cat(p, CN[mx_corner & 3u]);
+        g_text(T_XS, 10, 202, t, cc[mx_corner & 3u]);
+        g_text_r(T_XS, 230, 202, "K3 CORNER \xB7 K4 ITS SOUND", K_GREY);
+        g_text(g_fit(T_S, nm, 150), 10, 216, perf.mx_pre[mx_corner & 3u] ? nm : "NOW (OPENED WITH)", K_WHITE);
+        if (!perf.mx_pre[mx_corner & 3u]) g_text_r(T_XS, 230, 220, mx_now_nm, K_GREY);
+    }
+}
+static const char *mx_label(uint32_t id, char *t)   /* a setting with its section: DELAY TIME, AMP ATTACK */
+{
+    const char *g = id >= DR_ON && id <= DR_MIX ? "SAT" : id >= CR_ON && id <= CR_MIX ? "CRUSH" : id >= CH_ON && id <= CH_MIX ? "CHORUS" :
+                    (id >= DL_ON && id <= DL_MIX) || id == DL_TYPE ? "DELAY" : (id >= RV_ON && id <= RV_MIX) || id == RV_TYPE ? "VERB" :
+                    id >= CP_ON && id <= CP_PRATE ? "COMP" : id >= PH_ON && id <= PH_MIX ? "PHASER" : id >= ST_ON && id <= ST_SMO ? "STEP" :
+                    id >= L1_SHP && id < L2_SHP ? "LFO1" : id >= L2_SHP && id < M1_SRC ? "LFO2" : id >= F_TYPE && id <= F_VEL ? "FILT" :
+                    id >= AE_A && id <= AE_R ? "AMP" : id >= FE_A && id <= FE_R ? "F.ENV" : id >= ME_A && id <= ME_DST ? "M.ENV" :
+                    id >= SM_SEL && id <= SM_SPEED ? "SMP" : 0;
+    const char *n = item_name(id);
+    char *p = t;
+    if (n[0] >= '0' && n[0] <= '9' && n[2] == ' ') n += 3;   /* (01 ATTACK) */
+    if (g) { p = str_cat(p, g); *p++ = ' '; }
+    str_cat(p, n[0] == 'E' && n[1] == 'F' ? "ON" : n);
+    return t;
+}
+/* MORPH A/B: the two sounds and where between them, what moves the most (A cyan, B violet, now white) */
+static void draw_mab(void)
+{
+    int32_t k, a = mx_mode == MX_AB ? mx_ea : ab_amt, n = 0, top[5], sc[5];
+    uint32_t i, parts = perf.ab_parts % 6u;
+    char t[48], *p;
+    p = fmt_u(t, (uint32_t)a * 100u / 127u, 0); p = str_cat(p, " % \xB7 "); p = str_cat(p, L_PARTS[parts]);
+    p = str_cat(p, " \xB7 "); str_cat(p, L_ABT[perf.ab_time % 7u]);
+    win_head("MORPH A/B", t, "SEL 4/4");
+    if (g_vis(42, 46)) {
+        const char *nb = mx_name(perf.ab_pre);
+        g_box(4, 42, 232, 44, K_PANEL, K_LINE);
+        g_text(T_XS, 10, 46, "A \xB7 NOW", K_CYAN);
+        g_text_r(T_XS, 230, 46, "B \xB7 K2", K_MOD);
+        g_text(g_fit(T_S, mx_now_nm, 104), 10, 56, mx_now_nm, K_WHITE);
+        g_text_r(g_fit(T_S, nb, 104), 230, 56, nb, K_WHITE);
+        for (k = 0; k < 214; k++) g_rect(12 + k, 76, 1, 4, g_mix(K_CYAN, K_MOD, (uint32_t)k * 256u / 214u));
+        g_rect(11 + a * 214 / 127 - 1, 72, 3, 12, K_WHITE);
+    }
+    for (i = 0; i < NP; i++) {                  /* the five that move the most */
+        int32_t d;
+        if (!mx_moves(i, ab_snap, 2, parts)) continue;
+        d = ab_snap[1][i] - ab_snap[0][i];
+        d = (d < 0 ? -d : d) * 256 / (PD[i].hi - PD[i].lo ? PD[i].hi - PD[i].lo : 1);
+        if (PD[i].fmt == FM_LIST || PD[i].fmt == FM_DEST || PD[i].fmt == FM_DIV) d = 300;   /* (a switch: first) */
+        {
+            int32_t m = n < 5 ? n : 5, j;
+            for (k = 0; k < m && d <= sc[k]; k++) {}
+            if (k < 5) { for (j = (m < 5 ? m : 4); j > k; j--) { top[j] = top[j - 1]; sc[j] = sc[j - 1]; } top[k] = (int32_t)i; sc[k] = d; }
+        }
+        n++;
+    }
+    if (g_vis(90, 12)) {
+        p = str_cat(t, "WHAT MOVES ("); p = fmt_u(p, (uint32_t)n, 0); str_cat(p, ")");
+        g_text(T_XS, 8, 91, n ? t : "NOTHING MOVES: B IS THE SAME HERE", K_GREY);
+    }
+    for (k = 0; k < 5 && k < n; k++) {
+        int32_t y = 104 + k * 18, id = top[k], lo = PD[id].lo, w = PD[id].hi - lo ? PD[id].hi - lo : 1;
+        int32_t fa = (ab_snap[0][id] - lo) * 140 / w, fb = (ab_snap[1][id] - lo) * 140 / w, fc = (patch[id] - lo) * 140 / w;
+        if (!g_vis(y, 12)) continue;
+        mx_label((uint32_t)id, t);
+        g_text(g_fit(T_XS, t, 80), 8, y, t, K_WHITE);
+        g_rect(90, y + 3, 140, 4, K_TRACK);
+        g_rect(90 + (fa < fb ? fa : fb), y + 3, (fa < fb ? fb - fa : fa - fb) + 1, 4, g_mix(K_CYAN, K_MOD, 128));
+        g_rect(90 + fa, y + 1, 1, 8, K_CYAN);
+        g_rect(90 + fb, y + 1, 1, 8, K_MOD);
+        g_rect(90 + fc - 1, y, 3, 10, K_WHITE);
+    }
+    if (g_vis(198, 42)) {
+        g_box(4, 198, 232, 40, K_PANEL, K_LIME);
+        g_text(T_XS, 10, 202, "K1 MORPH \xB7 K2 B \xB7 K3 PARTS \xB7 K4 TIME", K_GREY);
+        if (ab_run) str_cat(t, "GOING...");
+        else if (!ABT_BEATS[perf.ab_time % 7u]) str_cat(t, "K4: A TIME, THEN PLAY");
+        else { p = str_cat(t, "PLAY: TO "); p = str_cat(p, a < 64 ? "B" : "A"); p = str_cat(p, " IN "); str_cat(p, L_ABT[perf.ab_time % 7u]); }
+        g_text(T_S, 10, 216, t, ab_run ? K_LIME : K_WHITE);
+    }
+}
 static void draw_win(void)
 {
     uint32_t k;
     char t[48], b[24], *p;
     if (win == 1u) {
-        win_head("FX LIVE", "PLAYED LIVE \xB7 NOT SAVED \xB7 OFF AT START", "SEL 1/2");
+        win_head("FX LIVE", "PLAYED LIVE \xB7 NOT SAVED \xB7 OFF AT START", "SEL 1/4");
         for (k = 0; k < 4u; k++) {
             static const char *const KN[4] = {"K1", "K2", "K3", "K4"};
             uint32_t id = LV_IT[k];
@@ -1107,7 +1227,9 @@ static void draw_win(void)
         if (g_vis(226, 12)) g_text(T_XS, 6, 228, "SELECT + ALGO: ALL SIX \xB7 A PAGE BUTTON: BACK", K_GREY);
         return;
     }
-    win_head("MACROS", "4 KNOBS \xB7 4 TARGETS EACH \xB7 EVERY SOUND", "SEL 2/2");
+    if (win == 4u) { draw_mxy(); return; }
+    if (win == 5u) { draw_mab(); return; }
+    win_head("MACROS", "4 KNOBS \xB7 4 TARGETS EACH \xB7 EVERY SOUND", "SEL 2/4");
     for (k = 0; k < 4u; k++) {                  /* each macro: its value, its targets */
         int32_t y = 42 + (int32_t)k * 39, x, s;
         int on = mc_val[k] != 0;
@@ -1271,7 +1393,7 @@ static void draw_all(void)
                                          "MIX", "FILTER", "AMP", "MIX", "MIX", "MOD", "OSC A", "OSC B", "OSC A", "OSC B", "MIX",
                                          "FILTER", "MOD", "MOD", "MOD", "STEP", "SAT", "SAT", "CRUSH", "CRUSH", "CRUSH", "CHORUS",
                                          "CHORUS", "CHORUS", "DELAY", "DELAY", "DELAY", "REVERB", "REVERB", "REVERB", "MASTER",
-                                         "MASTER", "MASTER", "COMP", "PHASER", "PHASER", "PHASER"};
+                                         "MASTER", "MASTER", "COMP", "PHASER", "PHASER", "PHASER", "MORPH", "MORPH", "MORPH"};
         uint8_t ls[ND];
         int src = dpop_id < NP && PD[dpop_id].list == L_SRC, mc = dpop_id == G_MC_DST;
         int32_t n = 0, at = 0, i, cur = mc ? perf.mc_dst[(mc_pos >> 1) & 15u] : patch[dpop_id], y;

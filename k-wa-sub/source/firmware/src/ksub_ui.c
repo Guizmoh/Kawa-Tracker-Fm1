@@ -535,6 +535,9 @@ static const char *hold_label(uint32_t b);
 static uint32_t ui_rng = 0x2545F491u;
 static uint32_t ui_rnd(void) { ui_rng ^= ui_rng << 13; ui_rng ^= ui_rng >> 17; ui_rng ^= ui_rng << 5; return ui_rng; }
 
+/* MORPH's state (the module is after save_user): a load lets go of the morph */
+enum { MX_OFF, MX_XY, MX_AB };
+static uint8_t mx_ready, mx_mode, ab_run;
 static void load_preset(uint32_t bank, uint32_t k)
 {
     int8_t p[NP_MAX];
@@ -556,6 +559,7 @@ static void load_preset(uint32_t bank, uint32_t k)
     prev_dirty = 1;
     pdirty = 0;
     pend_on = 0;
+    mx_ready = 0; mx_mode = MX_OFF; ab_run = 0;
 }
 static void save_user(uint32_t k)
 {
@@ -574,6 +578,206 @@ static void save_user(uint32_t k)
     set.idx = (uint8_t)k;
     set_dirty = 1;
     toast("SAVED");
+}
+
+/* ---- MORPH (SEL windows 3 and 4): X/Y between four sounds at the corners, A/B between two. The main loop writes
+ * the blend into the patch (not the audio): a setting the same in every sound is left alone (an edit stays), a list
+ * (an engine, a type, a destination) takes the nearest sound's. A sound: 0 the one playing when MORPH opened, then
+ * the factory presets, then the user slots. MORPH X, Y, A/B are destinations too (an LFO walks the sound). */
+#define MX_MAGIC 0x58u
+#define MX_NCODE (1u + NFACTORY + NUSER)
+typedef char mx_codes_fit[MX_NCODE <= 255u ? 1 : -1];
+static int8_t mx_snap[4][NP_MAX], ab_snap[2][NP_MAX], mx_now[NP_MAX];
+static char mx_now_nm[14];
+static uint8_t mx_x, mx_y = 127, ab_amt, mx_corner, mx_skip[(NP + 7u) / 8u], mx_last[3], mx_ex, mx_ey = 127, mx_ea;
+static uint8_t ab_from, ab_to;
+static uint32_t ab_t0, ab_dur;
+static const char *const L_PARTS[6] = {"ALL", "OSC", "FILTER", "ENV", "MOD", "FX"};
+static const char *const L_ABT[7] = {"OFF", "1 BEAT", "1 BAR", "2 BARS", "4 BARS", "8 BARS", "16 BARS"};
+static const uint8_t ABT_BEATS[7] = {0, 1, 4, 8, 16, 32, 64};
+static void mx_defaults(void)
+{
+    perf.mx_magic = MX_MAGIC;
+    perf.mx_pre[0] = 0;                         /* A: the sound playing; B C D: three far apart */
+    perf.mx_pre[1] = (uint8_t)(1u + 2u % NFACTORY);
+    perf.mx_pre[2] = (uint8_t)(1u + 5u % NFACTORY);
+    perf.mx_pre[3] = (uint8_t)(1u + 9u % NFACTORY);
+    perf.ab_pre = (uint8_t)(1u + 2u % NFACTORY);
+    perf.ab_parts = 0;
+    perf.ab_time = 3;
+}
+static int mx_code_ok(uint32_t c) { return c < MX_NCODE && (c <= NFACTORY || up_valid(c - 1u - NFACTORY)); }
+static uint32_t mx_code_step(uint32_t c, int32_t d)
+{
+    int32_t s = d > 0 ? 1 : -1, n = d > 0 ? d : -d;
+    while (n--) {
+        int32_t k = (int32_t)c;
+        do k += s; while (k >= 0 && k < (int32_t)MX_NCODE && !mx_code_ok((uint32_t)k));
+        if (k < 0 || k >= (int32_t)MX_NCODE) break;
+        c = (uint32_t)k;
+    }
+    return c;
+}
+static const char *mx_name(uint32_t c)
+{
+    if (!c || !mx_code_ok(c)) return mx_now_nm;
+    if (c <= NFACTORY) return FACTORY[c - 1u].name;
+    return ustore[c - 1u - NFACTORY].name;
+}
+static void mx_sound(uint32_t c, int8_t *p)
+{
+    char nm[14];
+    if (!c || !mx_code_ok(c)) memcpy(p, mx_now, NP_MAX);
+    else if (c <= NFACTORY) preset_factory(c - 1u, p, nm);
+    else user_get(c - 1u - NFACTORY, p);
+}
+static int mx_isdst(int32_t d) { return d == D_MORPHX || d == D_MORPHY || d == D_MORPH; }
+static void mx_skipset(uint32_t a, uint32_t n) { for (; n; n--, a++) mx_skip[a >> 3] |= (uint8_t)(1u << (a & 7u)); }
+static void mx_skipfrom(const int8_t *p)        /* what drives the morph is not morphed (its LFO, matrix slot...) */
+{
+    uint32_t k;
+    for (k = 0; k < 2u; k++) if (mx_isdst(p[L1_DST + k * LFO_2])) mx_skipset(L1_SHP + k * LFO_2, LFO_2);
+    for (k = 0; k < 4u; k++) if (mx_isdst(p[M1_DST + k * 3u])) mx_skipset(M1_SRC + k * 3u, 3);
+    if (mx_isdst(p[ST_DST])) mx_skipset(ST_ON, ST_SMO - ST_ON + 1u);
+    if (mx_isdst(p[ME_DST])) mx_skipset(ME_A, 4);
+}
+static void mx_reskip(void)
+{
+    uint32_t k;
+    memset(mx_skip, 0, sizeof mx_skip);
+    mx_skipset(P_STYLE, 1);
+    mx_skipfrom(patch);
+    for (k = 0; k < 4u; k++) mx_skipfrom(mx_snap[k]);
+    mx_skipfrom(ab_snap[1]);
+    mx_last[2] = MX_OFF;                        /* (worked out again) */
+}
+static void mx_load(void)                       /* the sound now becomes "NOW", the others are read */
+{
+    uint32_t k;
+    if (perf.mx_magic != MX_MAGIC) mx_defaults();
+    memcpy(mx_now, patch, NP_MAX);
+    memcpy(mx_now_nm, pname, 14);
+    for (k = 0; k < 4u; k++) mx_sound(perf.mx_pre[k], mx_snap[k]);
+    memcpy(ab_snap[0], mx_now, NP_MAX);
+    mx_sound(perf.ab_pre, ab_snap[1]);
+    mx_ready = 1;
+    mx_reskip();
+}
+static void mx_open(void)                       /* a MORPH window opens: a fresh "NOW" unless a morph is going on */
+{
+    if (mx_mode == MX_OFF) mx_ready = 0;
+    if (!mx_ready) mx_load();
+}
+static uint32_t mx_part(uint32_t i)             /* A/B's PARTS: 1 OSC, 2 FILTER, 3 ENV, 4 MOD, 5 FX (6: ALL only) */
+{
+    if (i <= X_RESET || (i >= SM_SEL && i <= SM_SPEED)) return 1;
+    if (i >= F_TYPE && i <= F_VEL) return 2;
+    if (i >= AE_A && i <= ME_DST) return 3;
+    if ((i >= L1_SHP && i <= M4_AMT) || (i >= ST_ON && i <= ST_SMO)) return 4;
+    if (i >= V_MODE && i <= P_STYLE) return 6;
+    return 5;
+}
+static int mx_moves(uint32_t i, int8_t (*s)[NP_MAX], uint32_t n, uint32_t parts)
+{
+    uint32_t k;
+    if (mx_skip[i >> 3] & (1u << (i & 7u))) return 0;
+    if (parts && mx_part(i) != parts) return 0;
+    for (k = 1; k < n; k++) if (s[k][i] != s[0][i]) return 1;
+    return 0;
+}
+static void mx_blend(int8_t (*s)[NP_MAX], const int32_t *w, uint32_t n, uint32_t parts)
+{
+    uint32_t i, k, big = 0, osc = 0;
+    int32_t tot = 0;
+    for (k = 0; k < n; k++) { tot += w[k]; if (w[k] > w[big]) big = k; }
+    if (tot <= 0) return;
+    for (i = 0; i < NP; i++) {
+        int32_t v, a = 0;
+        uint8_t f = PD[i].fmt;
+        if (!mx_moves(i, s, n, parts)) continue;
+        if (f == FM_LIST || f == FM_DEST || f == FM_DIV) v = s[big][i];
+        else {
+            for (k = 0; k < n; k++) a += w[k] * s[k][i];
+            v = (a + (a < 0 ? -tot / 2 : tot / 2)) / tot;
+        }
+        if (patch[i] != v) { patch[i] = (int8_t)v; if (i <= N_LVL || i == S_WAVE || i == S_OCT) osc = 1; }
+    }
+    if (osc) prev_dirty = 1;
+}
+static void ab_go(void)                         /* PLAY in A/B: across, on the tempo */
+{
+    uint32_t b = ABT_BEATS[perf.ab_time % 7u];
+    if (!b) { toast("K4: SET A TIME"); return; }
+    mx_open();
+    undo_mark(0xFFF1u);
+    ab_from = ab_amt;
+    ab_to = ab_amt < 64u ? 127u : 0u;
+    ab_dur = b * 600000u / (ks_bpm10 ? ks_bpm10 : 1400u);
+    ab_t0 = fm1_ms;
+    ab_run = 1;
+    mx_mode = MX_AB;
+}
+static void mx_tick(void)
+{
+    int32_t gx = gmod[D_MORPHX] >> 8, gy = gmod[D_MORPHY] >> 8, ga = gmod[D_MORPH] >> 8, w[4], x, y, a;
+    if (ab_run) {
+        uint32_t t = fm1_ms - ab_t0;
+        if (t >= ab_dur) { t = ab_dur; ab_run = 0; }
+        ab_amt = (uint8_t)((int32_t)ab_from + ((int32_t)ab_to - (int32_t)ab_from) * (int32_t)t / (int32_t)(ab_dur ? ab_dur : 1u));
+    }
+    if (ga && mx_mode != MX_AB) mx_mode = MX_AB;
+    else if ((gx || gy) && mx_mode != MX_XY && !ab_run) mx_mode = MX_XY;
+    if (mx_mode == MX_OFF) return;
+    if (!mx_ready) mx_load();
+    if (mx_mode == MX_XY) {
+        x = clampi(mx_x + gx, 0, 127);
+        y = clampi(mx_y + gy, 0, 127);
+        if (mx_last[2] == MX_XY && x == mx_last[0] && y == mx_last[1]) return;
+        w[0] = (127 - x) * y; w[1] = x * y; w[2] = (127 - x) * (127 - y); w[3] = x * (127 - y);
+        mx_blend(mx_snap, w, 4, 0);
+        mx_ex = (uint8_t)x; mx_ey = (uint8_t)y;
+        mx_last[0] = (uint8_t)x; mx_last[1] = (uint8_t)y; mx_last[2] = MX_XY;
+    } else {
+        a = clampi(ab_amt + ga, 0, 127);
+        if (mx_last[2] == MX_AB && a == mx_last[0]) return;
+        w[0] = 127 - a; w[1] = a;
+        mx_blend(ab_snap, w, 2, perf.ab_parts % 6u);
+        mx_ea = (uint8_t)a;
+        mx_last[0] = (uint8_t)a; mx_last[2] = MX_AB;
+    }
+}
+static void mx_knob(uint32_t k, int32_t d)      /* K1..K4 (SELECT and ALGO: K3 and K4) in a MORPH window */
+{
+    if (win == 4u) {
+        if (k == 0u || k == 1u) {
+            mx_open();
+            undo_mark(0xFFF0u);
+            if (k == 0u) mx_x = (uint8_t)clampi(mx_x + d, 0, 127);
+            else mx_y = (uint8_t)clampi(mx_y + d, 0, 127);
+            mx_mode = MX_XY;
+        } else if (k == 2u) mx_corner = (uint8_t)clampi(mx_corner + d, 0, 3);
+        else {
+            uint32_t c = mx_corner & 3u;
+            perf.mx_pre[c] = (uint8_t)mx_code_step(perf.mx_pre[c], d);
+            perf_touch();
+            mx_sound(perf.mx_pre[c], mx_snap[c]);
+            mx_reskip();
+        }
+        return;
+    }
+    if (k == 0u) {
+        mx_open();
+        undo_mark(0xFFF1u);
+        ab_run = 0;
+        ab_amt = (uint8_t)clampi(ab_amt + d, 0, 127);
+        mx_mode = MX_AB;
+    } else if (k == 1u) {
+        perf.ab_pre = (uint8_t)mx_code_step(perf.ab_pre, d);
+        perf_touch();
+        mx_sound(perf.ab_pre, ab_snap[1]);
+        mx_reskip();
+    } else if (k == 2u) { perf.ab_parts = (uint8_t)clampi(perf.ab_parts + d, 0, 5); perf_touch(); mx_last[2] = MX_OFF; }
+    else { perf.ab_time = (uint8_t)clampi(perf.ab_time + d, 0, 6); perf_touch(); }
 }
 
 /* ---- items: a parameter of the patch, or one of the globals */
@@ -1227,7 +1431,8 @@ static void on_button(uint32_t b)
         }
     switch (b) {
     case BTN_SEL:                               /* the windows: FX LIVE, MACROS, back (held: COMPARE) */
-        win = win == 3u ? 0u : (uint8_t)((win + 1u) % 3u);   /* (from the EQ: back to the page) */
+        { static const uint8_t NEXTW[6] = {1, 2, 4, 0, 5, 0}; win = NEXTW[win % 6u]; }   /* (from the EQ: back to the page) */
+        if (win >= 4u) mx_open();
         win_cur = 0;
         vpop_ms = 0;
         g_force = 1;
@@ -1236,7 +1441,8 @@ static void on_button(uint32_t b)
         if (VIEWS[vidx()].lay == LY_SAVE) { name_trim(); save_user(save_slot); vcur[PG_PRE] = 1; pre_cur[1] = save_slot; }
         else save_open();
         break;
-    case BTN_PLAY:                              /* SEQ BASS: play / stop (held: HOLD, ui_input) */
+    case BTN_PLAY:                              /* SEQ BASS: play / stop (held: HOLD, ui_input); in MORPH A/B: across */
+        if (win == 5u) { ab_go(); break; }
         seq_play(!sq_play);
         toast(sq_play ? "SEQ STOP" : "SEQ PLAY");
         break;
@@ -1292,6 +1498,11 @@ static void on_enc(uint32_t e, int32_t d)
     }
     if (win && e != ENC_PRESETS) {              /* the SEL windows: K1..K4 their four, SELECT a row, ALGO its value */
         vpop_pre[0] = 0;
+        if (win >= 4u) {                        /* MORPH: SELECT and ALGO are K3 and K4 */
+            if (e >= ENC_KNOB1 && e <= ENC_KNOB4) mx_knob(e - ENC_KNOB1, d);
+            else mx_knob(e == ENC_SELECT ? 2u : 3u, d);
+            return;
+        }
         if (win == 1u) {
             if (e == ENC_SELECT) win_cur = (uint8_t)clampi(win_cur + d, 0, 5);
             else if (e == ENC_ALGORITHM) edit_item(LV_IT[win_cur], d);
@@ -1677,6 +1888,7 @@ static void app_init(void)
     if (perf.mc_magic != MC_MAGIC) mc_defaults();
     if (perf.cc_magic != 0x43u) { memset(perf.cc_num, 0xFF, sizeof perf.cc_num); perf.cc_magic = 0x43u; }
     if (perf.eq_magic != 0x45u) eq_defaults();
+    if (perf.mx_magic != MX_MAGIC) mx_defaults();
     eq_dirty = 1;
     load_preset(set.bank, set.idx);
     if (set.bank && !up_valid(set.idx)) load_preset(0, 0);
@@ -1711,6 +1923,7 @@ static void app_step(void)
 {
     ui_input();
     if (eq_dirty) eq_update();
+    mx_tick();
     if (toast_ms && (int32_t)(fm1_ms - toast_ms) > 1400) toast_ms = 0;
     if (pend_on && fm1_ms - pend_ms > 6000u) { pend_on = 0; toast("KEPT"); }
     if (dpop_ms && (int32_t)(fm1_ms - dpop_ms) > 1500) dpop_ms = 0;
@@ -1759,6 +1972,8 @@ WASM_EXPORT("ksub_knob_label") const char *ksub_knob_label(uint32_t i)
     if (v->lay == LY_PRESET) return i == 0u ? "SCROLL" : i == 2u ? "LOAD" : "";
     if (v->lay == LY_SAVE) return i == 0u ? "SLOT" : i == 1u ? "POSITION" : i == 2u ? "LETTER" : "STYLE";
     if (win == 3u) return c3_col() == 1u ? "GAIN" : c3_col() == 2u ? "TYPE" : "FREQ";
+    if (win == 4u) { static const char *const KX[4] = {"X", "Y", "CORNER", "SOUND"}; return KX[i]; }
+    if (win == 5u) { static const char *const KA[4] = {"MORPH", "B", "PARTS", "TIME"}; return KA[i]; }
     if (win) return item_sname(win == 1u ? LV_IT[i] : G_MC1 + i);
     if (C3_ON) return item_sname(COL3[page].id[c3_col()][i]);
     return vknob(v, i) == I_NONE ? "" : item_sname(vknob(v, i));
