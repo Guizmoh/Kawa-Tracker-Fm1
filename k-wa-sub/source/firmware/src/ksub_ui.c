@@ -5,7 +5,8 @@
  *   LFO  05 LFO      FX   06 FX       ARP 07 PRESETS   GLO 08 SYSTEM
  *   the page's button again, or SEL: its next view (OSC A, OSC B, SUB, COMBINE...)
  *   SELECT: the row   ALGORITHM: the row's value   K1..K4: what the footer says   PRESETS: the next patch
- *   PLAY: HOLD (the notes stay)   REC: TAP tempo   OCT- / OCT+: octave (both: all notes off)   SAVE: save */
+ *   PLAY: HOLD (the notes stay)   REC: TAP tempo   OCT- / OCT+: octave (both: all notes off)
+ *   SAVE: save; held: UNDO (and again every 0.4 s while it stays held) */
 enum { PG_PLAY, PG_BASS, PG_ENV, PG_FILT, PG_LFO, PG_FX, PG_PRE, PG_SYS, NPAGE };
 static const uint8_t PAGE_BTN[NPAGE] = {BTN_HOME, BTN_EDIT, BTN_ENV, BTN_SEQ, BTN_LFO, BTN_FX, BTN_ARP, BTN_GLO};
 enum { LY_PLAY, LY_LIST, LY_BOX, LY_FILT, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
@@ -131,12 +132,50 @@ static uint8_t up_sum(const upatch_t *u)
 }
 static int up_valid(uint32_t k) { return k < NUSER && ustore[k].magic == UP_MAGIC && ustore[k].sum == up_sum(&ustore[k]); }
 
+/* ---- undo: the patch before each change (turns of the same knob within 1.5 s are one change), 16 deep */
+#define NUNDO 16u
+static int8_t undo_p[NUNDO][NP_MAX];
+static char undo_nm[NUNDO][14];
+static uint32_t undo_w, undo_n, undo_ms, undo_id = 0xFFFFu;
+static uint8_t booted;
+static void undo_push(void)
+{
+    if (!booted) return;
+    memcpy(undo_p[undo_w], patch, NP_MAX);
+    memcpy(undo_nm[undo_w], pname, 14);
+    undo_w = (undo_w + 1u) % NUNDO;
+    if (undo_n < NUNDO) undo_n++;
+}
+static void undo_mark(uint32_t id)              /* a parameter is about to change */
+{
+    if (id != undo_id || fm1_ms - undo_ms > 1500u) undo_push();
+    undo_id = id;
+    undo_ms = fm1_ms;
+}
+static void undo(void)
+{
+    char t[16], *p;
+    if (!undo_n) { toast("NOTHING TO UNDO"); return; }
+    undo_w = (undo_w + NUNDO - 1u) % NUNDO;
+    undo_n--;
+    memcpy(patch, undo_p[undo_w], NP_MAX);
+    memcpy(pname, undo_nm[undo_w], 14);
+    undo_id = 0xFFFFu;
+    prev_dirty = 1;
+    p = str_cat(t, "UNDO \xB7 ");
+    p = fmt_u(p, undo_n, 0);
+    str_cat(p, " LEFT");
+    toast(t);
+}
+
 static void load_preset(uint32_t bank, uint32_t k)
 {
     int8_t p[NP_MAX];
     uint32_t i;
+    if (bank && !up_valid(k)) { toast("EMPTY SLOT"); return; }
+    undo_push();                                /* (a load can be undone too) */
+    undo_id = 0xFFFFu;
     if (bank) {
-        if (!up_valid(k)) { toast("EMPTY SLOT"); return; }
         memcpy(p, ustore[k].p, NP_MAX);
         patch_sanitize(p);
         for (i = 0; i < 13u; i++) pname[i] = ustore[k].name[i];
@@ -196,6 +235,7 @@ static void item_set(uint32_t id, int32_t v)
     item_range(id, &lo, &hi);
     v = clampi(v, lo, hi);
     if (item_patch(id)) {
+        if (patch[id] != v) undo_mark(id);
         patch[id] = (int8_t)v;
         if (id < N_LVL || id == S_LVL || id == S_WAVE || id == S_OCT) prev_dirty = 1;
         return;
@@ -252,6 +292,40 @@ static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
     while (!(x >> m)) m--;
     return (m << 8) | (m >= 8u ? (x >> (m - 8u)) & 255u : (x << (8u - m)) & 255u);
 }
+/* a destination's name: the oscillators' with their engine's words (A WAVE, B DETUNE...) */
+static const char *dst_name(uint32_t d)
+{
+    static char nb[2][20];
+    static uint32_t t;
+    uint32_t o = d == D_BP1 || d == D_BP2 || d == D_BP3 ? OSC_B : 0u;
+    int32_t k = d == D_AP1 || d == D_BP1 ? 0 : d == D_AP2 || d == D_BP2 ? 1 : d == D_AP3 || d == D_BP3 ? 2 : -1;
+    if (k >= 0) {
+        char *p = nb[t ^= 1u];
+        str_cat(str_cat(p, o ? "B " : "A "), ENG_P[patch[A_ENG + o] & 7][k]);
+        return p;
+    }
+    return d < ND ? L_DST[d] : "";
+}
+static int dst_on(uint32_t d)                   /* an oscillator that is off is not offered */
+{
+    if (d == D_ALVL || d == D_AP1 || d == D_AP2 || d == D_AP3 || d == D_APIT) return patch[A_LVL] || patch[X_MODE] == 1;
+    if (d == D_BLVL || d == D_BP1 || d == D_BP2 || d == D_BP3 || d == D_BPIT) return patch[B_LVL] || patch[X_MODE];
+    return 1;
+}
+static int32_t dst_step(int32_t v, int32_t d)
+{
+    int32_t i, at = 0;
+    for (i = 0; i < ND; i++) if (DST_ORDER[i] == v) at = i;
+    while (d) {
+        int32_t s = d > 0 ? 1 : -1;
+        for (i = at + s; i >= 0 && i < ND && !dst_on(DST_ORDER[i]); i += s) {}
+        if (i < 0 || i >= ND) break;
+        at = i;
+        d -= s;
+    }
+    return DST_ORDER[at];
+}
+
 static void item_text(uint32_t id, char *b)
 {
     int32_t v = item_get(id);
@@ -293,6 +367,7 @@ static void item_text(uint32_t id, char *b)
     case FM_PCT: b = fmt_u(b, (uint32_t)v * 100u / 127u, 0); str_cat(b, "%"); break;
     case FM_BIP: b = v ? fmt_s(b, v * 100 / 64) : fmt_u(b, 0, 0); str_cat(b, "%"); break;
     case FM_LIST: case FM_DIV: str_cat(b, PD[rid].list[v]); break;
+    case FM_DEST: str_cat(b, dst_name((uint32_t)v)); break;
     case FM_INT: if (v) fmt_s(b, v); else fmt_u(b, 0, 0); break;
     case FM_SEMI: b = v && PD[rid].lo < 0 ? fmt_s(b, v) : fmt_u(b, (uint32_t)(v < 0 ? -v : v), 0); str_cat(b, " st"); break;
     case FM_CENT: b = v ? fmt_s(b, v) : fmt_u(b, 0, 0); str_cat(b, " ct"); break;
@@ -371,6 +446,11 @@ static void draw_head(const char *cat)
     p = fmt_u(p, (uint32_t)page + 1u, 2);
     if (page == PG_PLAY) str_cat(p, "/08");
     g_text_r(&F_XS, 232, 7, n, K_GREY);
+    {                                           /* the page's views: one dot each, the one shown lit */
+        uint32_t nv = (uint32_t)(PAGE_V0[page + 1u] - PAGE_V0[page]), i;
+        int32_t x = 232 - g_text_w(&F_XS, n) - 6 - (int32_t)nv * 8;
+        for (i = 0; nv > 1u && i < nv; i++) g_rect(x + (int32_t)i * 8, 8, 5, 5, i == vcur[page] ? K_LIME : K_LINE);
+    }
     g_rect(6, 19, 228, 1, K_LINE);
     g_text(&F_S, 8, 24, cat, K_LIME);
 }
@@ -515,7 +595,7 @@ static void draw_lfo(const view_t *v, uint32_t k)
     item_text(k ? I_L2RATE : I_L1RATE, s);
     s = str_cat(sub, L_SHAPE[p[L1_SHP]]);
     s = str_cat(s, " \xB7 ");
-    s = str_cat(s, L_DST[p[L1_DST]]);
+    s = str_cat(s, dst_name((uint32_t)p[L1_DST]));
     *s++ = ' ';
     item_text(L1_DEP + k * LFO_2, s);
     draw_title(t, sub, K_GREY);
@@ -614,7 +694,7 @@ static void draw_all(void)
     case LY_BOX: {
         uint32_t i, c = cursor[vi];
         draw_title(page == PG_ENV && vi == PAGE_V0[PG_ENV] ? "ADSR CONTROL" : vi == PAGE_V0[PG_ENV] + 1u ? "FILTER ADSR" : "PITCH / MOD",
-                   vi == PAGE_V0[PG_ENV] + 2u ? L_DST[patch[ME_DST]] : 0, K_GREY);
+                   vi == PAGE_V0[PG_ENV] + 2u ? dst_name((uint32_t)patch[ME_DST]) : 0, K_GREY);
         for (i = 0; i < 4u; i++) draw_vbox(i & 1u ? 123 : 6, 74 + (int32_t)(i >> 1) * 70, 111, 64, v->it[i], i == c, 0);
         draw_foot(v, 0);
         break;
@@ -633,7 +713,7 @@ static void draw_all(void)
         p = str_cat(p, " \xB7 KEY ");
         item_text(F_KEY, p); p += str_len(p);
         p = str_cat(p, " \xB7 LFO1 > ");
-        str_cat(p, L_DST[patch[L1_DST]]);
+        str_cat(p, dst_name((uint32_t)patch[L1_DST]));
         g_text(&F_XS, 8, 190, inf, K_GREY);
         draw_foot(v, 0);
         break;
@@ -717,6 +797,7 @@ static void edit_item(uint32_t id, int32_t d)
 {
     int32_t lo, hi, v = item_get(id), step = 1;
     if (id == I_NONE || id == G_CPU || id == G_FW) return;
+    if (item_patch(id) && PD[id].fmt == FM_DEST) { item_set(id, dst_step(v, d)); return; }
     item_range(id, &lo, &hi);
     if (hi - lo > 40 && fm1_ms - last_turn_ms < 45u) step = id == G_BPM ? 10 : 3;   /* fast: bigger steps */
     last_turn_ms = fm1_ms;
@@ -842,7 +923,14 @@ static void ui_input(void)
 {
     uint32_t rel, pr = fm1_input_edges(&rel), b, k, now = fm1_in.notes, ne = fm1_input_note_edges();
     int32_t d;
-    for (b = 0; b < 14u; b++) if (pr & (1u << b)) on_button(b);
+    for (b = 0; b < 14u; b++) if ((pr & (1u << b)) && b != BTN_SAVE) on_button(b);
+    {                                           /* SAVE: a tap saves (on release), held 0.6 s undoes, and on */
+        static uint32_t at, next;
+        static uint8_t down, undone;
+        if (pr & (1u << BTN_SAVE)) { down = 1; undone = 0; at = fm1_ms; next = 600u; }
+        if (down && (fm1_in.buttons & (1u << BTN_SAVE)) && fm1_ms - at >= next) { undo(); undone = 1; next += 400u; }
+        if (rel & (1u << BTN_SAVE)) { if (down && !undone) on_button(BTN_SAVE); down = 0; }
+    }
     for (b = 0; b < 7u; b++) if ((d = fm1_enc_take(b)) != 0) on_enc(b, d);
     for (k = 0; k < 27u; k++) {
         uint32_t m = 1u << k;
@@ -934,13 +1022,14 @@ static void app_init(void)
     }
     if (!set.cores) dual_mark[0] = dual_mark[1] = 0;
 #endif
+    booted = 1;
     g_force = 1;
 }
 
 static void app_step(void)
 {
     ui_input();
-    if (toast_ms && fm1_ms - toast_ms > 1400u) toast_ms = 0;
+    if (toast_ms && (int32_t)(fm1_ms - toast_ms) > 1400) toast_ms = 0;   /* (toast_ms can be 1 ms ahead: | 1) */
     if (prev_dirty && fm1_ms - prev_ms > 60u) { prev_dirty = 0; prev_ms = fm1_ms; preview_make(); }
     if (fm1_ms - ui_frame_ms >= 33u) {          /* ~30 frames a second, only what changed is sent */
         ui_frame_ms = fm1_ms;

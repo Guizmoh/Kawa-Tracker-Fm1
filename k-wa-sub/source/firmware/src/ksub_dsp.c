@@ -503,7 +503,7 @@ static void voice_mods(voice_t *v, int32_t *m, int32_t fenv, int32_t menv)
         const int8_t *s = patch + M1_SRC + 3u * k;
         if (s[0] && s[1]) {
             int32_t a = s[2];
-            if (s[1] == D_PITCH) m[D_PITCH] += (int32_t)(((int64_t)(a < 0 ? -a * a : a * a) * 3 * src[s[0]]) >> 15);
+            if (IS_PITCH(s[1])) m[s[1]] += (int32_t)(((int64_t)(a < 0 ? -a * a : a * a) * 3 * src[s[0]]) >> 15);
             else m[s[1]] += (a * src[s[0]]) >> 6;
         }
     }
@@ -512,12 +512,12 @@ static void voice_mods(voice_t *v, int32_t *m, int32_t fenv, int32_t menv)
         const int8_t *p = patch + k * LFO_2;
         int32_t d = clampi(p[L1_DEP] + (k == 0u ? wob : 0), -64, 64), dst = p[L1_DST];
         if (!dst || !d) continue;
-        if (dst == D_PITCH) m[D_PITCH] += (int32_t)(((int64_t)(d < 0 ? -d * d : d * d) * 3 * lfo[k].out) >> 15);
+        if (IS_PITCH(dst)) m[dst] += (int32_t)(((int64_t)(d < 0 ? -d * d : d * d) * 3 * lfo[k].out) >> 15);
         else m[dst] += (d * lfo[k].out) >> 6;
     }
     if (patch[ME_DST] && patch[ME_AMT]) {
         int32_t a = patch[ME_AMT];
-        if (patch[ME_DST] == D_PITCH) m[D_PITCH] += (int32_t)(((int64_t)(a < 0 ? -a * a : a * a) * 3 * menv) >> 15);
+        if (IS_PITCH(patch[ME_DST])) m[patch[ME_DST]] += (int32_t)(((int64_t)(a < 0 ? -a * a : a * a) * 3 * menv) >> 15);
         else m[patch[ME_DST]] += (a * menv) >> 6;
     }
     m[D_CUT] += (patch[F_ENV] * fenv) >> 6;
@@ -555,13 +555,13 @@ static void voice_block(voice_t *v, int32_t *acc)
     qa.eng = (uint8_t)P[A_ENG];
     qa.p1 = q8to15(pv(P[A_P1], m[D_AP1]));
     qa.p2 = q8to15(pv(P[A_P2], m[D_AP2]));
-    qa.p3 = P[A_P3] * 258;
-    qa.inc = pitch_inc(p + ((P[A_OCT] * 12 + P[A_SEMI]) << 8) + P[A_FINE] * 256 / 100 + ((v->drift_a * P[X_DRIFT]) >> 9));
+    qa.p3 = q8to15(pv(P[A_P3], m[D_AP3]));
+    qa.inc = pitch_inc(p + m[D_APIT] + ((P[A_OCT] * 12 + P[A_SEMI]) << 8) + P[A_FINE] * 256 / 100 + ((v->drift_a * P[X_DRIFT]) >> 9));
     qb.eng = (uint8_t)P[B_ENG];
     qb.p1 = q8to15(pv(P[B_P1], m[D_BP1]));
     qb.p2 = q8to15(pv(P[B_P2], m[D_BP2]));
-    qb.p3 = P[B_P3] * 258;
-    qb.inc = pitch_inc(p + ((P[B_OCT] * 12 + P[B_SEMI]) << 8) + P[B_FINE] * 256 / 100 + ((v->drift_b * P[X_DRIFT]) >> 9));
+    qb.p3 = q8to15(pv(P[B_P3], m[D_BP3]));
+    qb.inc = pitch_inc(p + m[D_BPIT] + ((P[B_OCT] * 12 + P[B_SEMI]) << 8) + P[B_FINE] * 256 / 100 + ((v->drift_b * P[X_DRIFT]) >> 9));
     inc_sub = pitch_inc(p - (2 - P[S_OCT]) * 12 * 256);
     la = lvl15(pv(P[A_LVL], m[D_ALVL]) >> 8);
     lb = lvl15(pv(P[B_LVL], m[D_BLVL]) >> 8);
@@ -578,7 +578,7 @@ static void voice_block(voice_t *v, int32_t *acc)
     if (la || P[X_MODE] == 1) osc_render(&v->oa, &qa, bufa, P[X_MODE] == 2 ? pmb : 0, KS_CB);
     else for (i = 0; i < (int32_t)KS_CB; i++) bufa[i] = 0;
     {
-        int32_t ncoef = 32767 - P[N_COL] * 250, rm = P[X_MODE] == 1;
+        int32_t ncoef = 32767 - (pv(P[N_COL], m[D_NCOL]) >> 8) * 250, rm = P[X_MODE] == 1;
         for (i = 0; i < (int32_t)KS_CB; i++) {
             int32_t x = mul15(bufa[i], la), b = rm ? mul15(bufa[i], bufb[i]) : bufb[i];
             x += mul15(b, lb);

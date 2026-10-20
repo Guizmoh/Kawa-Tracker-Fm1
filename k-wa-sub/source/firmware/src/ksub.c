@@ -16,7 +16,7 @@
  * Rules of the chip (docs/RULES.md of Dinghy): integers only, no 64-bit division, the audio interrupt short. */
 #define APP_NAME "K-WA SUB"
 #ifndef APP_VER
-#define APP_VER "0.1"
+#define APP_VER "0.2"
 #endif
 #ifndef FELUCCA_ID
 #define FELUCCA_ID "FM-1_970"                   /* K-WA SUB's identity (KAWA's are 95N / 96N) */

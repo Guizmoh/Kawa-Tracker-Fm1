@@ -53,6 +53,16 @@ int main(void)
         blocks(400);                            /* the tails end */
         for (e = 0; e < NVOICE; e++) if (vo[e].on) { printf("%s: a voice still on\n", FACTORY[k].name); return 1; }
     }
+    for (k = 0; k < ND; k++) {                  /* each destination, at full depth both ways, from LFO 1, the mod */
+        for (e = 0; e < 2u; e++) {              /* envelope and the matrix (LFO 2) */
+            load_preset(0, 9);
+            patch[B_LVL] = 100;
+            patch[L1_DST] = patch[ME_DST] = patch[M1_DST] = (int8_t)k;
+            patch[L1_DEP] = patch[ME_AMT] = patch[M1_AMT] = e ? 63 : -64;
+            patch[M1_SRC] = SR_LFO2; patch[L2_DEP] = 0; patch[L1_SHP] = 4; patch[L1_DIV] = 15;
+            play(e ? high : low, 1, 12);
+        }
+    }
     for (k = 0; k < 8; k++) {                   /* each engine on both oscillators, each filter, the extremes of P1..P3 */
         uint32_t f;
         for (f = 0; f < NFT; f++) {

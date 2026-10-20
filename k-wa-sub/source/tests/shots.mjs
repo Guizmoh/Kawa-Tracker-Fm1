@@ -1,6 +1,6 @@
 // K-WA SUB without a browser: runs build/web/ksub.wasm, plays a script, writes screens (raw RGB565) and a WAV.
 //   node tests/shots.mjs [script.txt] -> build/shots/*.raw, build/shots/out.wav (tests/png.py makes the PNGs)
-// Script lines: "ms btn ID" (tap), "ms on KEY" / "ms off KEY", "ms enc ID STEPS", "ms shot NAME", "ms end"
+// Script lines: "ms btn ID" (tap), "ms down ID" / "ms up ID" (held), "ms on KEY" / "ms off KEY", "ms enc ID STEPS", "ms shot NAME", "ms end"
 import fs from "fs";
 const wasm = fs.readFileSync(new URL("../build/web/ksub.wasm", import.meta.url));
 const { instance } = await WebAssembly.instantiate(wasm, {});
@@ -22,6 +22,8 @@ function run(until) {
 for (const [t, cmd, a, b] of script) {
   run(+t);
   if (cmd === "btn") { x.ksub_button(+a, 1); x.ksub_step(); x.ksub_button(+a, 0); }
+  else if (cmd === "down") x.ksub_button(+a, 1);
+  else if (cmd === "up") x.ksub_button(+a, 0);
   else if (cmd === "on") { keys |= 1 << +a; x.ksub_keys(keys); }
   else if (cmd === "off") { keys &= ~(1 << +a); x.ksub_keys(keys); }
   else if (cmd === "enc") x.ksub_turn(+a, +b);

@@ -7,10 +7,10 @@ set -e
 cd "$(dirname "$0")/.."
 mkdir -p build/web ../emulator
 clang --target=wasm32 -O2 -nostdlib -ffreestanding -fno-builtin -Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
-    -Wno-sign-compare -DKAWA_WASM -DAPP_VER="\"${APP_VER:-0.1}\"" -Ifirmware/src -Ifirmware/gen \
+    -Wno-sign-compare -DKAWA_WASM -DAPP_VER="\"${APP_VER:-0.2}\"" -Ifirmware/src -Ifirmware/gen \
     -Wl,--no-entry -Wl,--export-dynamic -Wl,--initial-memory=4194304 -Wl,-z,stack-size=262144 \
     -o build/web/ksub.wasm firmware/src/ksub.c
-KSUB_VER="${APP_VER:-0.1}" python3 - <<'PY'
+KSUB_VER="${APP_VER:-0.2}" python3 - <<'PY'
 import base64, os
 from pathlib import Path
 b64 = base64.b64encode(Path("build/web/ksub.wasm").read_bytes()).decode()

@@ -27,12 +27,16 @@ enum {
 enum { E_ANALOG, E_SUPER, E_WAVE, E_FM, E_PHASE, E_FOLD, E_SYNC, E_VOCAL };
 enum { FT_LP24, FT_LP12, FT_BP, FT_HP, FT_NOTCH, FT_VOWEL, FT_COMB, NFT };
 enum { D_OFF, D_CUT, D_RES, D_PITCH, D_AP1, D_AP2, D_BP1, D_BP2, D_ALVL, D_BLVL, D_XMOD, D_DRV, D_AMP, D_SUB, D_NOISE,
-       D_WOB, ND };
+       D_WOB, D_AP3, D_BP3, D_APIT, D_BPIT, D_NCOL, ND };   /* (stored in patches: append only) */
+#define IS_PITCH(d) ((d) == D_PITCH || (d) == D_APIT || (d) == D_BPIT)
+/* the order DEST steps through: the oscillators' EDIT rows together (ksub_ui.c skips an oscillator that is off) */
+static const uint8_t DST_ORDER[ND] = {D_OFF, D_CUT, D_RES, D_DRV, D_PITCH, D_ALVL, D_AP1, D_AP2, D_AP3, D_APIT, D_BLVL,
+                                      D_BP1, D_BP2, D_BP3, D_BPIT, D_XMOD, D_SUB, D_NOISE, D_NCOL, D_AMP, D_WOB};
 enum { SR_OFF, SR_LFO1, SR_LFO2, SR_FENV, SR_MENV, SR_VEL, SR_WHEEL, SR_PRESS, SR_NOTE, SR_RAND, NSRC };
 enum { VM_MONO, VM_LEGATO, VM_POLY };
 
 /* formats of the values on the screen */
-enum { FM_PCT, FM_BIP, FM_LIST, FM_INT, FM_SEMI, FM_CENT, FM_TIME, FM_CUT, FM_LFOHZ, FM_DIV, FM_VOL, FM_OSCP };
+enum { FM_PCT, FM_BIP, FM_LIST, FM_INT, FM_SEMI, FM_CENT, FM_TIME, FM_CUT, FM_LFOHZ, FM_DIV, FM_VOL, FM_OSCP, FM_DEST };
 
 static const char *const L_ENG[NENG] = {"ANALOG", "SUPER", "WAVE", "FM", "PHASE", "FOLD", "SYNC", "VOCAL"};
 static const char *const L_SUBW[] = {"SINE", "TRI", "SQUARE", "PULSE"};
@@ -46,7 +50,8 @@ static const char *const L_DIV[16] = {"4 BAR", "2 BAR", "1 BAR", "1/2", "1/4D", 
 static const uint32_t DIV_CPB[16] = {4096, 8192, 16384, 32768, 43691, 49152, 65536, 87381, 98304, 131072, 196608,
                                      262144, 393216, 524288, 786432, 1048576};   /* cycles per beat, Q16 */
 static const char *const L_DST[ND] = {"OFF", "CUTOFF", "RESO", "PITCH", "A SHAPE", "A COLOR", "B SHAPE", "B COLOR",
-                                      "A LEVEL", "B LEVEL", "X-MOD", "DRIVE", "AMP", "SUB", "NOISE", "WOB DEPTH"};
+                                      "A LEVEL", "B LEVEL", "X-MOD", "DRIVE", "AMP", "SUB", "NOISE", "WOB DEPTH",
+                                      "A EDGE", "B EDGE", "A PITCH", "B PITCH", "NOISE COLOR"};
 static const char *const L_SRC[NSRC] = {"OFF", "LFO 1", "LFO 2", "FILT ENV", "MOD ENV", "VELOCITY", "MOD WHEEL",
                                         "PRESSURE", "NOTE", "RANDOM"};
 static const char *const L_TRIG[] = {"FREE", "NOTE"};
@@ -88,11 +93,11 @@ typedef struct {
 #define LFO_PD(L) \
     {"SHAPE", "SHAPE", 0, 8, 0, FM_LIST, L_SHAPE}, {"SYNC", "SYNC", 0, 1, 1, FM_LIST, L_ONOFF}, \
     {"RATE", "RATE", 0, 127, 70, FM_LFOHZ, 0}, {"RATE / SYNC", "RATE", 0, 15, 9, FM_DIV, L_DIV}, \
-    {"DEPTH", "DEPTH", -64, 63, 0, FM_BIP, 0}, {"DEST", "DEST", 0, ND - 1, D_CUT, FM_LIST, L_DST}, \
+    {"DEPTH", "DEPTH", -64, 63, 0, FM_BIP, 0}, {"DEST", "DEST", 0, ND - 1, D_CUT, FM_DEST, L_DST}, \
     {"RETRIG", "TRIG", 0, 1, 0, FM_LIST, L_TRIG}, {"PHASE", "PHASE", 0, 127, 0, FM_PCT, 0}, \
     {"SMOOTH", "SMOOTH", 0, 127, 0, FM_PCT, 0}
 #define MX_PD(N) \
-    {N " SOURCE", "SRC" N, 0, NSRC - 1, 0, FM_LIST, L_SRC}, {N " DEST", "DST" N, 0, ND - 1, 0, FM_LIST, L_DST}, \
+    {N " SOURCE", "SRC" N, 0, NSRC - 1, 0, FM_LIST, L_SRC}, {N " DEST", "DST" N, 0, ND - 1, 0, FM_DEST, L_DST}, \
     {N " AMOUNT", "AMT" N, -64, 63, 0, FM_BIP, 0}
 
 static const pdesc_t PD[NP] = {
@@ -111,7 +116,7 @@ static const pdesc_t PD[NP] = {
     {"01 ATTACK", "A", 0, 127, 0, FM_TIME, 0}, {"02 DECAY", "D", 0, 127, 70, FM_TIME, 0},
     {"03 SUSTAIN", "S", 0, 127, 64, FM_PCT, 0}, {"04 RELEASE", "R", 0, 127, 40, FM_TIME, 0},
     {"01 ATTACK", "A", 0, 127, 0, FM_TIME, 0}, {"02 DECAY", "D", 0, 127, 50, FM_TIME, 0},
-    {"03 AMOUNT", "AMT", -64, 63, 0, FM_BIP, 0}, {"04 DEST", "DEST", 0, ND - 1, D_PITCH, FM_LIST, L_DST},
+    {"03 AMOUNT", "AMT", -64, 63, 0, FM_BIP, 0}, {"04 DEST", "DEST", 0, ND - 1, D_PITCH, FM_DEST, L_DST},
     LFO_PD(1), LFO_PD(2), MX_PD("1"), MX_PD("2"), MX_PD("3"), MX_PD("4"),
     {"EFFECT", "ON", 0, 1, 0, FM_LIST, L_ONOFF}, {"TYPE", "TYPE", 0, 3, 0, FM_LIST, L_DRT},
     {"AMOUNT", "AMT", 0, 127, 40, FM_PCT, 0}, {"MIX", "MIX", 0, 127, 127, FM_PCT, 0},
