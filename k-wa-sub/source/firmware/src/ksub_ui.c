@@ -10,12 +10,12 @@
 enum { PG_PLAY, PG_BASS, PG_ENV, PG_FILT, PG_LFO, PG_FX, PG_PRE, PG_SYS, NPAGE };
 static const uint8_t PAGE_BTN[NPAGE] = {BTN_HOME, BTN_EDIT, BTN_ENV, BTN_SEQ, BTN_LFO, BTN_FX, BTN_ARP, BTN_GLO};
 enum { LY_PLAY, LY_LIST, LY_BOX, LY_STEP, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
-enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, I_NONE = 255 };
+enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, G_GRID, I_NONE = 255 };
 
 typedef struct {
     uint8_t lay;
     const char *cat;
-    uint8_t n, it[12], k[4];
+    uint8_t n, it[14], k[4];
     const char *tag;
 } view_t;
 #define OSCV(L, X) {LY_LIST, "OSCILLATOR " L, 8, {X##_ENG, X##_LVL, X##_P1, X##_P2, X##_P3, X##_OCT, X##_SEMI, X##_FINE}, \
@@ -32,9 +32,9 @@ static const view_t VIEWS[] = {
     {LY_BOX, "MOD ENVELOPE", 4, {ME_A, ME_D, ME_AMT, ME_DST}, {ME_A, ME_D, ME_AMT, ME_DST}, "ENV"},
     {LY_BOX, "FILTER / COLOUR", 4, {F_CUT, F_RES, F_DRV, F_TYPE}, {F_CUT, F_RES, F_DRV, F_TYPE}, "FX"},
     {LY_LIST, "FILTER MOD", 6, {F_TYPE, F_ENV, F_KEY, F_VEL, F_CUT, F_RES}, {F_ENV, F_KEY, F_VEL, F_TYPE}, "FX"},
-    {LY_LFO, "LFO 1 \xB7 WOBBLE", 8, {L1_SHP, I_L1RATE, L1_DEP, L1_DST, L1_SYNC, L1_TRIG, L1_PH, L1_SMO},
+    {LY_LFO, "LFO 1 \xB7 WOBBLE", 9, {L1_SHP, I_L1RATE, L1_DEP, L1_DST, G_GRID, L1_SYNC, L1_TRIG, L1_PH, L1_SMO},
      {L1_SHP, I_L1RATE, L1_DEP, L1_DST}, "LFO"},
-    {LY_LFO, "LFO 2 \xB7 MOTION", 8, {L2_SHP, I_L2RATE, L2_DEP, L2_DST, L2_SYNC, L2_TRIG, L2_PH, L2_SMO},
+    {LY_LFO, "LFO 2 \xB7 MOTION", 9, {L2_SHP, I_L2RATE, L2_DEP, L2_DST, G_GRID, L2_SYNC, L2_TRIG, L2_PH, L2_SMO},
      {L2_SHP, I_L2RATE, L2_DEP, L2_DST}, "LFO"},
     {LY_STEP, "STEP FX", 7, {ST_ON, ST_PAT, ST_RATE, ST_GATE, ST_DST, ST_DEP, ST_SMO}, {ST_PAT, ST_RATE, ST_GATE, ST_DEP}, "LFO"},
     {LY_LIST, "MOD MATRIX", 12, {M1_SRC, M1_DST, M1_AMT, M2_SRC, M2_DST, M2_AMT, M3_SRC, M3_DST, M3_AMT, M4_SRC, M4_DST, M4_AMT},
@@ -46,7 +46,7 @@ static const view_t VIEWS[] = {
     {LY_PRESET, "PRESET BANK A", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_PRESET, "PRESET BANK B", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_SAVE, "SAVE PATCH", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
-    {LY_SYS, "GLOBAL SETUP", 12, {G_THEME, G_PAL, G_FONT, G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_CORES, G_CPU},
+    {LY_SYS, "GLOBAL SETUP", 13, {G_THEME, G_PAL, G_FONT, G_GRID, G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_CORES, G_CPU},
      {G_THEME, G_PAL, G_FONT, G_BPM}, "SYSTEM"},
 };
 static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 11, 15, 21, 24, 25};   /* each page's first view */
@@ -68,8 +68,9 @@ static struct {
     uint8_t ver, midich, clock, oct;            /* midich 0: omni; clock 0 internal, 1 MIDI */
     uint16_t bpm10;
     uint8_t bank, idx, cores;                   /* cores 1: both (the voices on core 1) */
-    uint8_t theme, pal, font;                   /* CLASSIC STUDIO PURE RACK; its 4 palettes; SANS / MONO */
-} set = {4, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0};
+    uint8_t theme, pal, font;                   /* CLASSIC STUDIO PURE RACK; its palettes; the font */
+    uint8_t grid;                               /* LFO GRID: 0 ALL, 1 STRAIGHT (round divisions only) */
+} set = {5, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0, 0};
 static char pname[14];
 static uint8_t page, vcur[NPAGE], cursor[sizeof VIEWS / sizeof VIEWS[0]], pre_cur[2], save_slot, save_pos, hold;
 static uint8_t key_note[27], latched[128], phys[128];
@@ -232,7 +233,7 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
     if (item_patch(id)) { *lo = PD[id].lo; *hi = PD[id].hi; return; }
     *lo = 0;
-    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES ? 1 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
+    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_GRID ? 1 : id == G_THEME || id == G_FONT ? 3 : id == G_PAL ? 5 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
 }
 static int32_t item_get(uint32_t id)
@@ -248,6 +249,7 @@ static int32_t item_get(uint32_t id)
     case G_THEME: return set.theme;
     case G_PAL: return set.pal;
     case G_FONT: return set.font;
+    case G_GRID: return set.grid;
     default: return 0;
     }
 }
@@ -272,6 +274,7 @@ static void item_set(uint32_t id, int32_t v)
     case G_THEME: set.theme = (uint8_t)v; theme_set(set.theme, set.pal); g_force = 1; break;
     case G_PAL: set.pal = (uint8_t)v; theme_set(set.theme, set.pal); g_force = 1; break;
     case G_FONT: set.font = (uint8_t)v; font_set(set.font); g_force = 1; break;
+    case G_GRID: set.grid = (uint8_t)v; ks_straight = set.grid; break;
     default: return;
     }
     set_dirty = 1;
@@ -302,6 +305,7 @@ static const char *item_name(uint32_t id)
     case G_THEME: return "THEME";
     case G_PAL: return "PALETTE";
     case G_FONT: return "FONT";
+    case G_GRID: return "LFO GRID";
     case G_FW: return "FIRMWARE";
     default: return "";
     }
@@ -313,7 +317,7 @@ static const char *item_sname(uint32_t id)
     if (k) return ENG_P[e][k - 1];
     if (id == I_L1RATE || id == I_L2RATE) return "RATE";
     if (item_patch(id)) return PD[id].sname;
-    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : "";
+    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : id == G_GRID ? "GRID" : "";
 }
 static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
 {
@@ -391,6 +395,7 @@ static void item_text(uint32_t id, char *b)
         case G_CORES: str_cat(b, !v ? "SINGLE" : dual_on ? "DUAL \xB7 ON" : KS_DUAL ? "DUAL \xB7 OFF" : "DUAL (FM-1)"); break;
         case G_THEME: { static const char *const TN[4] = {"CLASSIC", "STUDIO", "PURE", "RACK"}; str_cat(b, TN[v & 3]); break; }
         case G_PAL: { static const char *const PN[4] = {"SYNTHWAVE", "MINT", "BLACK / WHITE", "INVERTED"}; str_cat(b, v < 2 ? PAL_NAME[set.theme & 3][v] : PN[(v - 2) & 3]); break; }
+        case G_GRID: str_cat(b, v ? "STRAIGHT" : "ALL (T, D)"); break;
         case G_FONT: { static const char *const FN[4] = {"SANS", "MONO", "HYPER", "PIXEL"}; str_cat(b, FN[v & 3]); break; }
         case G_CPU:                             /* each core's share of a block, and the governor's step */
             b = str_cat(b, "C0 "); b = fmt_u(b, ks_load[0], 0); b = str_cat(b, "%");
@@ -404,7 +409,7 @@ static void item_text(uint32_t id, char *b)
     switch (PD[rid].fmt) {
     case FM_PCT: b = fmt_u(b, (uint32_t)v * 100u / 127u, 0); str_cat(b, "%"); break;
     case FM_BIP: b = v ? fmt_s(b, v * 100 / 64) : fmt_u(b, 0, 0); str_cat(b, "%"); break;
-    case FM_LIST: case FM_DIV: str_cat(b, PD[rid].list[v]); break;
+    case FM_LIST: case FM_DIV: str_cat(b, PD[rid].list[(rid == L1_DIV || rid == L2_DIV) && set.grid ? DIV_NEAR[v & 15] : v]); break;
     case FM_DEST: str_cat(b, dst_name((uint32_t)v)); break;
     case FM_INT: if (v) fmt_s(b, v); else fmt_u(b, 0, 0); break;
     case FM_SEMI: b = v && PD[rid].lo < 0 ? fmt_s(b, v) : fmt_u(b, (uint32_t)(v < 0 ? -v : v), 0); str_cat(b, " st"); break;
@@ -538,11 +543,18 @@ static void key_up(uint32_t n)
     else ev_push(EV_OFF, n, 0);
 }
 
+static uint32_t rate_like(uint32_t id) { return id == I_L1RATE || id == I_L2RATE ? rate_id(id) : id; }
 static void edit_item(uint32_t id, int32_t d)
 {
     int32_t lo, hi, v = item_get(id), step = 1;
     if (id == I_NONE || id == G_CPU || id == G_FW) return;
     if (item_patch(id) && PD[id].fmt == FM_DEST) { item_set(id, dst_step(v, d)); return; }
+    if (set.grid && (rate_like(id) == L1_DIV || rate_like(id) == L2_DIV)) {   /* STRAIGHT: from round to round */
+        int32_t i, at = 0;
+        for (i = 0; i < 9; i++) if (DIV_STRAIGHT[i] == DIV_NEAR[v & 15]) at = i;
+        item_set(id, DIV_STRAIGHT[clampi(at + d, 0, 8)]);
+        return;
+    }
     item_range(id, &lo, &hi);
     if (hi - lo > 40 && fm1_ms - last_turn_ms < 45u) step = id == G_BPM ? 10 : 3;   /* fast: bigger steps */
     last_turn_ms = fm1_ms;
@@ -733,7 +745,7 @@ static void midi_in(void)
             case 1: ks_wheel = d2 * 258; break;
             case 74: patch[F_CUT] = (int8_t)d2; pdirty = 1; break;
             case 71: patch[F_RES] = (int8_t)d2; pdirty = 1; break;
-            case 76: patch[L1_DIV] = (int8_t)(d2 >> 3); break;
+            case 76: patch[L1_DIV] = (int8_t)(set.grid ? DIV_NEAR[d2 >> 3] : d2 >> 3); break;
             case 77: patch[L1_DEP] = (int8_t)(d2 - 64); break;
             case 123: notes_all_off(); ev_push(EV_PANIC, 0, 0); break;
             }
@@ -749,13 +761,15 @@ static uint32_t ui_frame_ms, prev_ms;
 static void app_init(void)
 {
     uint32_t i;
-    if (settings_load(&set, sizeof set) || set.ver != 4u) {
-        set.theme = set.pal = set.font = 0;
-        set.ver = 4; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1;
+    if (settings_load(&set, sizeof set) || set.ver != 5u) {
+        set.theme = set.pal = set.font = set.grid = 0;
+        set.ver = 5; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1;
     }
     set.cores = set.cores ? 1u : 0u;
     theme_set(set.theme, set.pal);
     font_set(set.font);
+    set.grid = set.grid ? 1u : 0u;
+    ks_straight = set.grid;
     set.bpm10 = (uint16_t)clampi(set.bpm10, 600, 2400);
     set.oct = (uint8_t)(int8_t)clampi(OCT, -3, 3);
     ks_bpm10 = set.bpm10;

@@ -59,6 +59,9 @@ static const char *const L_DIV[16] = {"4 BAR", "2 BAR", "1 BAR", "1/2", "1/4D", 
                                       "1/16", "1/16T", "1/32", "1/32T", "1/64"};
 static const uint32_t DIV_CPB[16] = {4096, 8192, 16384, 32768, 43691, 49152, 65536, 87381, 98304, 131072, 196608,
                                      262144, 393216, 524288, 786432, 1048576};   /* cycles per beat, Q16 */
+/* LFO GRID STRAIGHT (for playing live): only the round divisions, a T or D one plays as the nearest round one */
+static const uint8_t DIV_STRAIGHT[9] = {0, 1, 2, 3, 6, 9, 11, 13, 15};
+static const uint8_t DIV_NEAR[16] = {0, 1, 2, 3, 3, 6, 6, 6, 9, 9, 11, 11, 13, 13, 15, 15};
 static const char *const L_DST[ND] = {"OFF", "CUTOFF", "RESO", "PITCH", "A SHAPE", "A COLOR", "B SHAPE", "B COLOR",
                                       "A LEVEL", "B LEVEL", "X-MOD", "FILT DRIVE", "AMP", "SUB", "NOISE", "WOB DEPTH",
                                       "A EDGE", "B EDGE", "A PITCH", "B PITCH", "NOISE COLOR", "FILT ENV", "LFO2 DEPTH",

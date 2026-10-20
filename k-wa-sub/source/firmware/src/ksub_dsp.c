@@ -46,6 +46,7 @@ static volatile uint8_t env_st_show[3];         /* the newest voice's envelopes:
 static volatile int32_t env_lv_show[3], cut_show; /* ... and its cutoff after the modulation (Q8 units) */
 static volatile int32_t step_val;               /* the STEP effect: its level now (Q15), its step */
 static volatile uint8_t step_pos;
+static volatile uint8_t ks_straight;            /* LFO GRID: round divisions only */
 static volatile int32_t gmod[ND];               /* the global destinations' modulation (Q8 units), once a block */
 static volatile int32_t meter_pk, meter_gr;     /* the output's peak and the glue's gain (Q15), for MASTER */
 #define BEATS_WRAP (48u << 24)
@@ -384,7 +385,9 @@ static void lfo_run(uint32_t k, uint32_t beats)
     if (p[L1_SYNC]) {
         uint32_t b = beats - (p[L1_TRIG] ? l->b0 : 0u);
         if (b >= BEATS_WRAP) b += BEATS_WRAP;   /* (wrapped below the start) */
-        ph = (uint32_t)((uint64_t)(b >> 8) * DIV_CPB[clampi(p[L1_DIV] + (gmod[D_L1RATE + k] >> 8) * 15 / 127, 0, 15)]);
+        int32_t dv = clampi(p[L1_DIV] + (gmod[D_L1RATE + k] >> 8) * 15 / 127, 0, 15);
+        if (ks_straight) dv = DIV_NEAR[dv];
+        ph = (uint32_t)((uint64_t)(b >> 8) * DIV_CPB[dv]);
         l->ph = ph;
     } else
         ph = l->ph += KS_LFO_INC[clampi(p[L1_RATE] + (gmod[D_L1RATE + k] >> 8), 0, 127)];
