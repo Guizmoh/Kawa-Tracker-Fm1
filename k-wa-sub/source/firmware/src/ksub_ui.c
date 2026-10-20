@@ -9,8 +9,8 @@
  *   SAVE: save; held: UNDO (and again every 0.4 s while it stays held) */
 enum { PG_PLAY, PG_BASS, PG_ENV, PG_FILT, PG_LFO, PG_FX, PG_PRE, PG_SYS, NPAGE };
 static const uint8_t PAGE_BTN[NPAGE] = {BTN_HOME, BTN_EDIT, BTN_ENV, BTN_SEQ, BTN_LFO, BTN_FX, BTN_ARP, BTN_GLO};
-enum { LY_PLAY, LY_LIST, LY_BOX, LY_FILT, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
-enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, I_NONE = 255 };
+enum { LY_PLAY, LY_LIST, LY_BOX, LY_STEP, LY_LFO, LY_PRESET, LY_SAVE, LY_SYS };
+enum { I_L1RATE = 200, I_L2RATE, G_MIDICH, G_BPM, G_CLOCK, G_OCT, G_CORES, G_CPU, G_FW, G_THEME, G_PAL, G_FONT, I_NONE = 255 };
 
 typedef struct {
     uint8_t lay;
@@ -30,12 +30,13 @@ static const view_t VIEWS[] = {
     {LY_BOX, "AMP ENVELOPE", 4, {AE_A, AE_D, AE_S, AE_R}, {AE_A, AE_D, AE_S, AE_R}, "ENV"},
     {LY_BOX, "FILTER ENVELOPE", 4, {FE_A, FE_D, FE_S, FE_R}, {FE_A, FE_D, FE_S, FE_R}, "ENV"},
     {LY_BOX, "MOD ENVELOPE", 4, {ME_A, ME_D, ME_AMT, ME_DST}, {ME_A, ME_D, ME_AMT, ME_DST}, "ENV"},
-    {LY_FILT, "FILTER / COLOUR", 3, {F_CUT, F_RES, F_DRV}, {F_CUT, F_RES, F_DRV, F_TYPE}, "FX"},
+    {LY_BOX, "FILTER / COLOUR", 4, {F_CUT, F_RES, F_DRV, F_TYPE}, {F_CUT, F_RES, F_DRV, F_TYPE}, "FX"},
     {LY_LIST, "FILTER MOD", 6, {F_TYPE, F_ENV, F_KEY, F_VEL, F_CUT, F_RES}, {F_ENV, F_KEY, F_VEL, F_TYPE}, "FX"},
     {LY_LFO, "LFO 1 \xB7 WOBBLE", 8, {L1_SHP, I_L1RATE, L1_DEP, L1_DST, L1_SYNC, L1_TRIG, L1_PH, L1_SMO},
      {L1_SHP, I_L1RATE, L1_DEP, L1_DST}, "LFO"},
     {LY_LFO, "LFO 2 \xB7 MOTION", 8, {L2_SHP, I_L2RATE, L2_DEP, L2_DST, L2_SYNC, L2_TRIG, L2_PH, L2_SMO},
      {L2_SHP, I_L2RATE, L2_DEP, L2_DST}, "LFO"},
+    {LY_STEP, "STEP FX", 7, {ST_ON, ST_PAT, ST_RATE, ST_GATE, ST_DST, ST_DEP, ST_SMO}, {ST_PAT, ST_RATE, ST_GATE, ST_DEP}, "LFO"},
     {LY_LIST, "MOD MATRIX", 12, {M1_SRC, M1_DST, M1_AMT, M2_SRC, M2_DST, M2_AMT, M3_SRC, M3_DST, M3_AMT, M4_SRC, M4_DST, M4_AMT},
      {M1_AMT, M2_AMT, M3_AMT, M4_AMT}, "LFO"},
     FXV(0, DR_ON, DR_TYPE, DR_AMT, DR_MIX), FXV(1, CR_ON, CR_BITS, CR_RATE, CR_MIX), FXV(2, CH_ON, CH_RATE, CH_DEP, CH_MIX),
@@ -45,10 +46,10 @@ static const view_t VIEWS[] = {
     {LY_PRESET, "PRESET BANK A", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_PRESET, "PRESET BANK B", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
     {LY_SAVE, "SAVE PATCH", 0, {0}, {I_NONE, I_NONE, I_NONE, I_NONE}, "PRESET"},
-    {LY_SYS, "GLOBAL SETUP", 12, {G_THEME, G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_OCT, P_STYLE, G_CORES, G_CPU},
-     {G_THEME, V_MODE, G_BPM, G_MIDICH}, "SYSTEM"},
+    {LY_SYS, "GLOBAL SETUP", 12, {G_THEME, G_PAL, G_FONT, G_MIDICH, V_MODE, V_GLIDE, V_BEND, V_VEL, G_BPM, G_CLOCK, G_CORES, G_CPU},
+     {G_THEME, G_PAL, G_FONT, G_BPM}, "SYSTEM"},
 };
-static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 11, 14, 20, 23, 24};   /* each page's first view */
+static const uint8_t PAGE_V0[NPAGE + 1] = {0, 2, 6, 9, 11, 15, 21, 24, 25};   /* each page's first view */
 static const char *const FX_TITLE[6] = {"SATURATION", "BITCRUSH", "CHORUS", "DUB DELAY", "REVERB", "MASTER"};
 static const char *const FT_TITLE[NFT] = {"DARK EDGE", "SOFT EDGE", "BAND RAZOR", "THIN AIR", "HOLLOW", "TALK BOX", "METAL COMB"};
 static const char *const FT_SUB[NFT] = {"LOW PASS \xB7 24 dB", "LOW PASS \xB7 12 dB", "BAND PASS \xB7 12 dB", "HIGH PASS \xB7 24 dB",
@@ -67,15 +68,15 @@ static struct {
     uint8_t ver, midich, clock, oct;            /* midich 0: omni; clock 0 internal, 1 MIDI */
     uint16_t bpm10;
     uint8_t bank, idx, cores;                   /* cores 1: both (the voices on core 1) */
-    uint8_t theme;                              /* 0 NEON, 1 PURE */
-} set = {3, 0, 0, 0xFF, 1400, 0, 0, 1, 0};
+    uint8_t theme, pal, font;                   /* CLASSIC STUDIO PURE RACK; its 4 palettes; SANS / MONO */
+} set = {4, 0, 0, 0xFF, 1400, 0, 0, 1, 0, 0, 0};
 static char pname[14];
-static uint8_t page, vcur[NPAGE], cursor[24], pre_cur[2], save_slot, save_pos, hold;
+static uint8_t page, vcur[NPAGE], cursor[sizeof VIEWS / sizeof VIEWS[0]], pre_cur[2], save_slot, save_pos, hold;
 static uint8_t key_note[27], latched[128], phys[128];
 static uint32_t prev_keys, toast_ms, set_ms, last_turn_ms, tap_ms[4];
 static uint8_t set_dirty, prev_dirty = 1;
 static char toast_txt[24];
-static int16_t prev_wave[224];
+static int16_t prev_wave[224], prev_a[112], prev_b[112], prev_s[112];   /* the pictures of the sound */
 static uint8_t led_want[41];
 #define OCT ((int32_t)(int8_t)set.oct)
 
@@ -231,7 +232,7 @@ static void item_range(uint32_t id, int32_t *lo, int32_t *hi)
     if (id == I_L1RATE || id == I_L2RATE) id = rate_id(id);
     if (item_patch(id)) { *lo = PD[id].lo; *hi = PD[id].hi; return; }
     *lo = 0;
-    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_THEME ? 1 : id == G_OCT ? 6 : 0;
+    *hi = id == G_MIDICH ? 16 : id == G_BPM ? 2400 : id == G_CLOCK || id == G_CORES || id == G_FONT ? 1 : id == G_THEME || id == G_PAL ? 3 : id == G_OCT ? 6 : 0;
     if (id == G_BPM) *lo = 600;
 }
 static int32_t item_get(uint32_t id)
@@ -245,6 +246,8 @@ static int32_t item_get(uint32_t id)
     case G_OCT: return OCT + 3;
     case G_CORES: return set.cores;
     case G_THEME: return set.theme;
+    case G_PAL: return set.pal;
+    case G_FONT: return set.font;
     default: return 0;
     }
 }
@@ -266,7 +269,9 @@ static void item_set(uint32_t id, int32_t v)
     case G_CLOCK: set.clock = (uint8_t)v; break;
     case G_OCT: set.oct = (uint8_t)(int8_t)(v - 3); break;
     case G_CORES: set.cores = (uint8_t)v; toast("RESTART TO APPLY"); break;
-    case G_THEME: set.theme = (uint8_t)v; theme_set(set.theme); g_force = 1; break;
+    case G_THEME: set.theme = (uint8_t)v; theme_set(set.theme, set.pal); g_force = 1; break;
+    case G_PAL: set.pal = (uint8_t)v; theme_set(set.theme, set.pal); g_force = 1; break;
+    case G_FONT: set.font = (uint8_t)v; font_set(set.font); g_force = 1; break;
     default: return;
     }
     set_dirty = 1;
@@ -295,6 +300,8 @@ static const char *item_name(uint32_t id)
     case G_CORES: return "AUDIO CORES";
     case G_CPU: return "CPU LOAD";
     case G_THEME: return "THEME";
+    case G_PAL: return "PALETTE";
+    case G_FONT: return "FONT";
     case G_FW: return "FIRMWARE";
     default: return "";
     }
@@ -306,7 +313,7 @@ static const char *item_sname(uint32_t id)
     if (k) return ENG_P[e][k - 1];
     if (id == I_L1RATE || id == I_L2RATE) return "RATE";
     if (item_patch(id)) return PD[id].sname;
-    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : "";
+    return id == G_MIDICH ? "MIDI" : id == G_BPM ? "BPM" : id == G_CLOCK ? "CLOCK" : id == G_OCT ? "OCT" : id == G_CORES ? "CORES" : id == G_THEME ? "THEME" : id == G_PAL ? "PALETTE" : id == G_FONT ? "FONT" : "";
 }
 static uint32_t ilog2q8(uint32_t x)             /* log2(x) in Q8, x >= 1 */
 {
@@ -376,7 +383,9 @@ static void item_text(uint32_t id, char *b)
         case G_CLOCK: str_cat(b, v ? "MIDI" : "INTERNAL"); break;
         case G_OCT: fmt_s(b, v - 3); break;
         case G_CORES: str_cat(b, !v ? "SINGLE" : dual_on ? "DUAL \xB7 ON" : KS_DUAL ? "DUAL \xB7 OFF" : "DUAL (FM-1)"); break;
-        case G_THEME: str_cat(b, v ? "PURE" : "NEON"); break;
+        case G_THEME: { static const char *const TN[4] = {"CLASSIC", "STUDIO", "PURE", "RACK"}; str_cat(b, TN[v & 3]); break; }
+        case G_PAL: str_cat(b, v < 2 ? PAL_NAME[set.theme & 3][v] : v == 2 ? "BLACK / WHITE" : "INVERTED"); break;
+        case G_FONT: str_cat(b, v ? "MONO" : "SANS"); break;
         case G_CPU:                             /* each core's share of a block, and the governor's step */
             b = str_cat(b, "C0 "); b = fmt_u(b, ks_load[0], 0); b = str_cat(b, "%");
             if (dual_on) { b = str_cat(b, " C1 "); b = fmt_u(b, ks_load[1], 0); b = str_cat(b, "%"); }
@@ -453,348 +462,19 @@ static void preview_make(void)
             x += mul15(sin32(ps), ls);
             w[i + j] = x;
             if ((x < 0 ? -x : x) > pk) pk = x < 0 ? -x : x;
+            if (i + j < 112) { prev_a[i + j] = (int16_t)clip(a[j], 32767); prev_b[i + j] = (int16_t)clip(bb[j], 32767); }
         }
+    }
+    for (i = 0; i < 112; i++) {                 /* the sub, one cycle */
+        uint32_t ph = (uint32_t)i * (0xFFFFFFFFu / 112u);
+        prev_s[i] = (int16_t)(patch[S_WAVE] == 0 ? sin32(ph) : patch[S_WAVE] == 1 ? tri32(ph + 0x40000000u)
+                              : (ph < (patch[S_WAVE] == 2 ? 0x80000000u : 0x40000000u) ? -30000 : 30000));
     }
     pk = (32000 << 12) / pk;                     /* (a gain, Q12: no 64-bit division) */
     for (i = 0; i < 224; i++) prev_wave[i] = (int16_t)((w[i] * pk) >> 12);
 }
 
-/* ================================================================ drawing */
-static void draw_head(const char *cat)
-{
-    char n[8], *p = n;
-    g_rect(0, g_y0, 240, (int32_t)BAND_H, K_BG);
-    if (!g_vis(0, 72)) return;
-    if (theme == 1u) {                          /* PURE: the section on a lime tab with a cut corner */
-        int32_t w = g_text_w(&F_S, cat) + 26, y;
-        for (y = 0; y < 20; y++) if (g_vis(y, 1)) g_rect(0, y, w + (19 - y) / 2 + 6, 1, K_LIME);
-        g_text(&F_S, 9, 5, cat, K_INK);
-    } else {
-        g_text(&F_M, 8, 5, "K-WA SUB", K_LIME);
-    }
-    p = fmt_u(p, (uint32_t)page + 1u, 2);
-    if (page == PG_PLAY) str_cat(p, "/08");
-    g_text_r(&F_XS, 232, 7, n, K_GREY);
-    {                                           /* the page's views: one dot each, the one shown lit */
-        uint32_t nv = (uint32_t)(PAGE_V0[page + 1u] - PAGE_V0[page]), i;
-        int32_t x = 232 - g_text_w(&F_XS, n) - 6 - (int32_t)nv * 8;
-        for (i = 0; nv > 1u && i < nv; i++) g_rect(x + (int32_t)i * 8, 8, 5, 5, i == vcur[page] ? K_LIME : K_LINE);
-    }
-    if (theme == 1u) { g_text(&F_XS, 8, 25, "K-WA SUB", K_GREY); return; }
-    g_rect(6, 19, 228, 1, K_LINE);
-    g_text(&F_S, 8, 24, cat, K_LIME);
-}
-static void draw_title(const char *t, const char *sub, uint16_t subc)
-{
-    g_text(&F_L, 8, 37, t, K_WHITE);
-    if (sub) g_text(&F_XS, 8, 61, sub, subc);
-}
-static void draw_foot(const view_t *v, const char *left)
-{
-    char b[64], *p = b;
-    uint32_t k, n = 4;
-    if (!g_vis(222, 12)) return;
-    if (left) str_cat(b, left);
-    else
-        for (;;) {                              /* "K1 FREQ · K2 RES · K3 DRIVE": as many as fit */
-            p = b;
-            *p = 0;
-            for (k = 0; k < n; k++) {
-                if (v->k[k] == I_NONE) continue;
-                if (p != b) p = str_cat(p, " \xB7 ");
-                *p++ = 'K'; *p++ = (char)('1' + k); *p++ = ' ';
-                p = str_cat(p, item_sname(v->k[k]));
-            }
-            if (g_text_w(&F_XS, b) < 180 || n <= 1u) break;
-            n--;
-        }
-    g_text(&F_XS, 8, 226, b, K_GREY);
-    g_text_r(&F_XS, 232, 226, v->tag, K_CYAN);
-}
-static void draw_row(int32_t y, const char *lab, const char *val, int sel, uint16_t valc)
-{
-    if (!g_vis(y, 24)) return;
-    g_box(6, y, 228, 24, sel ? K_LIMED : K_PANEL, sel ? K_LIME : K_LINE);
-    g_text(&F_S, 14, y + 8, lab, K_WHITE);
-    g_text_r(&F_S, 226, y + 8, val, sel ? K_LIME : valc);
-}
-static void draw_item_row(int32_t y, uint32_t id, int sel)
-{
-    char b[24];
-    item_text(id, b);
-    draw_row(y, item_name(id), b, sel, id == G_CPU || id == G_FW ? K_GREY : K_CYAN);
-}
-static void draw_rows(const view_t *v, int32_t y0, uint32_t vis)
-{
-    uint32_t c = cursor[vidx()], top = 0, i;
-    if (v->n > vis) {
-        top = c >= 2u ? c - 2u : 0u;
-        if (top + vis > v->n) top = v->n - vis;
-        if (g_vis(y0, (int32_t)vis * 29)) {     /* where we are in the list */
-            int32_t h = (int32_t)vis * 29 - 5, bh = h * (int32_t)vis / v->n;
-            g_rect(236, y0, 2, h, K_TRACK);
-            g_rect(236, y0 + (h - bh) * (int32_t)top / (int32_t)(v->n - vis), 2, bh, K_GREY);
-        }
-    }
-    for (i = 0; i < vis && top + i < v->n; i++) draw_item_row(y0 + (int32_t)i * 29, v->it[top + i], top + i == c);
-}
-static void draw_vbox(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t id, int sel, const char *lab)
-{
-    char b[24];
-    if (!g_vis(y, h)) return;
-    item_text(id, b);
-    g_box(x, y, w, h, sel ? K_LIMED : K_PANEL, sel ? K_LIME : K_LINE);
-    g_text(&F_XS, x + 7, y + 7, lab ? lab : item_name(id), sel ? K_LIME : K_GREY);
-    if (h >= 44) g_text(&F_B, x + 7, y + 19, b, sel ? K_LIME : K_WHITE);
-    else g_text(&F_M, x + 7, y + 17, b, sel ? K_LIME : K_WHITE);
-    g_bar(x + 7, y + h - 11, w - 14, 5, item_frac(id), sel ? K_LIME : K_CYAN);
-}
-static void draw_wave(int32_t y, int32_t h, const int16_t *w, uint32_t n, uint16_t c)   /* n points over x 8..231 */
-{
-    uint32_t i;
-    int32_t cy = y + h / 2, px = 8, py = cy - (w[0] * (h / 2 - 1)) / 32768;
-    if (!g_vis(y - 1, h + 2)) return;
-    for (i = 1; i < n; i++) {
-        int32_t x = 8 + (int32_t)(i * 223u / (n - 1u)), yy = cy - (w[i] * (h / 2 - 1)) / 32768;
-        g_line(px, py, x, yy, c);
-        g_line(px, py + 1, x, yy + 1, g_mix(K_BG, c, 120));
-        px = x;
-        py = yy;
-    }
-}
-
-static void draw_play(const view_t *v)
-{
-    char sub[40], *p = sub;
-    int32_t y = 37, ysub, sy, sh, by, bh, i, split = -1, w = g_text_w(&F_L, pname);
-    uint32_t c = cursor[vidx()];
-    static int16_t live[224];
-    if (w > 224) {                              /* two lines, cut at the last space that fits */
-        char t[14];
-        for (i = 0; pname[i]; i++) {
-            if (pname[i] != ' ') continue;
-            memcpy(t, pname, (uint32_t)i);
-            t[i] = 0;
-            if (g_text_w(&F_L, t) <= 224) split = i;
-        }
-    }
-    if (split > 0) {
-        char t[14];
-        memcpy(t, pname, (uint32_t)split);
-        t[split] = 0;
-        g_text(&F_L, 8, y, t, K_WHITE);
-        g_text(&F_L, 8, y + 22, pname + split + 1, K_WHITE);
-        ysub = 83;
-    } else {
-        g_text(&F_L, 8, y, pname, K_WHITE);
-        ysub = 61;
-    }
-    p = str_cat(p, L_STYLE[clampi(patch[P_STYLE], 0, NSTYLE - 1)]);
-    p = str_cat(p, " \xB7 ");
-    p = eng_str(p, patch);
-    p = str_cat(p, set.bank ? " \xB7 B" : " \xB7 A");
-    fmt_u(p, (uint32_t)set.idx + 1u, 2);
-    g_text(&F_XS, 8, ysub, sub, K_GREY);
-    p = sub;
-    if (hold) p = str_cat(p, "HOLD \xB7 ");
-    p = fmt_u(p, ks_bpm10 / 10u, 0);
-    str_cat(p, " BPM");
-    g_text_r(&F_XS, 232, ysub, sub, hold ? K_LIME : K_CYAN);
-    sy = ysub + 12;
-    sh = split > 0 ? 28 : 34;
-    if (ks_sounding) {                          /* the last ~20 ms of sound, from a rising zero crossing */
-        uint32_t w = scope_w - 512u, k, at = 0;
-        for (k = 1; k < 288u; k++) if (scope[(w + k - 1u) & 511u] < 0 && scope[(w + k) & 511u] >= 0) { at = k; break; }
-        for (k = 0; k < 224u; k++) live[k] = scope[(w + at + k) & 511u];
-        draw_wave(sy, sh, live, 224, K_WAVE);
-    } else
-        draw_wave(sy, sh, prev_wave, 224, K_WAVE);
-    by = sy + sh + 6;
-    bh = (220 - by - 6) / 2;
-    for (i = 0; i < 4; i++)
-        draw_vbox(i & 1 ? 123 : 6, by + (i >> 1) * (bh + 6), 111, bh, v->it[i], (uint32_t)i == c,
-                  v->it[i] == I_L1RATE ? "WOB RATE" : v->it[i] == L1_DEP ? "WOB DEPTH" : 0);
-}
-
-static void draw_lfo(const view_t *v, uint32_t k)
-{
-    const int8_t *p = patch + k * LFO_2;
-    char t[24], sub[40], *s;
-    int16_t w[112];
-    uint32_t i, ph = lfo_ph_show[k];
-    lfo_t l;
-    s = str_cat(t, k ? "MOTION " : "WOBBLE ");
-    item_text(k ? I_L2RATE : I_L1RATE, s);
-    s = str_cat(sub, L_SHAPE[p[L1_SHP]]);
-    s = str_cat(s, " \xB7 ");
-    s = str_cat(s, dst_name((uint32_t)p[L1_DST]));
-    *s++ = ' ';
-    item_text(L1_DEP + k * LFO_2, s);
-    draw_title(t, sub, K_GREY);
-    memset(&l, 0, sizeof l);
-    l.sh = 20000; l.sh0 = -12000;
-    for (i = 0; i < 112u; i++) w[i] = (int16_t)lfo_shape(&l, i * (0xFFFFFFFFu / 56u), (uint32_t)p[L1_SHP]);
-    if (g_vis(70, 36)) {
-        g_rect(8, 87, 224, 1, K_LINE);
-        draw_wave(71, 34, w, 112, K_CYAN);
-        {                                       /* where it is now */
-            int32_t x = 8 + (int32_t)((ph >> 24) * 111u / 255u), y = 88 - (lfo[k].out * 16) / 32768;
-            g_rect(x - 2, y - 2, 5, 5, K_LIME);
-        }
-    }
-    draw_rows(v, 110, 4);
-}
-
-static void draw_presets(uint32_t bank)
-{
-    uint32_t c = pre_cur[bank], n = bank ? NUSER : NFACTORY, top, i;
-    char sub[32], *p;
-    p = str_cat(sub, bank ? "USER \xB7 " : "FACTORY \xB7 ");
-    p = fmt_u(p, n, 0);
-    str_cat(p, bank ? " SLOTS \xB7 K3 LOADS" : " PATCHES \xB7 K3 LOADS");
-    draw_title("SELECT PATCH", sub, K_GREY);
-    top = c >= 2u ? c - 2u : 0u;
-    if (top + 5u > n) top = n - 5u;
-    for (i = 0; i < 5u; i++) {
-        uint32_t k = top + i;
-        int32_t y = 74 + (int32_t)i * 29;
-        char b[24];
-        const char *nm = bank ? (up_valid(k) ? ustore[k].name : "- EMPTY -") : FACTORY[k].name;
-        p = fmt_u(b, k + 1u, 2);
-        *p++ = ' '; *p++ = ' ';
-        str_cat(p, nm);
-        draw_row(y, b, "", k == c, K_CYAN);
-        if ((!bank || up_valid(k)) && g_vis(y, 24)) {   /* its music and its engines, small, on the right */
-            int8_t pp[NP_MAX];
-            char nb[14], e[32];
-            if (bank) memcpy(pp, ustore[k].p, NP_MAX); else preset_factory(k, pp, nb);
-            eng_str(e, pp);
-            g_text_r(&F_XS, 214, y + 4, L_STYLE[clampi(pp[P_STYLE], 0, NSTYLE - 1)], k == c ? K_LIME : K_GREY);
-            g_text_r(&F_XS, 214, y + 13, e, K_CYAN);
-        }
-        if (set.bank == bank && set.idx == k && g_vis(y, 24)) {   /* the one playing */
-            int32_t j;
-            for (j = 0; j < 4; j++) g_rect(220 + j, y + 8 + j, 1, 8 - 2 * j, k == c ? K_LIME : K_CYAN);
-        }
-    }
-}
-static void draw_save(void)
-{
-    char sub[32], *p;
-    int32_t x = 8, i;
-    p = str_cat(sub, "TO USER SLOT B");
-    fmt_u(p, save_slot + 1u, 2);
-    draw_title(pname, sub, K_ORANGE);
-    for (i = 0; i < (int32_t)save_pos; i++) { char ch[2] = {pname[i], 0}; x += g_text_w(&F_L, ch); }
-    if (g_vis(58, 2)) { char ch[2] = {pname[save_pos] ? pname[save_pos] : ' ', 0}; g_rect(x, 58, g_text_w(&F_L, ch), 2, K_LIME); }
-    p = sub;
-    if (up_valid(save_slot)) str_cat(p, ustore[save_slot].name);
-    else str_cat(p, "- EMPTY -");
-    {
-        char b[8];
-        p = str_cat(b, "B");
-        fmt_u(p, save_slot + 1u, 2);
-        draw_row(74, "SLOT", b, 1, K_CYAN);
-    }
-    draw_row(103, "NOW IN SLOT", sub, 0, K_GREY);
-    draw_row(132, "STYLE", L_STYLE[clampi(patch[P_STYLE], 0, NSTYLE - 1)], 0, K_CYAN);
-    if (g_vis(170, 30)) {
-        g_text(&F_XS, 8, 172, "K2 LETTER POSITION \xB7 K3 LETTER", K_GREY);
-        g_text(&F_XS, 8, 184, "K4 STYLE \xB7 PRESS SAVE AGAIN TO WRITE", K_LIME);
-    }
-}
-
-static void draw_all(void)
-{
-    const view_t *v = view();
-    uint32_t vi = vidx();
-    char b[24];
-    draw_head(v->cat);
-    switch (v->lay) {
-    case LY_PLAY: draw_play(v); draw_foot(v, vi == 0u ? "KNOBS = LIVE MACROS" : 0); break;
-    case LY_LIST:
-        if (page == PG_BASS && vi <= 3u) {
-            uint32_t e = (uint32_t)patch[vi == 2u ? A_ENG : B_ENG];
-            draw_title(ENG_TITLE[e], ENG_SUB[e], K_GREY);
-        } else if (page == PG_BASS && vi == 4u) draw_title("SUB / NOISE", "LOW END CHARACTER", K_GREY);
-        else if (page == PG_BASS) draw_title(patch[X_MODE] == 0 ? "A + B" : patch[X_MODE] == 1 ? "A x B  RING" : "B > A  X-MOD", "TWO ENGINES, ONE BASS", K_GREY);
-        else if (page == PG_FILT) draw_title(FT_TITLE[patch[F_TYPE]], "ENVELOPE \xB7 KEY \xB7 VELOCITY", K_GREY);
-        else if (page == PG_LFO) draw_title("ROUTING", "4 SLOTS \xB7 SOURCE > DEST", K_GREY);
-        else if (page == PG_FX) {
-            uint32_t f = vi - PAGE_V0[PG_FX];
-            const char *st = f < 5u ? (patch[v->it[0]] ? "ON" : "OFF") : "ALWAYS ON";
-            char *p = str_cat(b, f == 0u ? L_DRT[patch[DR_TYPE]] : f == 3u ? L_DIV[patch[DL_TIME]] : "");
-            if (p != b) p = str_cat(p, " \xB7 ");
-            str_cat(p, st);
-            draw_title(FX_TITLE[f], b, K_ORANGE);
-        }
-        draw_rows(v, 74, 5);
-        draw_foot(v, 0);
-        break;
-    case LY_BOX: {
-        uint32_t i, c = cursor[vi];
-        draw_title(page == PG_ENV && vi == PAGE_V0[PG_ENV] ? "ADSR CONTROL" : vi == PAGE_V0[PG_ENV] + 1u ? "FILTER ADSR" : "PITCH / MOD",
-                   vi == PAGE_V0[PG_ENV] + 2u ? dst_name((uint32_t)patch[ME_DST]) : 0, K_GREY);
-        for (i = 0; i < 4u; i++) draw_vbox(i & 1u ? 123 : 6, 74 + (int32_t)(i >> 1) * 70, 111, 64, v->it[i], i == c, 0);
-        draw_foot(v, 0);
-        break;
-    }
-    case LY_FILT: {
-        uint32_t c = cursor[vi];
-        char inf[48], *p;
-        draw_title(FT_TITLE[patch[F_TYPE]], FT_SUB[patch[F_TYPE]], K_GREY);
-        item_text(F_CUT, b);
-        draw_row(74, "CUTOFF", b, c == 0u, K_CYAN);
-        if (g_vis(104, 8)) g_bar(6, 104, 228, 8, item_frac(F_CUT), K_LIME);
-        draw_vbox(6, 118, 111, 62, F_RES, c == 1u, "RESONANCE");
-        draw_vbox(123, 118, 111, 62, F_DRV, c == 2u, "DRIVE");
-        p = str_cat(inf, "ENV ");
-        item_text(F_ENV, p); p += str_len(p);
-        p = str_cat(p, " \xB7 KEY ");
-        item_text(F_KEY, p); p += str_len(p);
-        p = str_cat(p, " \xB7 LFO1 > ");
-        str_cat(p, dst_name((uint32_t)patch[L1_DST]));
-        g_text(&F_XS, 8, 190, inf, K_GREY);
-        draw_foot(v, 0);
-        break;
-    }
-    case LY_LFO: draw_lfo(v, vi - PAGE_V0[PG_LFO]); draw_foot(v, 0); break;
-    case LY_PRESET: draw_presets(vi - PAGE_V0[PG_PRE]); draw_foot(v, "K1 SCROLL \xB7 K3 LOAD"); break;
-    case LY_SAVE: draw_save(); draw_foot(v, "K1 SLOT \xB7 SAVE = WRITE"); break;
-    case LY_SYS:
-        draw_title("DEVICE SETUP", 0, K_GREY);
-        draw_rows(v, 74, 4);
-        if (g_vis(192, 14)) {
-            g_box(6, 192, 228, 14, K_LIMED, K_LIME);
-            g_text_c(&F_XS, 120, 195, "DNB / DUB / DUBSTEP / TECHNO EDITION", K_LIME);
-        }
-        draw_foot(v, "SELECT ROW \xB7 ALGO VALUE");
-        break;
-    }
-    if (pend_on && g_vis(126, 90)) {            /* the question */
-        char q[32], e[32], *p;
-        int8_t pp[NP_MAX];
-        char nb[14];
-        g_box(14, 126, 212, 88, K_PANEL, K_ORANGE);
-        g_text_c(&F_XS, 120, 134, "SOUND CHANGED \xB7 NOT SAVED", K_ORANGE);
-        p = str_cat(q, "LOAD ");
-        if (pend_bank) { p = str_cat(p, "B"); p = fmt_u(p, pend_k + 1u, 2); memcpy(pp, ustore[pend_k].p, NP_MAX); }
-        else { p = fmt_u(p, pend_k + 1u, 2); preset_factory(pend_k, pp, nb); }
-        p = str_cat(p, " ");
-        str_cat(p, pend_bank ? ustore[pend_k].name : FACTORY[pend_k].name);
-        g_text_c(&F_S, 120, 150, q, K_WHITE);
-        p = str_cat(e, L_STYLE[clampi(pp[P_STYLE], 0, NSTYLE - 1)]);
-        p = str_cat(p, " \xB7 ");
-        eng_str(p, pp);
-        g_text_c(&F_XS, 120, 168, e, K_CYAN);
-        g_text_c(&F_XS, 120, 188, "SEL = LOAD \xB7 OTHER BUTTON = KEEP", K_LIME);
-        g_text_c(&F_XS, 120, 200, "PRESETS: ANOTHER ONE", K_GREY);
-    }
-    if (toast_ms && g_vis(196, 22)) {
-        g_box(30, 196, 180, 22, K_PANEL, K_LIME);
-        g_text_c(&F_S, 120, 202, toast_txt, K_WHITE);
-    }
-}
+#include "ksub_draw.c"
 
 /* ================================================================ the panel */
 static void led(uint32_t id, uint32_t lvl) { if (id < 41u) led_want[id] = (uint8_t)lvl; }
@@ -1063,12 +743,13 @@ static uint32_t ui_frame_ms, prev_ms;
 static void app_init(void)
 {
     uint32_t i;
-    if (settings_load(&set, sizeof set) || set.ver != 3u) {
-        set.theme = 0;
-        set.ver = 3; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1;
+    if (settings_load(&set, sizeof set) || set.ver != 4u) {
+        set.theme = set.pal = set.font = 0;
+        set.ver = 4; set.midich = 0; set.clock = 0; set.oct = 0xFF; set.bpm10 = 1400; set.bank = 0; set.idx = 0; set.cores = 1;
     }
     set.cores = set.cores ? 1u : 0u;
-    theme_set(set.theme);
+    theme_set(set.theme, set.pal);
+    font_set(set.font);
     set.bpm10 = (uint16_t)clampi(set.bpm10, 600, 2400);
     set.oct = (uint8_t)(int8_t)clampi(OCT, -3, 3);
     ks_bpm10 = set.bpm10;

@@ -9,23 +9,36 @@ static int32_t g_y0;
 static uint32_t g_hash[NBAND];
 static uint8_t g_force = 1, g_tx;
 
-/* the colours: two themes. NEON (the first design: teal black, lime, cyan) and PURE (after Arturia's Pure SUB:
- * charcoal, a neon lime for the section tabs, lavender for values and curves) */
-enum { KC_BG, KC_PANEL, KC_LINE, KC_LIME, KC_LIMED, KC_CYAN, KC_WHITE, KC_GREY, KC_TRACK, KC_ORANGE, KC_WAVE, KC_INK, KC_N };
-#define NTHEME 2u
-static const uint16_t THEMES[NTHEME][KC_N] = {
-    {RGB(11, 18, 20), RGB(17, 27, 30), RGB(40, 56, 60), RGB(200, 240, 60), RGB(30, 40, 20), RGB(80, 216, 208),
-     RGB(236, 242, 242), RGB(130, 146, 148), RGB(36, 52, 56), RGB(240, 140, 60), RGB(200, 240, 60), RGB(11, 18, 20)},
-    {RGB(28, 28, 32), RGB(42, 42, 47), RGB(62, 62, 70), RGB(204, 240, 58), RGB(50, 50, 58), RGB(160, 132, 248),
-     RGB(238, 238, 242), RGB(150, 150, 162), RGB(60, 60, 68), RGB(240, 150, 70), RGB(160, 132, 248), RGB(20, 20, 22)},
+/* the colours: four palettes for each theme (ksub_draw.c): its own, another, black and white, and inverted */
+enum { KC_BG, KC_PANEL, KC_LINE, KC_LIME, KC_LIMED, KC_CYAN, KC_WHITE, KC_GREY, KC_TRACK, KC_ORANGE, KC_WAVE, KC_INK, KC_MOD, KC_N };
+#define C3(r, g, b) RGB(r, g, b)
+static const uint16_t PALS[10][KC_N] = {
+    /* CLASSIC: NEON, AMBER */
+    {C3(11,18,20), C3(17,27,30), C3(40,56,60), C3(200,240,60), C3(30,40,20), C3(80,216,208), C3(236,242,242), C3(130,146,148), C3(36,52,56), C3(240,140,60), C3(200,240,60), C3(11,18,20), C3(170,140,250)},
+    {C3(18,12,6), C3(30,20,10), C3(66,44,20), C3(255,170,40), C3(52,34,10), C3(255,214,140), C3(250,238,220), C3(170,140,110), C3(60,40,20), C3(255,90,60), C3(255,170,40), C3(18,12,6), C3(255,214,140)},
+    /* STUDIO: STUDIO, OCEAN */
+    {C3(10,14,16), C3(22,30,33), C3(44,58,62), C3(200,240,60), C3(30,40,20), C3(80,216,208), C3(240,244,244), C3(140,156,158), C3(44,58,62), C3(240,140,60), C3(200,240,60), C3(10,14,16), C3(170,140,250)},
+    {C3(8,14,30), C3(16,26,50), C3(36,54,90), C3(80,200,255), C3(16,40,70), C3(255,120,200), C3(236,244,255), C3(130,150,180), C3(36,54,90), C3(255,170,60), C3(80,200,255), C3(8,14,30), C3(255,120,200)},
+    /* PURE: PURE, PURE RED */
+    {C3(28,28,32), C3(42,42,47), C3(62,62,70), C3(204,240,58), C3(50,50,58), C3(160,132,248), C3(238,238,242), C3(150,150,162), C3(60,60,68), C3(240,150,70), C3(160,132,248), C3(20,20,22), C3(160,132,248)},
+    {C3(28,26,28), C3(44,40,42), C3(70,62,64), C3(255,90,70), C3(60,36,34), C3(255,190,120), C3(244,238,236), C3(160,150,150), C3(70,62,64), C3(255,200,60), C3(255,190,120), C3(24,20,20), C3(255,190,120)},
+    /* RACK: RACK, MAGMA */
+    {C3(8,10,12), C3(20,24,27), C3(40,46,50), C3(210,245,70), C3(32,42,16), C3(90,220,210), C3(250,250,250), C3(150,160,164), C3(40,46,50), C3(240,140,60), C3(90,220,210), C3(8,10,12), C3(175,145,255)},
+    {C3(10,8,8), C3(26,18,16), C3(56,36,30), C3(255,120,40), C3(50,24,12), C3(255,214,80), C3(255,246,236), C3(170,140,120), C3(56,36,30), C3(255,60,60), C3(255,214,80), C3(10,8,8), C3(255,170,120)},
+    /* MONO: white on black (classic), INVERT: black on white */
+    {C3(0,0,0), C3(16,16,16), C3(70,70,70), C3(255,255,255), C3(48,48,48), C3(200,200,200), C3(255,255,255), C3(140,140,140), C3(50,50,50), C3(255,255,255), C3(255,255,255), C3(0,0,0), C3(200,200,200)},
+    {C3(255,255,255), C3(236,236,236), C3(180,180,180), C3(0,0,0), C3(210,210,210), C3(60,60,60), C3(0,0,0), C3(110,110,110), C3(205,205,205), C3(0,0,0), C3(0,0,0), C3(255,255,255), C3(80,80,80)},
 };
+static const char *const PAL_NAME[4][2] = {{"NEON", "AMBER"}, {"STUDIO", "OCEAN"}, {"PURE", "PURE RED"}, {"RACK", "MAGMA"}};
 static uint16_t kc[KC_N];
-static uint8_t theme;
-static void theme_set(uint32_t t)
+static uint8_t theme, theme_pal;
+static void theme_set(uint32_t t, uint32_t pal)
 {
-    uint32_t i;
-    theme = (uint8_t)(t < NTHEME ? t : 0u);
-    for (i = 0; i < KC_N; i++) kc[i] = THEMES[theme][i];
+    uint32_t i, k;
+    theme = (uint8_t)(t < 4u ? t : 0u);
+    theme_pal = (uint8_t)(pal < 4u ? pal : 0u);
+    k = theme_pal < 2u ? theme * 2u + theme_pal : 6u + theme_pal;
+    for (i = 0; i < KC_N; i++) kc[i] = PALS[k][i];
 }
 #define K_BG kc[KC_BG]
 #define K_PANEL kc[KC_PANEL]
@@ -39,6 +52,17 @@ static void theme_set(uint32_t t)
 #define K_ORANGE kc[KC_ORANGE]
 #define K_WAVE kc[KC_WAVE]
 #define K_INK kc[KC_INK]
+#define K_MOD kc[KC_MOD]
+
+/* the fonts: two families (DejaVu Sans Bold, IBM Plex Mono SemiBold), five sizes */
+static const ks_font_t *const FAMS[2][5] = {{&F_XS, &F_S, &F_M, &F_B, &F_L}, {&F_GXS, &F_GS, &F_GM, &F_GB, &F_GL}};
+static const ks_font_t *tf[5] = {&F_XS, &F_S, &F_M, &F_B, &F_L};
+static void font_set(uint32_t f) { uint32_t i; for (i = 0; i < 5u; i++) tf[i] = FAMS[f & 1u][i]; }
+#define T_XS tf[0]
+#define T_S tf[1]
+#define T_M tf[2]
+#define T_B tf[3]
+#define T_L tf[4]
 
 static int g_vis(int32_t y, int32_t h) { return y < g_y0 + (int32_t)BAND_H && y + h > g_y0; }
 static uint16_t g_mix(uint16_t a, uint16_t b, uint32_t t)   /* a .. b, t = 0..256 */

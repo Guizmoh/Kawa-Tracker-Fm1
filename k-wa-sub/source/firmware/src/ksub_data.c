@@ -18,6 +18,7 @@ enum {
     DR_ON, DR_TYPE, DR_AMT, DR_MIX, CR_ON, CR_BITS, CR_RATE, CR_MIX, CH_ON, CH_RATE, CH_DEP, CH_MIX,
     DL_ON, DL_TIME, DL_FB, DL_TONE, DL_MIX, RV_ON, RV_SIZE, RV_DAMP, RV_MIX, MS_GLUE, MS_SUB, MS_VOL,
     V_MODE, V_GLIDE, V_BEND, V_VEL, P_STYLE,
+    ST_ON, ST_PAT, ST_RATE, ST_GATE, ST_DST, ST_DEP, ST_SMO,     /* the STEP effect: 16 steps on the tempo */
     NP
 };
 #define NP_MAX 112u                             /* room in a stored patch */
@@ -32,7 +33,7 @@ enum { D_OFF, D_CUT, D_RES, D_PITCH, D_AP1, D_AP2, D_BP1, D_BP2, D_ALVL, D_BLVL,
 /* the order DEST steps through: the oscillators' EDIT rows together (ksub_ui.c skips an oscillator that is off) */
 static const uint8_t DST_ORDER[ND] = {D_OFF, D_CUT, D_RES, D_DRV, D_PITCH, D_ALVL, D_AP1, D_AP2, D_AP3, D_APIT, D_BLVL,
                                       D_BP1, D_BP2, D_BP3, D_BPIT, D_XMOD, D_SUB, D_NOISE, D_NCOL, D_AMP, D_WOB};
-enum { SR_OFF, SR_LFO1, SR_LFO2, SR_FENV, SR_MENV, SR_VEL, SR_WHEEL, SR_PRESS, SR_NOTE, SR_RAND, NSRC };
+enum { SR_OFF, SR_LFO1, SR_LFO2, SR_FENV, SR_MENV, SR_VEL, SR_WHEEL, SR_PRESS, SR_NOTE, SR_RAND, SR_STEP, NSRC };
 enum { VM_MONO, VM_LEGATO, VM_POLY };
 
 /* formats of the values on the screen */
@@ -53,7 +54,16 @@ static const char *const L_DST[ND] = {"OFF", "CUTOFF", "RESO", "PITCH", "A SHAPE
                                       "A LEVEL", "B LEVEL", "X-MOD", "DRIVE", "AMP", "SUB", "NOISE", "WOB DEPTH",
                                       "A EDGE", "B EDGE", "A PITCH", "B PITCH", "NOISE COLOR"};
 static const char *const L_SRC[NSRC] = {"OFF", "LFO 1", "LFO 2", "FILT ENV", "MOD ENV", "VELOCITY", "MOD WHEEL",
-                                        "PRESSURE", "NOTE", "RANDOM"};
+                                        "PRESSURE", "NOTE", "RANDOM", "STEP"};
+/* the STEP patterns: 16 steps, a level 0..F each ("RANDOM": a new one every bar) */
+static const char *const L_SPAT[16] = {"OFFBEAT", "PUMP", "DUB CHOP", "TRANCE", "TRIPLET", "BROKEN", "SKANK", "GALLOP",
+                                      "STAIRS UP", "STAIRS DN", "DNB ROLL", "HALFTIME", "STUTTER", "ACID", "SYNCOPE", "RANDOM"};
+static const char *const STEP_PAT[16] = {"0F0F0F0F0F0F0F0F", "37BF37BF37BF37BF", "F0F00F00F0F00F00", "F0FF0FF0F0FF0FF0",
+                                        "F00F00F00F00F00F", "F00F00F0F00F0F00", "00F000F000F000F0", "F0FFF0FFF0FFF0FF",
+                                        "0123456789ABCDEF", "FEDCBA9876543210", "F0F0FFF0F0F0FF0F", "FFFF0000FFFF0000",
+                                        "FFF0F0F0FFFF0000", "F8A3F5C1E07B92D4", "F00F0F00F00F0F00", "0000000000000000"};
+static const char *const L_SRATE[6] = {"1/4", "1/8", "1/8T", "1/16", "1/16T", "1/32"};
+static const uint8_t STEP_PB[6] = {1, 2, 3, 4, 6, 8};   /* steps a beat */
 static const char *const L_TRIG[] = {"FREE", "NOTE"};
 static const char *const L_ONOFF[] = {"OFF", "ON"};
 static const char *const L_DRT[] = {"SOFT", "TUBE", "HARD", "FOLD"};
@@ -136,6 +146,10 @@ static const pdesc_t PD[NP] = {
     {"VOICE MODE", "VOICE", 0, 2, VM_MONO, FM_LIST, L_VM}, {"GLIDE", "GLIDE", 0, 127, 0, FM_TIME, 0},
     {"BEND RANGE", "BEND", 0, 24, 2, FM_SEMI, 0}, {"VELOCITY", "VELO", 0, 127, 40, FM_PCT, 0},
     {"STYLE", "STYLE", 0, NSTYLE - 1, 0, FM_LIST, L_STYLE},
+    {"STEP", "ON", 0, 1, 0, FM_LIST, L_ONOFF}, {"PATTERN", "PATTERN", 0, 15, 0, FM_LIST, L_SPAT},
+    {"RATE", "RATE", 0, 5, 3, FM_LIST, L_SRATE}, {"GATE", "GATE", 0, 127, 100, FM_PCT, 0},
+    {"DEST", "DEST", 0, ND - 1, D_OFF, FM_DEST, L_DST}, {"DEPTH", "DEPTH", -64, 63, 0, FM_BIP, 0},
+    {"SMOOTH", "SMOOTH", 0, 127, 10, FM_PCT, 0},
 };
 
 /* ---- the factory presets: the defaults, then (parameter, value) pairs, -1 ends */

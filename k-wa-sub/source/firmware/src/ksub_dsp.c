@@ -42,6 +42,11 @@ static volatile uint8_t ks_sounding;
 static int16_t scope[512];                      /* the output, one sample in 4 (the PLAY page draws it) */
 static volatile uint32_t scope_w;
 static volatile uint32_t lfo_ph_show[2];        /* where the LFOs are (the LFO page's dot) */
+static volatile uint8_t env_st_show[3];         /* the newest voice's envelopes: stage, level Q15 (the ENV dots) */
+static volatile int32_t env_lv_show[3], cut_show; /* ... and its cutoff after the modulation (Q8 units) */
+static volatile int32_t step_val;               /* the STEP effect: its level now (Q15), its step */
+static volatile uint8_t step_pos;
+static volatile int32_t meter_pk, meter_gr;     /* the output's peak and the glue's gain (Q15), for MASTER */
 #define BEATS_WRAP (48u << 24)
 
 /* ---- helpers */
@@ -498,6 +503,7 @@ static void voice_mods(voice_t *v, int32_t *m, int32_t fenv, int32_t menv)
     src[SR_PRESS] = ks_press;
     src[SR_NOTE] = clip(((int32_t)v->note - 60) * 512, 32767);
     src[SR_RAND] = v->rand;
+    src[SR_STEP] = step_val;
     for (k = 0; k < ND; k++) m[k] = 0;
     for (k = 0; k < 4u; k++) {                  /* the matrix, then the LFOs (their depth can be a destination) */
         const int8_t *s = patch + M1_SRC + 3u * k;
@@ -514,6 +520,11 @@ static void voice_mods(voice_t *v, int32_t *m, int32_t fenv, int32_t menv)
         if (!dst || !d) continue;
         if (IS_PITCH(dst)) m[dst] += (int32_t)(((int64_t)(d < 0 ? -d * d : d * d) * 3 * lfo[k].out) >> 15);
         else m[dst] += (d * lfo[k].out) >> 6;
+    }
+    if (patch[ST_ON] && patch[ST_DST] && patch[ST_DEP]) {   /* the STEP effect's own destination */
+        int32_t a = patch[ST_DEP];
+        if (IS_PITCH(patch[ST_DST])) m[patch[ST_DST]] += (int32_t)(((int64_t)(a < 0 ? -a * a : a * a) * 3 * step_val) >> 15);
+        else m[patch[ST_DST]] += (a * step_val) >> 6;
     }
     if (patch[ME_DST] && patch[ME_AMT]) {
         int32_t a = patch[ME_AMT];
@@ -592,6 +603,12 @@ static void voice_block(voice_t *v, int32_t *acc)
 
     /* the filter */
     cut = pv(P[F_CUT], m[D_CUT]);
+    if (v->age == vage) {                      /* (the newest voice: what the screen shows) */
+        env_st_show[0] = v->ea.st; env_lv_show[0] = v->ea.lv >> 15;
+        env_st_show[1] = v->ef.st; env_lv_show[1] = v->ef.lv >> 15;
+        env_st_show[2] = v->em.st; env_lv_show[2] = v->em.lv >> 15;
+        cut_show = cut;
+    }
     res = pv(P[F_RES], m[D_RES]) >> 8;
     drv = pv(P[F_DRV], m[D_DRV]) >> 8;
     gain = 4096 + drv * 160;
@@ -675,6 +692,27 @@ static void voice_block(voice_t *v, int32_t *acc)
     v->amp = amp_t;
 }
 
+/* the STEP effect: the pattern's level at this step of the beat grid, smoothed (once a control block) */
+static void step_run(uint32_t beats)
+{
+    static int32_t sv;
+    uint32_t spb = STEP_PB[clampi(patch[ST_RATE], 0, 5)], n = (uint32_t)(((uint64_t)(beats >> 8) * spb) >> 16), pos = n & 15u;
+    int32_t raw, smo = patch[ST_SMO];
+    char c;
+    if (!patch[ST_ON]) { step_val = 32767; sv = 32767; return; }
+    if (patch[ST_PAT] == 15) {                  /* RANDOM: a hash of the step and the bar */
+        uint32_t h = (n >> 4) * 2654435761u ^ pos * 40503u;
+        h ^= h >> 13;
+        raw = (int32_t)(((h * 0x9E3779B1u) >> 28) & 15u) * 2184;
+    } else {
+        c = STEP_PAT[patch[ST_PAT] & 15][pos];
+        raw = (c <= '9' ? c - '0' : c - 'A' + 10) * 2184;
+    }
+    sv = smo ? sv + mul15(raw - sv, 32767 - smo * 255) : raw;
+    step_val = sv;
+    step_pos = (uint8_t)pos;
+}
+
 /* all the voices for n samples (core 1's job) -> dst, mono */
 static void voices_render(int32_t *dst, uint32_t n, uint32_t t0, uint32_t budget)
 {
@@ -707,9 +745,16 @@ static void voices_render(int32_t *dst, uint32_t n, uint32_t t0, uint32_t budget
         ks_beats = (ks_beats + binc) % BEATS_WRAP;
         lfo_run(0, ks_beats);
         lfo_run(1, ks_beats);
+        step_run(ks_beats);
         for (k = 0; k < KS_CB; k++) acc[k] = 0;
         for (k = 0; k < NVOICE; k++)
             if (vo[k].on) { voice_block(&vo[k], acc); any = 1; }
+        if (patch[ST_ON] && patch[ST_GATE]) {   /* the gate: the steps cut the sound, ramped over the block */
+            static int32_t g0 = 32767;
+            int32_t g1 = 32767 - (((32767 - step_val) * patch[ST_GATE]) >> 7), dg = (g1 - g0) / (int32_t)KS_CB;
+            for (k = 0; k < KS_CB; k++) { g0 += dg; acc[k] = mul15(acc[k], g0); }
+            g0 = g1;
+        }
     }
     ks_sounding = (uint8_t)any;
 }
@@ -750,6 +795,8 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
         if (glue && fx.env > thr) tg = (((thr + ((fx.env - thr) >> 2)) >> 2) << 15) / (fx.env >> 2);
         if (!fx.gain) fx.gain = 32767;
         fx.gain += (tg - fx.gain) >> 2;
+        meter_gr = fx.gain;
+        meter_pk -= meter_pk >> 3;              /* (the meter falls back) */
     }
     for (i = 0; i < n; i++) {
         int32_t x = in[i] * 7 / 8, L, R, w;
@@ -843,6 +890,7 @@ static void fx_render(const int32_t *in, int32_t *out, uint32_t n)
         }
         L = mul15(L, fx.gain);
         R = mul15(R, fx.gain);
+        { int32_t a = L < 0 ? -L : L; if (a > meter_pk) meter_pk = a; }
         fx.dco[0] += (L * 256 - fx.dco[0]) >> 12;   /* (no DC out; Q8, so it settles at 0) */
         fx.dco[1] += (R * 256 - fx.dco[1]) >> 12;
         L -= fx.dco[0] >> 8;
