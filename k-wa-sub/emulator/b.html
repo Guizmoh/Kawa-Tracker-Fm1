@@ -137,7 +137,7 @@ label.vol { display: flex; align-items: center; gap: 8px; color: var(--mute); fo
       <ul>
         <li>Notes : <kbd>Z</kbd><kbd>S</kbd><kbd>X</kbd>… et <kbd>Q</kbd><kbd>2</kbd><kbd>W</kbd>…</li>
         <li><kbd>↑</kbd><kbd>↓</kbd> ligne &middot; <kbd>←</kbd><kbd>→</kbd> valeur &middot; <kbd>PgUp</kbd><kbd>PgDn</kbd> preset</li>
-        <li><kbd>Shift</kbd>+<kbd>1</kbd>…<kbd>8</kbd> pages &middot; <kbd>Tab</kbd> vue suivante &middot; <kbd>Espace</kbd> SEQ PLAY/STOP &middot; <kbd>Entrée</kbd> TAP (vue SEQ : REC) &middot; <kbd>⌫</kbd> SAVE (maintenu : undo)</li>
+        <li><kbd>Shift</kbd>+<kbd>1</kbd>…<kbd>8</kbd> pages &middot; <kbd>Tab</kbd> vue suivante &middot; <kbd>Espace</kbd> SEQ PLAY/STOP &middot; <kbd>Entrée</kbd> TAP (vue SEQ : REC) &middot; <kbd>⌫</kbd> SAVE (maintenu : undo) &middot; <kbd>-</kbd> / <kbd>=</kbd> OCT− / OCT+ (version B, maintenus : colonnes jaune / orange)</li>
         <li><kbd>-</kbd> <kbd>=</kbd> octave &middot; molette ou glisser sur un bouton rotatif</li>
       </ul>
     </section>
@@ -362,13 +362,15 @@ window.addEventListener("keydown", e => {
   const k = keyOf(e.code);
   if (k >= 0) { e.preventDefault(); if (!e.repeat) setKey(k, true); return; }
   if (e.code === "Backspace") { e.preventDefault(); if (!e.repeat) press(BTN.SAVE, true); return; }   /* held: undo */
+  if (e.code === "Minus" || e.code === "Equal") { e.preventDefault(); if (!e.repeat) press(e.code === "Minus" ? BTN.OCT_DOWN : BTN.OCT_UP, true); return; }   /* held: SHIFT (version B) */
   const map = { ArrowUp: () => encs.SELECT.turn(-1), ArrowDown: () => encs.SELECT.turn(1), ArrowLeft: () => encs.ALGO.turn(-1),
     ArrowRight: () => encs.ALGO.turn(1), PageUp: () => encs.PRESETS.turn(-1), PageDown: () => encs.PRESETS.turn(1),
-    Tab: () => tapBtn(BTN.SEL), Space: () => tapBtn(BTN.PLAY), Enter: () => tapBtn(BTN.REC), Minus: () => tapBtn(BTN.OCT_DOWN), Equal: () => tapBtn(BTN.OCT_UP) };
+    Tab: () => tapBtn(BTN.SEL), Space: () => tapBtn(BTN.PLAY), Enter: () => tapBtn(BTN.REC) };
   const f = map[e.code];
   if (f && !(e.code === "Enter" && e.target.tagName === "BUTTON")) { e.preventDefault(); if (!e.repeat || e.code.startsWith("Arrow") || e.code.startsWith("Page")) f(); }
 });
-window.addEventListener("keyup", e => { const k = keyOf(e.code); if (k >= 0) setKey(k, false); if (e.code === "Backspace") press(BTN.SAVE, false); });
+window.addEventListener("keyup", e => { const k = keyOf(e.code); if (k >= 0) setKey(k, false); if (e.code === "Backspace") press(BTN.SAVE, false);
+  if (e.code === "Minus") press(BTN.OCT_DOWN, false); if (e.code === "Equal") press(BTN.OCT_UP, false); });
 window.addEventListener("blur", () => { for (let k = 0; k < 27; k++) setKey(k, false); });
 
 /* ---- MIDI in (a controller, a DAW's clock) */
