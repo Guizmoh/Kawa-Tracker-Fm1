@@ -1457,7 +1457,7 @@ static void draw_all(void)
         g_text_c(T_XS, 120, 200, "PRESETS: ANOTHER ONE", K_GREY);
     }
     {                                           /* the value turned, big: before -> now (below the picture, when there is one) */
-        int32_t vy = VZ_OF[vidx()] && view()->lay != LY_PLAY ? 146 : 72;
+        int32_t vy = VZ_OF[vidx()] ? 146 : 72;   /* (below the picture, the scope included) */
         if (vpop_ms && !dpop_ms && !pend_on && !C3_ON && !win && g_vis(vy, 66)) {
             char now[24], t[40];
             str_cat(str_cat(t, vpop_pre), item_name(vpop_id));

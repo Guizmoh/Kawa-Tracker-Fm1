@@ -309,15 +309,15 @@ sauf s'ils ont été appris pour autre chose.
 
 ## Installer sur le FM-1
 
-Le paquet est [`install/k-wa-sub-0.9.9-8.fwsc`](install/k-wa-sub-0.9.9-8.fwsc) (identité `FM-1_979` ; les anciens dans `install/older/`). Il s'installe exactement
+Le paquet est [`install/k-wa-sub-0.9.9-9.fwsc`](install/k-wa-sub-0.9.9-9.fwsc) (identité `FM-1_979` ; les anciens dans `install/older/`). Il s'installe exactement
 comme KAWA, avec le même chargeur de mise à jour, et fonctionne depuis le firmware d'origine comme depuis KAWA :
 
 - **Installateur rapide** : ouvrir [`installer.html`](installer.html) dans Chrome ou Edge (un seul fichier, hors ligne,
   le firmware est dedans), cliquer sur « Installer K-WA SUB », confirmer. Il accepte aussi un autre .fwsc (KAWA...).
 - **Dans le navigateur** (Chrome ou Edge, Web MIDI) : la page d'installation de KAWA ([`../index.html`](../index.html)),
-  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.9.9-8.fwsc`.
+  bouton « Use a local .fwsc file… », puis choisir `k-wa-sub-0.9.9-9.fwsc`.
 - **Avec Python 3** : `INSTALL-Linux.sh`, `INSTALL-Mac.command` ou `INSTALL-Windows.bat` dans ce dossier (ou
-  `python3 install/fm1_install.py install/k-wa-sub-0.9.9-8.fwsc`).
+  `python3 install/fm1_install.py install/k-wa-sub-0.9.9-9.fwsc`).
 
 Un câble USB **de données**, aucun autre logiciel MIDI ouvert, rien à débrancher avant la fin. Pour revenir à KAWA :
 installer `kawa-0.5.fwsc` de la même façon. Pour le firmware officiel : M-UPGRADE, comme décrit pour KAWA. En cas de
