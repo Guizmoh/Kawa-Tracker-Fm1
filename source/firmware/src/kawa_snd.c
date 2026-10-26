@@ -450,9 +450,9 @@ static void voice_on(uint32_t t, uint32_t note, uint32_t vol, const tricks_t *k,
             fm6_lfo_key(&fm_lfo);
         }
     } else if (e == E_KIT)
-        drum_on(t, cell_idx(note) & 15u, (trick(k, FX_PITCH, &sv) ? sv : 0) + v->tb_tr + (cell_idx(note) >= 16u ? 5 : 0), trick(k, FX_CRUSH, &sv) ? sv : -1);   /* (17..32: the same drum, tuned up) */
+        drum_on(t, cell_idx(note) & 15u, (trick(k, FX_PITCH, &sv) ? sv : 0) + v->tb_tr + (cell_idx(note) >= 16u ? 12 : 0), trick(k, FX_CRUSH, &sv) ? sv : -1);   /* (17..32: the same drum, tuned up) */
     else {
-        if (nm == NM_SLICE && cell_idx(note) >= 16u) smp_extra = 5;
+        if (nm == NM_SLICE && cell_idx(note) >= 16u) smp_extra = 12;
         smp_on(t, nm == NM_SLICE ? cell_idx(note) & 15u : note, k);
     }
     if (e == E_SAMPLE && nm == NM_NOTE)
