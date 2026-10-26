@@ -2093,7 +2093,7 @@ static void play_toggle(void)
     play_from_cursor();
 }
 
-/* the note a key plays on track t (and the trick it carries: black keys roll the drum, reverse the slice) */
+/* the note a key plays on track t (a black key on a drum or slice track plays its left neighbour) */
 static uint32_t key_to_note(uint32_t t, uint32_t k, uint8_t *fx, uint8_t *fxv)
 {
     *fx = 0;
@@ -2108,9 +2108,7 @@ static uint32_t key_to_note(uint32_t t, uint32_t k, uint8_t *fx, uint8_t *fxv)
     {
         int32_t w = WHITE_OF_KEY[k];
         if (w < 0) {
-            w = k ? WHITE_OF_KEY[k - 1u] : 0;
-            *fx = ENG(t) == E_KIT ? FX_ROLL : FX_REV;
-            *fxv = ENG(t) == E_KIT ? 1u : 0u;
+            w = k ? WHITE_OF_KEY[k - 1u] : 0;   /* (a black key plays its left neighbour as it is: no roll, no reverse) */
         }
         return (uint32_t)w + 1u;
     }
