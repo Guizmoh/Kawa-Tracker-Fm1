@@ -2093,7 +2093,7 @@ static void play_toggle(void)
     play_from_cursor();
 }
 
-/* the note a key plays on track t (a black key on a drum or slice track plays its left neighbour) */
+/* the note a key plays on track t (a black key on a drum or slice track: its left neighbour, tuned 5 semitones up) */
 static uint32_t key_to_note(uint32_t t, uint32_t k, uint8_t *fx, uint8_t *fxv)
 {
     *fx = 0;
@@ -2108,7 +2108,9 @@ static uint32_t key_to_note(uint32_t t, uint32_t k, uint8_t *fx, uint8_t *fxv)
     {
         int32_t w = WHITE_OF_KEY[k];
         if (w < 0) {
-            w = k ? WHITE_OF_KEY[k - 1u] : 0;   /* (a black key plays its left neighbour as it is: no roll, no reverse) */
+            w = k ? WHITE_OF_KEY[k - 1u] : 0;
+            *fx = FX_PITCH;                     /* a black key: its left neighbour, 5 semitones higher (a drum or a slice tuned up) */
+            *fxv = 5u;
         }
         return (uint32_t)w + 1u;
     }
