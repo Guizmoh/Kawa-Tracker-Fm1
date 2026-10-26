@@ -260,6 +260,7 @@ static void smp_retune(smpv_t *v, int32_t tr)   /* the table's semitones over th
     v->step = tr ? (uint32_t)(((uint64_t)v->step0 * semi_ratio(tr)) >> 16) : v->step0;
 }
 
+static int32_t smp_extra;                       /* semitones added to the next smp_on (a black key on a slice track) */
 static void smp_on(uint32_t t, uint32_t note, const tricks_t *k)
 {
     const int8_t *p = prj.snd[t].p;
@@ -267,7 +268,8 @@ static void smp_on(uint32_t t, uint32_t note, const tricks_t *k)
     smpv_t *v = &smp[t][smp_next[t]], *o = &smp[t][smp_next[t] ^ 1u];
     const uint8_t *d;
     uint32_t len, rate, s0, s1, a, b, ratio, q = DUR_Q[clampi(p[P_LEN], 0, 11)];
-    int32_t sv, semis = p[P_STUNE] + ((lv_mask >> t & 1u) ? lv_transpose : 0) + (trick(k, FX_PITCH, &sv) ? sv : 0);
+    int32_t sv, semis = p[P_STUNE] + ((lv_mask >> t & 1u) ? lv_transpose : 0) + (trick(k, FX_PITCH, &sv) ? sv : 0) + smp_extra;
+    smp_extra = 0;
     if (!smp_source((uint32_t)clampi(p[P_SRC], 0, BRK_N + NUSR - 1), &d, &len, &rate))
         return;
     if (o->on)
@@ -448,9 +450,11 @@ static void voice_on(uint32_t t, uint32_t note, uint32_t vol, const tricks_t *k,
             fm6_lfo_key(&fm_lfo);
         }
     } else if (e == E_KIT)
-        drum_on(t, cell_idx(note), (trick(k, FX_PITCH, &sv) ? sv : 0) + v->tb_tr, trick(k, FX_CRUSH, &sv) ? sv : -1);
-    else
-        smp_on(t, nm == NM_SLICE ? cell_idx(note) : note, k);
+        drum_on(t, cell_idx(note) & 15u, (trick(k, FX_PITCH, &sv) ? sv : 0) + v->tb_tr + (cell_idx(note) >= 16u ? 5 : 0), trick(k, FX_CRUSH, &sv) ? sv : -1);   /* (17..32: the same drum, tuned up) */
+    else {
+        if (nm == NM_SLICE && cell_idx(note) >= 16u) smp_extra = 5;
+        smp_on(t, nm == NM_SLICE ? cell_idx(note) & 15u : note, k);
+    }
     if (e == E_SAMPLE && nm == NM_NOTE)
         smp_on(t, note, k);
     v->note = (uint8_t)note;

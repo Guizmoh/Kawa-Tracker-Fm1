@@ -129,8 +129,8 @@ static void note_text(uint32_t t, uint32_t note, char *s, int wide)
     uint32_t nm = note_mode(t);
     if (note == NOTE_NONE) { str_cat(s, wide ? " . " : " ."); return; }
     if (note == NOTE_OFF) { str_cat(s, wide ? "OFF" : "--"); return; }
-    if (nm == NM_DRUM) { str_cat(s, drum_code(t, cell_idx(note), wide)); return; }
-    if (nm == NM_SLICE) { char *p = s; while (*p) p++; if (wide) *p++ = 'S'; fmt_u(p, (cell_idx(note) & 15u) + 1u, 2); return; }
+    if (nm == NM_DRUM) { str_cat(s, drum_code(t, cell_idx(note) & 15u, wide)); if (cell_idx(note) >= 16u) { while (*s) s++; s[-1] = '+'; } return; }   /* (a tuned-up drum: its code ends in +) */
+    if (nm == NM_SLICE) { char *p = s; while (*p) p++; if (wide) *p++ = 'S'; fmt_u(p, (cell_idx(note) & 15u) + 1u, 2); if (cell_idx(note) >= 16u) { while (*p) p++; p[-1] = '+'; } return; }
     if (wide) {
         s = str_cat(s, NOTE_NAME[note % 12u]);
         fmt_u(s, note / 12u ? note / 12u - 1u : 0u, 1);
@@ -2109,8 +2109,7 @@ static uint32_t key_to_note(uint32_t t, uint32_t k, uint8_t *fx, uint8_t *fxv)
         int32_t w = WHITE_OF_KEY[k];
         if (w < 0) {
             w = k ? WHITE_OF_KEY[k - 1u] : 0;
-            *fx = FX_PITCH;                     /* a black key: its left neighbour, 5 semitones higher (a drum or a slice tuned up) */
-            *fxv = 5u;
+            return (uint32_t)w + 17u;           /* a black key: its left neighbour tuned up (notes 17..32), a sound of its own in the cell */
         }
         return (uint32_t)w + 1u;
     }
