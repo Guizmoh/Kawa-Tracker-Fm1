@@ -234,7 +234,7 @@ static void prj_new(void)
     memset(&prj, 0, sizeof prj);
     prj.magic = PRJ_MAGIC;
     prj.version = PRJ_VERSION;
-    prj.bpm = 100;
+    prj.bpm = 120;
     prj.swing = 50;
     prj.root = 9;                               /* A */
     prj.scale = 2;                              /* MINOR */
@@ -307,7 +307,7 @@ static void prj_demo(void)
 {
     uint32_t p, r;
     prj_new();
-    prj.bpm = 160;                              /* (the demo is written for 160; a new song starts at 100) */
+    prj.bpm = 120;                              /* (the demo and a new song both start at 120) */
     memcpy(prj.name, "KAWA QUEST", 11);
     prj.root = 0;                               /* C major (the dungeon and the boss are A minor: the same notes) */
     prj.scale = 1;

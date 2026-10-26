@@ -219,7 +219,7 @@ class Fm1 {
             mode: "app",                 // what it runs when plugged: app | loader
             appId: "FM-1_015",           // what the running firmware answers (the stock V15)
             loaderId: "ota-FM-1_900",    // what the update loader answers
-            afterId: "FM-1_955",         // what the new firmware answers after a good install
+            afterId: "FM-1_956",         // what the new firmware answers after a good install
             names: { app: "FM-1", loader: "ota-FM-1_900" },   // MIDI port names (the device re-enumerates)
             readTimeout: 300,            // ota_read: 5000 ms in the firmware, 3 tries
             reenum: 40,                  // ms off the bus while it restarts

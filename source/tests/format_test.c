@@ -44,6 +44,7 @@ int main(void)
     CHECK(slot_valid(1, 0) == 4, "demo-v4: not seen as format 4");
     prj_demo();
     want = prj;
+    want.bpm = 160;                             /* (the demo saved by 0.2 ran at 160; the demo now opens at 120) */
     prj_new();
     CHECK(prj_load(1) == 0, "demo-v4: refused");
     CHECK(prj.version == PRJ_VERSION, "demo-v4: still format %u", prj.version);

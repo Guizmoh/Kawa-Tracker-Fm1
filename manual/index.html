@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KAWA Manual</title>
-<meta name="description" content="The manual of KAWA 0.5 beta, Omnipotard's Pocket Tracker for the M-VAVE FM-1, made for chiptune and IDM: install it, make a song, then the sound and the effects.">
+<meta name="description" content="The manual of KAWA 0.6 beta, Omnipotard's Pocket Tracker for the M-VAVE FM-1, made for chiptune and IDM: install it, make a song, then the sound and the effects.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap">
@@ -158,7 +158,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       <li><a href="#options">Options</a></li>
       <li><a href="#raccourcis">Shortcuts</a></li>
       <li><a href="#aide">Troubleshooting</a></li>
-      <li><a href="#nouveau">What's new in 0.5</a></li>
+      <li><a href="#nouveau">What's new in 0.6 (and 0.5)</a></li>
       <li><a href="#soutenir">Support KAWA</a></li>
     </ol>
   </nav>
@@ -168,7 +168,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       <div>
         <h1>The KAWA manual <span class="beta">BETA</span></h1>
         <p>KAWA turns the <strong>M-VAVE FM-1</strong> into a pocket tracker made above all for <strong>chiptune and IDM</strong>: 4-bit waves, pulse and noise like the old consoles, FM, breakbeats cut into slices, rolls, stutter and glitch effects. It can do other styles, but that is what it is built for.</p>
-        <p>You do not need to know trackers. Start here, follow the five tutorials to make a real song, and come back to the reference when you want to go further. Version <strong>0.5 beta</strong>.</p>
+        <p>You do not need to know trackers. Start here, follow the five tutorials to make a real song, and come back to the reference when you want to go further. Version <strong>0.6 beta</strong>.</p>
       </div>
       <figure class="screen"><img src="img/en/01-boot.png" alt="The start-up screen: KAWA's dog, wearing headphones, and PRESS ANY KEY blinking" width="480" height="480"><figcaption>At power-on, KAWA's dog waits for you: press any key.</figcaption></figure>
     </header>
@@ -188,7 +188,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     <section id="beta">
       <div class="note warn">
         <h3>Beta version: read this first</h3>
-        <p>KAWA 0.5 <strong>has not been tried on a real FM-1 yet</strong>. It passes every check we can run without the hardware: the simulator, the web emulator, and an install tested against simulated power cuts.</p>
+        <p>KAWA 0.6 <strong>has not been tried on a real FM-1 yet</strong>. It passes every check we can run without the hardware: the simulator, the web emulator, and an install tested against simulated power cuts.</p>
         <p>Installing an unofficial firmware is at your own risk, but you can always <a href="#revenir">go back to the official one</a>. Use a stable power supply and never unplug the FM-1 during an install. Projects cannot be moved to a computer yet. If something seems odd, say so: that is what a beta is for.</p>
       </div>
     </section>
@@ -308,6 +308,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
           <tr><td>PROJECTS</td><td>The slot</td><td></td></tr>
         </tbody>
       </table></div>
+      <p>On a <strong>KIT</strong> or a sliced <strong>SAMPLE</strong> track, the black keys are sounds too: each plays the drum or the slice next to it, an octave higher. They are written in the cell like any note (a <code>+</code> after the name).</p>
     </section>
 
     <section id="premiers-pas">
@@ -596,16 +597,16 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     </section>
 
     <section id="nouveau">
-      <h2>What's new in 0.5</h2>
-      <p>For people coming from 0.4.</p>
+      <h2>What's new in 0.6 (and 0.5)</h2>
+      <p>For people coming from 0.4. 0.6 adds to 0.5 the black keys of kit and slice tracks (a sound of their own, an octave up), the demo opening on its last step, and a new song or demo at 120 BPM.</p>
       <ul>
-        <li>KAWA starts on an <strong>empty song</strong> (100 BPM) with a first-steps box; the demo is in <kbd>SAVE</kbd>, DEMO.</li>
+        <li>KAWA starts on an <strong>empty song</strong> (120 BPM) with a first-steps box; the demo (120 BPM too) is in <kbd>SAVE</kbd>, DEMO, and opens on its last step, 7 of 7.</li>
         <li><kbd>FX</kbd> has two pages: <strong>SENDS</strong> (new: a DRIVE, ECHO and REVERB per track), then <strong>LIVE</strong>.</li>
         <li><strong>Hold <kbd>SAVE</kbd>: the tools</strong> (it used to be one undo). <kbd>SAVE</kbd> held + <kbd>OCT−</kbd> / <kbd>OCT+</kbd> is undo / redo.</li>
         <li><strong>Undo covers sounds</strong> as well as patterns (ten steps), and a sound you edited is protected from PRESETS.</li>
         <li><strong>Buttons that moved:</strong> LFO and MODULATION are on <kbd>LFO</kbd>, MAGIC is <kbd>SCL</kbd> twice, the engine is <kbd>ARP</kbd> + PRESETS. SELECT turns pages; ALGORITHM moves along the chain and the groove.</li>
         <li><strong>New:</strong> 16, 32 or 64 steps, a metronome, <kbd>HOME</kbd> + <kbd>PLAY</kbd> panic, a blinking SAVE.</li>
-        <li><strong>Your songs:</strong> those from 0.2 to 0.4 open in 0.5. A 0.5 song also opens in 0.4 and 0.3 (the DRIVE send and the 64-step link are ignored there).</li>
+        <li><strong>Your songs:</strong> those from 0.2 to 0.5 open in 0.6. A 0.6 song also opens in 0.5, 0.4 and 0.3 (the DRIVE send and the 64-step link are ignored there).</li>
       </ul>
     </section>
 
@@ -618,7 +619,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     </section>
 
     <footer>
-      <p>KAWA 0.5 beta, Pocket Tracker by Omnipotard. Free software (GPL-3.0), built on Dinghy, Felucca (Hügelton Instruments) and SLOOP; the FM engine comes from msfa (Dexed, Apache-2.0). M-VAVE and FM-1 are trademarks of their owners; KAWA is not an M-VAVE product.</p>
+      <p>KAWA 0.6 beta, Pocket Tracker by Omnipotard. Free software (GPL-3.0), built on Dinghy, Felucca (Hügelton Instruments) and SLOOP; the FM engine comes from msfa (Dexed, Apache-2.0). M-VAVE and FM-1 are trademarks of their owners; KAWA is not an M-VAVE product.</p>
     </footer>
   </main>
 </div>

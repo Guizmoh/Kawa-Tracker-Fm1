@@ -124,7 +124,7 @@ def main():
     build.mkdir(parents=True, exist_ok=True)
     exe = ROOT / "build" / "host" / "kawa"
     subprocess.run(["cc", "-O2", "-Wall", "-Wno-unused-function", "-Wno-unused-parameter", "-DDINGHY_HOST",
-                    '-DAPP_VER="0.5"', "-Ifirmware/src", "-Ifirmware/gen", "-o", str(exe), "firmware/src/kawa.c"],
+                    '-DAPP_VER="0.6"', "-Ifirmware/src", "-Ifirmware/gen", "-o", str(exe), "firmware/src/kawa.c"],
                    cwd=ROOT, check=True)
     for code, lang in (("fr", 0), ("en", 1), ("es", 2)):
         s = build / f"shots-{code}.txt"

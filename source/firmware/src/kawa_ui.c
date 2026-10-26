@@ -2518,6 +2518,10 @@ static void pm_do(uint32_t act)                 /* the action, its questions ans
         dirty = 0;                              /* nothing to lose yet; the autosave takes it */
         auto_due = 1;
         song_fresh(act == PM_NEW ? prj.name : "DEMO !");
+        if (act == PM_DEMO) {                   /* the demo opens on its last step (7/7), pattern on the screen */
+            song_cur = (uint8_t)(prj.song_len - 1u);
+            ui_pat = prj.song[song_cur].pat;
+        }
         break;
     case PM_LOAD:
         if (prj_load(pm_slot)) { toast(TR("RIEN ICI", "NOTHING HERE", "NADA AQUI")); pm_state = PMS_SLOT; break; }

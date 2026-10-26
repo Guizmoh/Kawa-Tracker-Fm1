@@ -48,13 +48,13 @@ int main(void)
     uint32_t i, k, t, n, pk0 = 0, pk1 = 0, pk2 = 0;
     uint8_t seen[SP_N];
     fm1_ms = 1000;
-    /* 1. a new FM-1 starts on an empty song at 100 BPM, in English */
+    /* 1. a new FM-1 starts on an empty song at 120 BPM, in English */
     memset(host_settings, 0, sizeof host_settings);
     app_init();
     for (n = 0, k = 0; k < NPAT; k++)
         for (i = 0; i < NROW; i++)
             for (t = 0; t < NTRK; t++) n += prj.pat[k].c[i][t].note != 0;
-    CHECK(n == 0 && prj.bpm == 100 && lang == LANG_EN, "1. first start: %u notes, %u BPM, language %u (want 0, 100, English)", n, prj.bpm, lang);
+    CHECK(n == 0 && prj.bpm == 120 && lang == LANG_EN, "1. first start: %u notes, %u BPM, language %u (want 0, 120, English)", n, prj.bpm, lang);
     set_page(PG_TRACK);
     /* 1b. the boot screen stays until something is touched (a minute: still there); that touch is only that */
     page = PG_BOOT;
@@ -701,6 +701,13 @@ int main(void)
     n = undo_h.n;
     knob(0, 5);                                         /* LEVEL is already at its end */
     CHECK(undo_h.n == n, "15. an operator knob at its end is not an undo step");
+
+    /* 16. the demo opens at 120 BPM on its last step; a new song is 120 BPM too */
+    fresh();
+    pm_act = PM_DEMO; pm_do(PM_DEMO);
+    CHECK(prj.bpm == 120 && song_cur == prj.song_len - 1u && ui_pat == prj.song[song_cur].pat && prj.song_len == 7, "16. the demo: %u BPM, step %u of %u, pattern %u", prj.bpm, song_cur + 1u, prj.song_len, ui_pat);
+    pm_do(PM_NEW);
+    CHECK(prj.bpm == 120 && ui_pat == 0 && song_cur == 0, "16. a new song: %u BPM", prj.bpm);
     printf("ui_test: %s\n", fails ? "FAILED" : "passed");
     return fails != 0;
 }

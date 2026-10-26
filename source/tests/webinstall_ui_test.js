@@ -118,7 +118,7 @@ test("install: cancel in the dialog writes nothing; confirm writes; the guards w
     await page.waitForFunction(() => document.getElementById("dlg").open);
     const info = await text(page, "#dlg");
     assert.match(info, /Write KAWA to the FM-1\?/); assert.match(info, /Do not unplug the FM-1/); assert.match(info, /do not close or reload this page/);
-    assert.match(await text(page, "#dlg-info"), /^Package FM-1_955 \(kawa-[\d.]+\.fwsc\) onto the device FM-1_015 on the port "FM-1"\.$/);
+    assert.match(await text(page, "#dlg-info"), /^Package FM-1_956 \(kawa-[\d.]+\.fwsc\) onto the device FM-1_015 on the port "FM-1"\.$/);
     assert.equal(await page.evaluate(() => document.getElementById("dlg-no") === document.activeElement), true, "Cancel has the focus, not the write button");
     await shot(page, "dialog.png");
     await page.click("#dlg-no");
@@ -141,16 +141,16 @@ test("install: cancel in the dialog writes nothing; confirm writes; the guards w
     assert.equal(mid.keep, true); assert.equal(mid.go, true); assert.match(mid.pick, /off/); assert.match(mid.status, /^Writing \d+%$/); assert.equal(mid.writing, "writing");
     await shot(page, "writing.png");
     await page.waitForSelector("#done:not([hidden])", { timeout: 60000 });
-    assert.equal(await text(page, "#done"), "Done: the FM-1 runs KAWA (FM-1_955).");
-    assert.equal(await text(page, "#status"), "Done: the FM-1 runs KAWA (FM-1_955).");
+    assert.equal(await text(page, "#done"), "Done: the FM-1 runs KAWA (FM-1_956).");
+    assert.equal(await text(page, "#status"), "Done: the FM-1 runs KAWA (FM-1_956).");
     const end = await page.evaluate(() => {
         const e = new Event("beforeunload", { cancelable: true }); dispatchEvent(e);
         return { guard: e.defaultPrevented, keep: !document.getElementById("keep").hidden, go: document.getElementById("go").disabled,
                  bar: document.getElementById("bar").getAttribute("aria-valuenow"), log: document.getElementById("log").textContent };
     });
     assert.deepEqual([end.guard, end.keep, end.go, end.bar], [false, false, false, "100"], "guards released at the end");
-    assert.match(end.log, /^package: FM-1_955 {2}\(kawa-/); assert.match(end.log, /device: {2}FM-1_015 {2}\(FM-1\)/);
-    assert.match(end.log, /Starting the update on FM-1_015\nSwitching to update mode\nRestarting\ndone: the FM-1 runs FM-1_955$/);
+    assert.match(end.log, /^package: FM-1_956 {2}\(kawa-/); assert.match(end.log, /device: {2}FM-1_015 {2}\(FM-1\)/);
+    assert.match(end.log, /Starting the update on FM-1_015\nSwitching to update mode\nRestarting\ndone: the FM-1 runs FM-1_956$/);
     assert.equal(await appOk(page), true, "the simulated chip does not hold the package");
     const st = await stats(page);
     assert.equal(st.finishes, 1); assert.equal(st.upgrades, 2);
@@ -178,20 +178,20 @@ test("closing the tab while writing: the browser asks first (the real beforeunlo
     await ctx.close();
 });
 
-test("a newer package named in install/SHA256SUMS (0.5) is the one the page shows, downloads and installs: no version in the page", async () => {
+test("a newer package named in install/SHA256SUMS (0.6) is the one the page shows, downloads and installs: no version in the page", async () => {
     const hash = require("node:crypto").createHash("sha256").update(PKG).digest("hex");
     const { ctx, page, seen } = await open({ before: async pg => {
-        await pg.route("**/install/SHA256SUMS", r => r.fulfill({ contentType: "text/plain", body: `${hash}  kawa-0.5.fwsc\n${"c".repeat(64)}  kawa-0.4.fwsc\n${"d".repeat(64)}  older/kawa-0.3.fwsc\n` }));
-        await pg.route("**/install/kawa-0.5.fwsc", r => r.fulfill({ contentType: "application/octet-stream", body: PKG }));
+        await pg.route("**/install/SHA256SUMS", r => r.fulfill({ contentType: "text/plain", body: `${hash}  kawa-0.6.fwsc\n${"c".repeat(64)}  kawa-0.4.fwsc\n${"d".repeat(64)}  older/kawa-0.3.fwsc\n` }));
+        await pg.route("**/install/kawa-0.6.fwsc", r => r.fulfill({ contentType: "application/octet-stream", body: PKG }));
     } });
-    assert.equal(await text(page, "#pkg"), "Package: kawa-0.5.fwsc");
+    assert.equal(await text(page, "#pkg"), "Package: kawa-0.6.fwsc");
     await page.click("#go");
     await page.waitForFunction(() => document.getElementById("dlg").open);
-    assert.match(await text(page, "#dlg-info"), /\(kawa-0\.5\.fwsc\)/);
+    assert.match(await text(page, "#dlg-info"), /\(kawa-0\.6\.fwsc\)/);
     await page.click("#dlg-yes");
     await page.waitForSelector("#done:not([hidden])", { timeout: 60000 });
-    assert.equal(await text(page, "#done"), "Done: the FM-1 runs KAWA (FM-1_955).");
-    assert.ok(seen.requests.some(u => u.endsWith("/install/kawa-0.5.fwsc")) && !seen.requests.some(u => u.endsWith("/install/kawa-0.4.fwsc")));
+    assert.equal(await text(page, "#done"), "Done: the FM-1 runs KAWA (FM-1_956).");
+    assert.ok(seen.requests.some(u => u.endsWith("/install/kawa-0.6.fwsc")) && !seen.requests.some(u => u.endsWith("/install/kawa-0.4.fwsc")));
     await ctx.close();
 });
 
@@ -209,7 +209,7 @@ test("a local damaged .fwsc: refused, nothing written, no MIDI asked; then a goo
     assert.match(await text(page, "#dlg-info"), /\(kawa-local\.fwsc\)/);
     await page.click("#dlg-yes");
     await page.waitForSelector("#done:not([hidden])", { timeout: 60000 });
-    assert.equal(await text(page, "#done"), "Done: the FM-1 runs FM-1_955.", "a local file does not claim to be KAWA");
+    assert.equal(await text(page, "#done"), "Done: the FM-1 runs FM-1_956.", "a local file does not claim to be KAWA");
     assert.equal(await appOk(page), true);
     assert.equal(await page.evaluate(() => document.getElementById("error").hidden), true, "the old error is gone");
     await ctx.close();
@@ -247,7 +247,7 @@ test("no FM-1 / wrong model: the message, no dialog, nothing written", async () 
     t = await open({ dev: { appId: "FM-2_015" } });
     await t.page.click("#go");
     await t.page.waitForFunction(() => !document.getElementById("error").hidden);
-    assert.match(await text(t.page, "#error"), /^Error: the device is FM-2_015, the package is for FM-1_955$/);
+    assert.match(await text(t.page, "#error"), /^Error: the device is FM-2_015, the package is for FM-1_956$/);
     assert.equal(await t.page.evaluate(() => document.getElementById("dlg").open), false);
     assert.equal((await stats(t.page)).upgrades, 0);
     await t.ctx.close();
@@ -278,7 +278,7 @@ test("from file://: the page works, the download cannot, a local file installs",
     await page.waitForFunction(() => document.getElementById("dlg").open);
     await page.click("#dlg-yes");
     await page.waitForSelector("#done:not([hidden])", { timeout: 60000 });
-    assert.equal(await text(page, "#done"), "Done: the FM-1 runs FM-1_955.");
+    assert.equal(await text(page, "#done"), "Done: the FM-1 runs FM-1_956.");
     assert.deepEqual(seen.external, []);
     await ctx.close();
 });
