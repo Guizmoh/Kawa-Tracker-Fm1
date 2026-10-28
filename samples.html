@@ -41,10 +41,6 @@ p { margin: .5rem 0; }
 code, kbd { font-family: var(--mono); font-size: .92em; background: var(--panel-2); border: 1px solid var(--rule); border-radius: 5px; padding: 0 .3em; }
 :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
 [hidden] { display: none !important; }
-.top { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; align-items: center; justify-content: space-between; }
-.brand { font: 800 1.5rem/1 var(--mono); letter-spacing: .08em; color: var(--ink); text-decoration: none; }
-.brand span { color: var(--pink); }
-.top nav { display: flex; gap: 1rem; }
 .lead { font-size: 1.08rem; color: var(--muted); max-width: 46rem; margin: 0; }
 
 .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 16px; padding: 18px 20px; margin-top: 18px; }
@@ -168,15 +164,29 @@ body.dragging .overlay { display: grid; }
 }
 @media (max-width: 340px) { .slots { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .big, .bar > i, .drop { transition: none; } }
+
+/* the site menu, the same on every page */
+.ksite { position: sticky; top: 0; z-index: 50; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; padding: 6px 16px; background: rgba(18, 12, 36, .94); border-bottom: 1px solid #3b2e69; font: 600 15px/1 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+.ksite .ksb { margin-right: auto; padding-right: 12px; font: 800 20px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .08em; color: #eeeaff; text-decoration: none; }
+.ksite .ksb span { color: #ff5fb4; }
+.ksite a.ksl { display: inline-flex; align-items: center; min-height: 40px; padding: 0 13px; border: 1px solid transparent; border-radius: 999px; color: #eeeaff; text-decoration: none; }
+.ksite a.ksl:hover { border-color: #3ed8ff; color: #ffde6e; }
+.ksite a.ksl[aria-current="page"] { background: #251a47; border-color: #5a3d93; color: #ffde6e; }
+.ksite a:focus-visible { outline: 3px solid #ffde6e; outline-offset: 2px; }
+@media (max-width: 640px) { .ksite { position: static; padding: 6px 8px; } .ksite .ksb { flex-basis: 100%; padding: 4px 8px 6px; } .ksite a.ksl { padding: 0 11px; } }
 </style>
 </head>
 <body>
-<main>
+<nav class="ksite" aria-label="KAWA menu">
+  <a class="ksb" href="index.html" aria-label="KAWA, home">KA<span>WA</span></a>
+  <a class="ksl" href="index.html#install">Install</a>
+  <a class="ksl" href="emulator/index.html">Emulator</a>
+  <a class="ksl" href="manual/index.html">Manual</a>
+  <a class="ksl" href="samples.html" aria-current="page">Samples</a>
+  <a class="ksl" href="https://github.com/Guizmoh/Kawa-Tracker-Fm1">GitHub</a>
+</nav>
 
-<div class="top">
-  <a class="brand" href="index.html" aria-label="KAWA, home page">KA<span>WA</span></a>
-  <nav aria-label="Pages"><a href="index.html">Home and installer</a> <a href="manual/index.html">Manual</a></nav>
-</div>
+<main>
 
 <header>
   <h1>Put your own sounds into your <b>FM-1</b></h1>

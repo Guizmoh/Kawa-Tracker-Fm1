@@ -2,6 +2,8 @@
 
 ![KAWA, Pocket Tracker for the M-VAVE FM-1](manual/img/kawa-preview.png)
 
+**[▶ Ouvrir le site de KAWA](https://guizmoh.github.io/Kawa-Tracker-Fm1/)** — [Installer](https://guizmoh.github.io/Kawa-Tracker-Fm1/#install) · [Émulateur](https://guizmoh.github.io/Kawa-Tracker-Fm1/emulator/index.html) · [Manuel](https://guizmoh.github.io/Kawa-Tracker-Fm1/manual/fr.html) · [Samples](https://guizmoh.github.io/Kawa-Tracker-Fm1/samples.html)
+
 [English](README.md) · **Français** · [Español](README.es.md)
 
 KAWA est un firmware tracker pour le **M-VAVE FM-1**, fait avant tout pour la **chiptune et l'IDM** : ondes

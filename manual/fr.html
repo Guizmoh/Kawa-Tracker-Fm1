@@ -123,9 +123,29 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
   .support { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* the site menu, the same on every page */
+.ksite { position: sticky; top: 0; z-index: 50; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; padding: 6px 16px; background: rgba(18, 12, 36, .94); border-bottom: 1px solid #3b2e69; font: 600 15px/1 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+.ksite .ksb { margin-right: auto; padding-right: 12px; font: 800 20px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .08em; color: #eeeaff; text-decoration: none; }
+.ksite .ksb span { color: #ff5fb4; }
+.ksite a.ksl { display: inline-flex; align-items: center; min-height: 40px; padding: 0 13px; border: 1px solid transparent; border-radius: 999px; color: #eeeaff; text-decoration: none; }
+.ksite a.ksl:hover { border-color: #3ed8ff; color: #ffde6e; }
+.ksite a.ksl[aria-current="page"] { background: #251a47; border-color: #5a3d93; color: #ffde6e; }
+.ksite a:focus-visible { outline: 3px solid #ffde6e; outline-offset: 2px; }
+@media (max-width: 640px) { .ksite { position: static; padding: 6px 8px; } .ksite .ksb { flex-basis: 100%; padding: 4px 8px 6px; } .ksite a.ksl { padding: 0 11px; } }
+@media (min-width: 981px) { nav.toc { top: 52px; max-height: calc(100vh - 52px); } }
 </style>
 </head>
 <body>
+<nav class="ksite" aria-label="Menu de KAWA">
+  <a class="ksb" href="../index.html" aria-label="KAWA, home">KA<span>WA</span></a>
+  <a class="ksl" href="../index.html#install">Installer</a>
+  <a class="ksl" href="../emulator/index.html">Émulateur</a>
+  <a class="ksl" href="../manual/fr.html" aria-current="page">Manuel</a>
+  <a class="ksl" href="../samples.html">Samples</a>
+  <a class="ksl" href="https://github.com/Guizmoh/Kawa-Tracker-Fm1">GitHub</a>
+</nav>
+
 
 <div class="shell">
   <nav class="toc" aria-label="Sommaire">
