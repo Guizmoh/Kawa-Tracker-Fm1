@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K-WA SUB Installer</title>
+<style>
+/* one card on a dark room: the FM-1's colours, big steps, one button */
+:root { color-scheme: dark; --bg: #0b1214; --card: #141d20; --edge: #2a3a3d; --ink: #ecf2f2; --mute: #8fa0a2; --lime: #c8f03c; --red: #ff6b5a; }
+[hidden] { display: none !important; }
+html, body { background: var(--bg); color: var(--ink); margin: 0; }
+body { font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 24px max(16px, env(safe-area-inset-left)); }
+main { max-width: 560px; margin: 0 auto; display: grid; gap: 16px; }
+h1 { font-size: 26px; margin: 0; letter-spacing: .03em; } h1 b { color: var(--lime); }
+.sub { color: var(--mute); font-size: 13px; }
+.card { background: var(--card); border: 1px solid var(--edge); border-radius: 14px; padding: 18px; display: grid; gap: 12px; }
+ol { margin: 0; padding-left: 20px; color: var(--mute); } ol b { color: var(--ink); }
+button { font: 600 16px system-ui, sans-serif; border-radius: 10px; padding: 14px 18px; border: 1px solid var(--edge); background: #1e2a2d; color: var(--ink); cursor: pointer; }
+button.go { background: var(--lime); color: #111a06; border-color: var(--lime); }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+#status { font-weight: 600; min-height: 1.5em; }
+.bar { height: 10px; background: #0d1517; border-radius: 6px; overflow: hidden; border: 1px solid var(--edge); }
+.bar i { display: block; height: 100%; width: 0; background: var(--lime); transition: width .2s; }
+.bar.busy i { width: 30%; animation: slide 1.1s linear infinite; }
+@keyframes slide { from { margin-left: -30%; } to { margin-left: 100%; } }
+#ask { border-color: var(--lime); } #err { color: var(--red); white-space: pre-wrap; }
+#done { color: var(--lime); font-weight: 600; }
+pre { margin: 0; max-height: 140px; overflow: auto; background: #0d1517; border-radius: 8px; padding: 8px; font-size: 12px; color: var(--mute); }
+label { color: var(--mute); font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .bar.busy i { animation: none; width: 100%; opacity: .5; } }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>K-WA <b>SUB</b> · installateur</h1>
+    <div class="sub">Firmware __PKG_NAME__ (identité __PKG_ID__) · pour le M-VAVE FM-1 · fonctionne hors ligne</div>
+  </div>
+  <div class="card">
+    <ol>
+      <li><b>Chrome ou Edge</b> sur ordinateur (Web MIDI). Ferme les autres logiciels MIDI.</li>
+      <li>Allume le FM-1 et branche-le avec un câble USB <b>de données</b>.</li>
+      <li>Clique sur <b>Installer</b>, autorise l'accès MIDI, puis confirme.</li>
+      <li><b>Ne débranche rien</b> avant « Terminé ». En cas de coupure : rebranche et relance, l'installation reprend.</li>
+    </ol>
+    <div class="row">
+      <button id="go" class="go" type="button">Installer K-WA SUB</button>
+      <button id="probe" type="button">Que contient mon FM-1 ?</button>
+    </div>
+    <label>Autre fichier .fwsc (KAWA, une autre version) : <input id="file" type="file" accept=".fwsc"></label>
+  </div>
+  <div class="card">
+    <div id="status" role="status">Prêt.</div>
+    <div class="bar" id="bar" hidden><i id="fill"></i></div>
+    <div class="card" id="ask" hidden>
+      <div id="askText"></div>
+      <div class="row"><button id="yes" class="go" type="button">Écrire sur le FM-1</button><button id="no" type="button">Annuler</button></div>
+    </div>
+    <div id="done" hidden></div>
+    <div id="err" hidden></div>
+    <pre id="log" hidden></pre>
+  </div>
+  <div class="sub">Secours : maintenir OCT- à l'allumage (secours USB), puis relancer l'installation. Retour à KAWA : choisir son fichier .fwsc ci-dessus.</div>
+</main>
+<script>
+__WEBINSTALL_JS__
+</script>
+<script>
+"use strict";
+const K = window.KawaInstall, $ = id => document.getElementById(id);
+const PKG = Uint8Array.from(atob("__PKG_B64__"), c => c.charCodeAt(0)), PKG_NAME = "__PKG_NAME__";
+let busy = false;
+const status = t => { $("status").textContent = t; };
+const log = t => { const l = $("log"); l.hidden = false; l.textContent += (l.textContent ? "\n" : "") + t; l.scrollTop = l.scrollHeight; };
+function bar(p) {
+  const b = $("bar");
+  b.hidden = p === undefined; b.classList.toggle("busy", p === null);
+  $("fill").style.width = p === null || p === undefined ? "" : p + "%";
+}
+function lock(on) { busy = on; $("go").disabled = $("probe").disabled = $("file").disabled = on; }
+function ask(info) {
+  return new Promise(res => {
+    $("askText").textContent = (info.resume ? "Le FM-1 est en mode mise à jour : l'écriture interrompue va être terminée. " : "") +
+      "Écrire " + info.product + " (" + info.name + ") sur le FM-1 trouvé (" + info.device + ", port " + info.port + ") ?";
+    $("ask").hidden = false;
+    const end = v => { $("ask").hidden = true; res(v); };
+    $("yes").onclick = () => end(true); $("no").onclick = () => end(false);
+  });
+}
+window.addEventListener("beforeunload", e => { if (busy) { e.preventDefault(); e.returnValue = ""; } });
+async function install(bytes, name) {
+  if (busy) return;
+  lock(true); ["done", "err"].forEach(i => $(i).hidden = true); $("log").textContent = ""; $("log").hidden = true;
+  try {
+    status("Vérification du paquet…");
+    const res = await K.runInstall({
+      nav: navigator, bytes, name,
+      say: l => { log(l); if (/^package:/.test(l)) { status("Recherche du FM-1 (autorise l'accès MIDI)…"); bar(null); }
+                          if (/^device:/.test(l)) { status("FM-1 trouvé : confirme l'écriture."); bar(undefined); } },
+      step: (k, a) => { if (k === "write") { bar(a); status("Écriture " + a + " %"); } else { bar(null); status(K.STEP_TEXT[k](a)); } },
+      confirm: ask, busy: () => {},
+    });
+    if (res.cancelled) { status("Annulé. Rien n'a été écrit."); bar(undefined); return; }
+    bar(100); status("Terminé."); $("done").hidden = false; $("done").textContent = "Le FM-1 redémarre avec " + res.id + ". Tu peux le débrancher.";
+  } catch (e) {
+    bar(undefined);
+    const clean = e instanceof K.InstallError && (/^(badpkg|nomidi|download|notfound|model|foreign)$/.test(e.code) || /nothing was written/.test(e.message));
+    status(clean ? "Arrêté. Rien n'a été écrit." : "Arrêté.");
+    $("err").hidden = false; $("err").textContent = "Erreur : " + (e && e.message ? e.message : e) +
+      (clean ? "" : "\nSi le FM-1 affiche un écran de mise à jour : rebranche-le et clique sur Installer, l'écriture reprend.");
+  } finally { lock(false); }
+}
+$("go").onclick = () => install(PKG, PKG_NAME);
+$("file").onchange = async () => { const f = $("file").files[0]; if (f) await install(new Uint8Array(await f.arrayBuffer()), f.name); $("file").value = ""; };
+$("probe").onclick = async () => {
+  if (busy) return; lock(true); status("Recherche du FM-1…"); bar(null);
+  try { const r = await K.probe({ nav: navigator }); status("FM-1 sur « " + r.port + " » : " + r.id + (r.loader ? " (en mode mise à jour : Installer termine l'écriture)" : "")); }
+  catch (e) { status("Pas trouvé : " + (e && e.message ? e.message : e)); }
+  finally { bar(undefined); lock(false); }
+};
+if (!K) status("Le script d'installation n'a pas chargé.");
+else if (typeof navigator.requestMIDIAccess !== "function") { status("Ce navigateur n'a pas Web MIDI : utilise Chrome ou Edge sur ordinateur."); $("go").disabled = $("probe").disabled = true; }
+</script>
+</body>
+</html>
