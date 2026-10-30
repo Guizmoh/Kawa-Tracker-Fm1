@@ -28,6 +28,11 @@ jobs:
         uses: actions/checkout@v6
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+      - name: Build the web emulator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld python3
+          source/web/make_emulator.sh
       - name: Upload static site
         uses: actions/upload-pages-artifact@v4
         with:

@@ -3338,8 +3338,14 @@ static void app_init(void)
         set.font = g_font;
     }
     usr_boot();                                 /* the user's samples (kawa_sysex.c) */
-    if (prj_load(0))
-        prj_new();                              /* nothing saved: an empty song (the demo is in PROJECTS) */
+    if (prj_load(0)) {
+#if defined(KAWA_WASM)
+        prj_demo();                             /* the browser starts with the demo; the FM-1 still starts empty */
+        sq_req = 1u;                            /* POWER ON is a browser gesture, so audio is enabled */
+#else
+        prj_new();                              /* the FM-1 starts with an empty song (the demo is in PROJECTS) */
+#endif
+    }
     proj_cur = prj.home >= 1u && prj.home < NSLOT ? prj.home : 0xFF;   /* (SAVE goes back into its slot) */
     boot_ms = fm1_ms;
     last_input_ms = fm1_ms;
