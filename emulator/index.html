@@ -228,19 +228,19 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
 
 /* ---- a word from the author */
 .donate {
-  border-radius: 18px; padding: 22px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 28px;
-  background: radial-gradient(circle at 8% 0%, rgba(255,95,180,.20), transparent 55%), radial-gradient(circle at 100% 100%, rgba(255,176,58,.18), transparent 50%), var(--desk-2);
-  border: 1px solid rgba(255,176,58,.22);
+  border-radius: 12px; padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+  background: var(--desk-2);
+  border: 1px solid rgba(255,176,58,.16);
 }
-.donate > div { flex: 1 1 320px; min-width: 0; }
-.donate h2 { font-family: var(--display); font-weight: 400; font-size: 20px; letter-spacing: 0.04em; margin: 0 0 6px; color: var(--amber); }
-.donate p { margin: 0; color: #ebe4f6; font-size: 15.5px; max-width: 56ch; }
-.donate .sig { color: var(--muted); font-size: 13.5px; margin-top: 6px; }
-.kofi { display: inline-flex; align-items: center; gap: 10px; background: var(--amber); color: #1a1026; font: 700 15.5px/1.2 var(--text); text-decoration: none; padding: 13px 22px; border-radius: 999px; box-shadow: 0 4px 0 #a5660c; transition: filter .12s; }
+.donate > div { flex: 1 1 260px; min-width: 0; }
+.donate h2 { font-family: var(--display); font-weight: 400; font-size: 15px; letter-spacing: 0.04em; margin: 0 0 2px; color: var(--amber); }
+.donate p { margin: 0; color: #ebe4f6; font-size: 13px; max-width: 70ch; }
+.donate .sig { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.kofi { display: inline-flex; align-items: center; gap: 7px; background: var(--amber); color: #1a1026; font: 700 13px/1.2 var(--text); text-decoration: none; padding: 7px 12px; border-radius: 999px; box-shadow: 0 2px 0 #a5660c; transition: filter .12s; }
 .kofi:hover { filter: brightness(1.07); }
 .kofi:active { transform: translateY(2px); box-shadow: 0 2px 0 #a5660c; }
 .kofi:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
-.kofi svg { width: 24px; height: 24px; flex: none; }
+.kofi svg { width: 18px; height: 18px; flex: none; }
 .foot { color: var(--muted); font-size: 13.5px; max-width: 86ch; margin: 0; }
 
 @media (max-width: 940px) {
