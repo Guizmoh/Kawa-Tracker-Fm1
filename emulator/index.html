@@ -63,6 +63,8 @@ h1 span { color: var(--pink); }
   background: linear-gradient(90deg, rgba(255,176,58,.14), rgba(255,176,58,.04)); border: 1px solid rgba(255,176,58,.38); }
 .note svg { flex: none; width: 22px; height: 22px; color: var(--amber); margin-top: 1px; }
 .note b { color: var(--amber); }
+.tip-banner { margin: 0; padding: 7px 12px; border: 1px solid rgba(255,176,58,.24); border-radius: 10px; background: var(--desk-2); color: var(--text-2); text-align: center; font-size: 13.5px; line-height: 1.4; }
+.tip-banner a { color: var(--amber); font-weight: 700; text-underline-offset: 3px; }
 
 /* ---- the device */
 .device {
@@ -333,6 +335,7 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4.5"/><path d="M12 17.4v.1"/></svg>
     <span data-t="beta"></span>
   </p>
+  <p class="tip-banner"><span data-t="tip"></span></p>
 
   <section class="panel samples" id="samples" aria-labelledby="smp-h">
     <h2 id="smp-h" data-t="s.h"></h2>
@@ -527,6 +530,7 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       tag: "Pocket Tracker by Omnipotard · firmware for the M-VAVE FM-1",
       langs: "Language",
       beta: "<b>This is a beta.</b> KAWA has been tested on a real FM-1. Read the safety section of the manual before you install it. The official firmware can always be reinstalled with M-UPGRADE; that is the risky step, so never unplug the FM-1 while it runs.",
+      tip: "If you like this firmware and would like to encourage me to keep developing it, you can leave me a small tip on <a href=\"https://ko-fi.com/omnipotard\" target=\"_blank\" rel=\"noopener\">Ko-fi</a>.",
       screen: "The FM-1's screen",
       power: "The firmware runs here as it is, compiled to WebAssembly. Turn the sound on, power up, then press any key.",
       powerBtn: "POWER ON",
@@ -630,6 +634,7 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       tag: "Pocket Tracker by Omnipotard · firmware pour M-VAVE FM-1",
       langs: "Langue",
       beta: "<b>Ceci est une bêta.</b> KAWA a été testé sur un vrai FM-1. Lis la partie sécurité du manuel avant de l'installer. Le firmware officiel se réinstalle toujours avec M-UPGRADE ; c'est l'étape risquée : ne débranche jamais le FM-1 pendant qu'elle tourne.",
+      tip: "Si vous aimez ce firmware et souhaitez m'encourager à poursuivre son développement, vous pouvez m'offrir un petit pourboire sur <a href=\"https://ko-fi.com/omnipotard\" target=\"_blank\" rel=\"noopener\">Ko-fi</a>.",
       screen: "L'écran du FM-1",
       power: "Le firmware tourne ici tel quel, compilé en WebAssembly. Mets le son, allume, puis appuie sur une touche.",
       powerBtn: "ALLUMER",
@@ -733,6 +738,7 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       tag: "Pocket Tracker by Omnipotard · firmware para el M-VAVE FM-1",
       langs: "Idioma",
       beta: "<b>Esto es una beta.</b> KAWA se ha probado en un FM-1 real. Lee la sección de seguridad del manual antes de instalarlo. El firmware oficial siempre se puede reinstalar con M-UPGRADE; es el paso delicado: nunca desconectes el FM-1 mientras se ejecuta.",
+      tip: "Si te gusta este firmware y quieres animarme a seguir desarrollándolo, puedes dejarme una pequeña propina en <a href=\"https://ko-fi.com/omnipotard\" target=\"_blank\" rel=\"noopener\">Ko-fi</a>.",
       screen: "La pantalla del FM-1",
       power: "El firmware funciona aquí tal cual, compilado a WebAssembly. Sube el sonido, enciende y luego pulsa una tecla.",
       powerBtn: "ENCENDER",
