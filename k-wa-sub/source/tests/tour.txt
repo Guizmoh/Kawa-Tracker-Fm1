@@ -1,0 +1,32 @@
+# the eight pages (button ids: HOME 8, EDIT 6, ENV 4, SEQ 11, LFO 5, FX 2, ARP 10, GLO 7, SEL 3, SAVE 9, PLAY 12, REC 13)
+100 shot 01-play
+200 btn 6
+300 shot 02-bass
+400 btn 4
+500 shot 03-env
+600 btn 11
+700 shot 04-filter
+800 btn 5
+900 shot 05-lfo
+1000 btn 2
+1100 shot 06-fx
+1200 btn 10
+1300 shot 07-presets
+1400 btn 7
+1500 shot 08-system
+# a wobble: preset 8 (WOBBLE 01), a held note
+1600 btn 8
+1700 enc 6 7
+1800 on 5
+2600 shot 09-play-wobble
+2700 btn 5
+2800 shot 10-lfo-wobble
+3600 off 5
+3700 btn 6
+3800 btn 6
+3900 shot 11-osc-b
+4000 btn 3
+4100 shot 12-sub
+4200 btn 3
+4300 shot 13-combine
+4400 end
