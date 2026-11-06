@@ -44,7 +44,7 @@ enum { ENC_SELECT = 0, ENC_ALGORITHM = 1, ENC_KNOB1 = 2, ENC_KNOB2 = 3, ENC_KNOB
 #define APP_NAME "DINGHY"
 #endif
 #ifndef FELUCCA_ID
-#define FELUCCA_ID "FM-1_950"                   /* package identity: KAWA's 95N / 96N (tools/build.py; Dinghy is 99N) */
+#define FELUCCA_ID "FM-1_957"                   /* package identity: KAWA's own, every version (tools/build.py) */
 #endif
 #ifndef APP_VER
 #define APP_VER "0.0"

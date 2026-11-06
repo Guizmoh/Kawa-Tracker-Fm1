@@ -59,13 +59,10 @@ SDK_SHA256 = {
     "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
 }
 
-# Package identity (the .fwsc marker, the handshake answer). The installers want FM-1_9NN; all of these are KAWA's:
-#   no --release   FM-1_950 (firmware/src/kawa.c's default too, for a build outside build.py)
-#   --release X.Y  FM-1_9(5+X)Y: 0.Y -> 95Y (0.2 -> FM-1_952), 1.Y -> 96Y (1.0 -> FM-1_960): majors 0 and 1
-#                  never share one. X.Y.Z and X.Y-suffix keep X.Y's (the full version is in the text).
-# Taken by others: Felucca 900 and 9XY for its X.Y (v1.5.1: 915), Dinghy 99N. A major 2 (97N) is refused:
-# it needs a new scheme first.
-PRODUCT = "FM-1_950"
+# Package identity (the .fwsc marker, the handshake answer): KAWA's own, FM-1_957, the same for every version (as
+# The Firmware Hub asks: one identity per firmware, no other firmware uses it; the version is in the text and the file
+# name). The installers want FM-1_9NN. 0.2 to 0.6 used FM-1_95Y per version; 0.7 kept its 957 for good.
+PRODUCT = "FM-1_957"
 VERSION = None                      # APP_VER for release builds
 
 
@@ -381,19 +378,14 @@ def mmio_check():
 def main():
     global PRODUCT, VERSION
     ap = argparse.ArgumentParser()
-    ap.add_argument("--release", metavar="X.Y", help="release build: identity FM-1_95Y (0.Y) / FM-1_96Y (1.Y), "
-                    "version string X.Y")
+    ap.add_argument("--release", metavar="X.Y", help="release build: version string X.Y (the identity stays FM-1_957)")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
     name = "kawa.fwsc"
-    if a.release:                   # one digit each: the identity has room for two (X.Y; a .Z only in the text)
-        m = re.fullmatch(r"(\d)\.(\d)(\.\d)?(-[A-Za-z0-9]+)?", a.release)
+    if a.release:
+        m = re.fullmatch(r"(\d+)\.(\d+)(\.\d+)?(-[A-Za-z0-9]+)?", a.release)
         if not m:
-            raise SystemExit(f"--release {a.release}: use X.Y, X.Y.Z or X.Y-suffix, one digit each")
-        if int(m[1]) > 1:
-            raise SystemExit(f"--release {a.release}: KAWA's identities cover majors 0 (FM-1_95Y) and 1 (FM-1_96Y); "
-                             "a major 2 needs a new scheme first (tools/build.py, PRODUCT)")
-        PRODUCT = f"FM-1_9{5 + int(m[1])}{m[2]}"
+            raise SystemExit(f"--release {a.release}: use X.Y, X.Y.Z or X.Y-suffix")
         VERSION = m[1] + "." + m[2] + (m[3] or "")
         name = f"kawa-{a.release}.fwsc"
     fm1pkg_make.SDK = a.sdk

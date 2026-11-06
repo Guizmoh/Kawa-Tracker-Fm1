@@ -1,8 +1,11 @@
 {
-  "what": "KAWA is a pocket tracker for the M-VAVE FM-1, built for chiptune and IDM. Sequence six tracks with pulse, 4-bit wave, noise, 6-operator FM, drum kit and sample engines. Create patterns and songs, chop breaks, shape sounds with tables and groove, and perform with 32 live effects.",
+  "what": "KAWA is a pocket tracker for the M-VAVE FM-1, built for chiptune and IDM. Sequence six tracks with pulse, 4-bit wave, noise, 6-operator FM, drum kit and sample engines. Write patterns and songs, chop breaks, shape sounds with tables and groove, and perform with 32 live effects.",
+  "author": "Omnipotard",
   "kinds": [
     "tracker"
   ],
   "play": "https://guizmoh.github.io/Kawa-Tracker-Fm1/emulator/",
-  "editor": "https://guizmoh.github.io/K-WASUB_Firmware_for_FM1/data.html"
+  "cheat": "https://guizmoh.github.io/Kawa-Tracker-Fm1/manual/index.html",
+  "image": "docs/card.png",
+  "color": "#FF5FB4"
 }

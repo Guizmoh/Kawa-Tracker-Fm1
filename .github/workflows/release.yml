@@ -1,0 +1,16 @@
+# A release for each version tag (git tag v0.7 && git push origin v0.7): The Firmware Hub's shared workflow builds
+# KAWA from this commit, signs the package ("Built from source on GitHub") and attaches it to the release.
+name: release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  build:
+    uses: zvenson/fm1-build/.github/workflows/build.yml@v1
+    permissions:
+      contents: write         # the release
+      id-token: write         # the signing certificate
+      attestations: write     # the attestation
+    with:
+      build: source/build.sh --release "${GITHUB_REF_NAME#v}"
+      packages: source/build/kawa-*.fwsc

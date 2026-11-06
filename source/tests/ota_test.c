@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define FELUCCA_ID "FM-1_950"
+#define FELUCCA_ID "FM-1_957"
 #define FELUCCA_OTA_DRYRUN 0
 static char pkg_id[21];                         /* the package's marker identity */
 #define OTA_IDENTITY pkg_id

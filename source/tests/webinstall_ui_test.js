@@ -85,7 +85,7 @@ test("the page: content, image, links, no network, no console error", async () =
     assert.match(await text(page, "#browsers"), /Chrome, Edge or Opera/); assert.match(await text(page, "#browsers"), /Firefox and Safari/);
     assert.match(await text(page, "#browsers"), /INSTALL-Windows\.bat/);
     assert.match(await text(page, "#official"), /M-UPGRADE/);
-    assert.equal(await page.$eval("#official a", a => a.getAttribute("href")), "https://github.com/Guizmoh/Kawa-Tracker-Fm1#back-to-the-official-firmware");
+    assert.equal(await page.$eval("#official a", a => a.getAttribute("href")), "https://github.com/Guizmoh/Kawa-Tracker-Fm1#go-back-to-the-official-firmware-or-install-another-one");
     assert.equal(await page.$eval(".hero img", i => [i.getAttribute("src"), i.complete && i.naturalWidth]).then(x => x.join(" ")), "manual/img/kawa-preview.png 1280");
     const hrefs = await page.$$eval("a[href]", a => a.map(x => x.getAttribute("href")));
     for (const h of ["manual/index.html", "manual/fr.html", "manual/es.html", "emulator/index.html", "samples.html", "https://github.com/Guizmoh/Kawa-Tracker-Fm1", "https://github.com/Guizmoh/Kawa-Tracker-Fm1#readme"]) assert.ok(hrefs.includes(h), h);

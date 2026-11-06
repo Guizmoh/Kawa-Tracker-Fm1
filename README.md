@@ -14,7 +14,7 @@ effects. The screen speaks English, French or Spanish.
 
 > **Beta 0.7 — tested on a real FM-1.** It also passes every automatic check (size, memory, an install tested
 > against simulated power cuts, the simulator and the web emulator). Installing an
-> unofficial firmware is at your own risk, but you can always [go back to the official one](#go-back-to-the-official-firmware).
+> unofficial firmware is at your own risk, but you can always [go back to the official one](#go-back-to-the-official-firmware-or-install-another-one).
 
 ## Start here
 
@@ -85,9 +85,10 @@ KAWA. **Do not unplug it while it writes.** A cut install resumes at the next po
 written. If KAWA ever fails to start twice in a row, the FM-1 opens the USB rescue by itself (or hold **OCT−** while
 switching on): then run the installer again.
 
-## Go back to the official firmware
+## Go back to the official firmware (or install another one)
 
-1. Your KAWA projects are lost: the official firmware cannot read them.
+1. Your KAWA projects are lost: the official firmware cannot read them. The same goes for any other firmware, and
+   KAWA does not read the projects or samples another firmware saved. Projects cannot be copied to a computer yet.
 2. Use a stable power supply and a USB data cable. If KAWA misbehaves, open the USB rescue first (OCT− held while switching on).
 3. Install M-VAVE's official firmware **V15** with **M-UPGRADE**. KAWA first checks that the tool is M-VAVE's own and that
    its package matches your FM-1; otherwise nothing is written and KAWA keeps running.
