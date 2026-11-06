@@ -708,6 +708,24 @@ int main(void)
     CHECK(prj.bpm == 120 && song_cur == prj.song_len - 1u && ui_pat == prj.song[song_cur].pat && prj.song_len == 7, "16. the demo: %u BPM, step %u of %u, pattern %u", prj.bpm, song_cur + 1u, prj.song_len, ui_pat);
     pm_do(PM_NEW);
     CHECK(prj.bpm == 120 && ui_pat == 0 && song_cur == 0, "16. a new song: %u BPM", prj.bpm);
+    /* 17. a black key on a kit or slice track: the drum or slice on its left, an octave up (notes 17..32), shown with a + */
+    fresh();
+    {
+        uint32_t bk = 0, nt;
+        uint8_t fx, fxv;
+        char a[16], b[16];
+        for (bk = 1; bk < 27u && WHITE_OF_KEY[bk] >= 0; bk++) {}
+        prj.snd[0].engine = E_KIT; sound_build(0);
+        nt = key_to_note(0, bk, &fx, &fxv);
+        a[0] = b[0] = 0; note_text(0, nt, a, 1); note_text(0, nt, b, 0);
+        CHECK(nt == (uint32_t)WHITE_OF_KEY[bk - 1u] + 17u && fx == 0 && a[2] == '+' && !strchr(b, '+') && note_up(0, nt) && !note_up(0, nt - 16u),
+              "17. kit: black key %u -> note %u, \"%s\" / \"%s\"", bk, nt, a, b);
+        prj.snd[0].engine = E_SAMPLE; prj.snd[0].p[P_SMODE] = 0; sound_build(0);
+        a[0] = b[0] = 0; note_text(0, 28u, a, 1); note_text(0, 12u, b, 1);
+        CHECK(!strcmp(a, "12+") && !strcmp(b, "S12"), "17. slices: 12 an octave up \"%s\", 12 \"%s\"", a, b);
+        a[0] = b[0] = 0; note_text(0, 26u, a, 1); note_text(0, 28u, b, 1);
+        CHECK(strcmp(a, b) != 0, "17. slices 10 and 12 an octave up differ (\"%s\", \"%s\")", a, b);
+    }
     printf("ui_test: %s\n", fails ? "FAILED" : "passed");
     return fails != 0;
 }

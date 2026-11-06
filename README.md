@@ -12,7 +12,7 @@ live effects, tables, a groove, a drive on every track. (It can do other styles,
 for.) Six tracks, a step sequencer you write with the keys, a chain of patterns that makes a song, and 32 live
 effects. The screen speaks English, French or Spanish.
 
-> **Beta 0.6 — not yet tried on a real FM-1.** It passes every check we can run without the hardware (size,
+> **Beta 0.7 — not yet tried on a real FM-1.** It passes every check we can run without the hardware (size,
 > memory, an install tested against simulated power cuts, the simulator and the web emulator). Installing an
 > unofficial firmware is at your own risk, but you can always [go back to the official one](#go-back-to-the-official-firmware).
 
@@ -20,7 +20,7 @@ effects. The screen speaks English, French or Spanish.
 
 | | |
 | --- | --- |
-| **1. Install** | **[Install from your browser](https://guizmoh.github.io/Kawa-Tracker-Fm1/)** (Chrome or Edge: plug the FM-1 in, click *Install KAWA*). Or download [`kawa-0.6.fwsc`](kawa-0.6.fwsc) and use the [launcher](#install) for your computer. |
+| **1. Install** | **[Install from your browser](https://guizmoh.github.io/Kawa-Tracker-Fm1/)** (Chrome or Edge: plug the FM-1 in, click *Install KAWA*). Or download [`kawa-0.7.fwsc`](kawa-0.7.fwsc) and use the [launcher](#install) for your computer. |
 | **2. Play** | Switch the FM-1 on and press any key. Press **REC**, play the keys, press **PLAY**. **HOME held** shows the help of the page you are on. |
 | **3. Learn** | **[The manual](https://guizmoh.github.io/Kawa-Tracker-Fm1/manual/index.html)** ([FR](https://guizmoh.github.io/Kawa-Tracker-Fm1/manual/fr.html), [ES](https://guizmoh.github.io/Kawa-Tracker-Fm1/manual/es.html)): five short tutorials, from an empty song to a saved one. Or try KAWA right now in the **[web emulator](https://guizmoh.github.io/Kawa-Tracker-Fm1/emulator/index.html)**. |
 | **4. Your sounds** | The **[sample importer](https://guizmoh.github.io/Kawa-Tracker-Fm1/samples.html)** puts your own WAV / MP3 / OGG / FLAC files into KAWA over USB. |

@@ -756,7 +756,7 @@ static void mg_vary(pat_t *p, uint32_t t, uint32_t inten)
         case 0:                                 /* another note near it */
             if (c->note && c->note != NOTE_OFF) {
                 if (IS_TONAL(t)) c->note = (uint8_t)scale_step(c->note, rnd(2) ? 1 : -1);
-                else c->note = (uint8_t)(1u + (cell_idx(c->note) + 1u + rnd(15)) % 16u);
+                else c->note = (uint8_t)(1u + (cell_idx(c->note) & 16u) + (cell_idx(c->note) + 1u + rnd(15)) % 16u);   /* (a drum an octave up stays up) */
             }
             break;
         case 1: {                               /* trade with a neighbour */
@@ -824,7 +824,7 @@ static void lane_apply(uint32_t tool, pat_t *p, uint32_t t, uint32_t inten, uint
             cell_t *c = &p->c[r][t];
             if (!c->note || c->note == NOTE_OFF) continue;
             if (IS_TONAL(t)) c->note = (uint8_t)(prj.lock ? scale_step(c->note, 1) : (c->note < 119u ? c->note + 1u : c->note));
-            else c->note = (uint8_t)(1u + (cell_idx(c->note) + 1u) % 16u);
+            else c->note = (uint8_t)(1u + (cell_idx(c->note) & 16u) + (cell_idx(c->note) + 1u) % 16u);
         }
         break;
     case MG_CLEAR:
