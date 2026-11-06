@@ -81,7 +81,7 @@ test("the page: content, image, links, no network, no console error", async () =
     assert.equal(await text(page, "h1"), "KAWA — Pocket Tracker for the M-VAVE FM-1");
     assert.equal(await text(page, ".lead"), "A free tracker firmware for the M-VAVE FM-1. Write patterns on six tracks (FM, chiptune, drums, breaks, samples), chain them into a song, and play live effects. Beta, GPL-3.0.");
     const warn = await text(page, ".warn");
-    assert.match(warn, /Not yet tried on a real FM-1/); assert.match(warn, /unofficial firmware/); assert.match(warn, /at your own risk/); assert.match(warn, /M-UPGRADE/);
+    assert.match(warn, /Tested on a real FM-1/); assert.match(warn, /unofficial firmware/); assert.match(warn, /at your own risk/); assert.match(warn, /M-UPGRADE/);
     assert.match(await text(page, "#browsers"), /Chrome, Edge or Opera/); assert.match(await text(page, "#browsers"), /Firefox and Safari/);
     assert.match(await text(page, "#browsers"), /INSTALL-Windows\.bat/);
     assert.match(await text(page, "#official"), /M-UPGRADE/);

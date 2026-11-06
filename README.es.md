@@ -21,7 +21,7 @@ los encadenas en una canción y tocas 32 efectos en directo al estilo de un Pock
 
 > **Estado: 0.5, beta.** KAWA compila para el FM-1 y pasa todas las comprobaciones de su plataforma: tamaño,
 > memoria, acceso al hardware, y una instalación probada con cortes de corriente simulados. Funciona en el
-> simulador y en el emulador web. **Todavía no se ha probado en un FM-1 real.** Instalar un firmware no
+> simulador y en el emulador web. **Se ha probado en un FM-1 real.** Instalar un firmware no
 > oficial es bajo tu responsabilidad: lee [Instalar](#instalar) y
 > [Volver al firmware oficial](#volver-al-firmware-oficial) antes de empezar.
 

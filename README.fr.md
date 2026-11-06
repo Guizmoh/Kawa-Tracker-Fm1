@@ -22,7 +22,7 @@ espagnol.
 
 > **État : 0.5, bêta.** KAWA compile pour le FM-1 et passe toutes les vérifications de sa plateforme :
 > taille, mémoire, accès au matériel, chemin d'installation testé avec des coupures de courant simulées.
-> Il tourne dans le simulateur et dans l'émulateur web. Il n'a **pas encore été essayé sur un vrai FM-1**.
+> Il tourne dans le simulateur et dans l'émulateur web, et **il a été testé sur un vrai FM-1**.
 > Installer un firmware non officiel se fait à tes risques : lis [Installer](#installer) et
 > [Revenir au firmware officiel](#revenir-au-firmware-officiel) avant de commencer.
 

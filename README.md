@@ -12,8 +12,8 @@ live effects, tables, a groove, a drive on every track. (It can do other styles,
 for.) Six tracks, a step sequencer you write with the keys, a chain of patterns that makes a song, and 32 live
 effects. The screen speaks English, French or Spanish.
 
-> **Beta 0.7 — not yet tried on a real FM-1.** It passes every check we can run without the hardware (size,
-> memory, an install tested against simulated power cuts, the simulator and the web emulator). Installing an
+> **Beta 0.7 — tested on a real FM-1.** It also passes every automatic check (size, memory, an install tested
+> against simulated power cuts, the simulator and the web emulator). Installing an
 > unofficial firmware is at your own risk, but you can always [go back to the official one](#go-back-to-the-official-firmware).
 
 ## Start here
