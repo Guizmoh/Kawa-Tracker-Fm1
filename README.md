@@ -2,7 +2,7 @@
 
 ![KAWA, Pocket Tracker for the M-VAVE FM-1](manual/img/kawa-preview.png)
 
-**[▶ Open the KAWA website](https://guizmoh.github.io/Kawa-Tracker-Fm1/)** — [Install](https://guizmoh.github.io/Kawa-Tracker-Fm1/#install) · [Emulator](https://guizmoh.github.io/Kawa-Tracker-Fm1/emulator/index.html) · [Manual](https://guizmoh.github.io/Kawa-Tracker-Fm1/manual/index.html) · [Samples](https://guizmoh.github.io/Kawa-Tracker-Fm1/samples.html)
+**[▶ Open the KAWA website](https://guizmoh.github.io/Kawa-Tracker-Fm1/)** — [Install](https://guizmoh.github.io/Kawa-Tracker-Fm1/#install) · [Emulator](https://guizmoh.github.io/Kawa-Tracker-Fm1/emulator/index.html) · [Manual](https://guizmoh.github.io/Kawa-Tracker-Fm1/manual/index.html) · [Cheat sheet](https://guizmoh.github.io/Kawa-Tracker-Fm1/docs/cheatsheet.html) · [Samples](https://guizmoh.github.io/Kawa-Tracker-Fm1/samples.html)
 
 **English** · [Français](README.fr.md) · [Español](README.es.md)
 
