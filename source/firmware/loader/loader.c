@@ -72,7 +72,7 @@ static void ldr_record_clear(void)
 {
     fm1_updata_parm_clear();                        /* CRC 0: the SPL ignores it on a warm reset */
 }
-static int ldr_flash_known(void) { return fl_jedec_ram() == 0x856014u; }   /* as the app (project.c) */
+static int ldr_flash_known(void) { return FL_CHIP_OK(fl_jedec_ram()); }   /* as the app (platform.c) */
 static void ldr_progress(uint32_t done, uint32_t total) { (void)done; (void)total; ldr_poll(); }
 #include "ldr_core.c"
 #if LDR_APP_LO != 0x4000u || LDR_DATA_LO != 0x97000u || LDR_DATA_HI != 0xE0000u || LDR_REC_HI != 0xFC000u || \

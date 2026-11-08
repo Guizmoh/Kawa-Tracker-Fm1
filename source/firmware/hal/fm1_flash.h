@@ -143,7 +143,14 @@ RAMINL int fl_wait_ready(uint32_t max_us, uint32_t *took_us)
 
 /* ---- entry points: IRQs OFF, args/buffers in RAM ---- */
 
-static RAMFN uint32_t fl_jedec_ram(void)                 /* expect 0x856014 */
+/* The FM-1's 1 MiB SPI NOR: a Puya (0x856014) on the first units, a UC25HQ80 (0xB36014) on units sold
+ * since autumn 2026 (same size, same command set: thefirmwarehub.com/kb/#newchip, tested on real units).
+ * Any later part of the same density may answer with the capacity byte 0x14 too; this driver only uses
+ * the generic SPI NOR commands (9F, 06, 20, 02, 0B, 05, 35), so it is not tied to either chip beyond this
+ * check. Stay conservative: a chip neither flash_ok nor the loader recognise is simply not written to. */
+#define FL_CHIP_OK(id) ((id) == 0x856014u || (id) == 0xB36014u)
+
+static RAMFN uint32_t fl_jedec_ram(void)                 /* expect 0x856014 or 0xB36014 (FL_CHIP_OK) */
 {
     fl_saved_t s; uint32_t id;
     if (fl_enter(&s)) return 0;
