@@ -726,6 +726,20 @@ int main(void)
         a[0] = b[0] = 0; note_text(0, 26u, a, 1); note_text(0, 28u, b, 1);
         CHECK(strcmp(a, b) != 0, "17. slices 10 and 12 an octave up differ (\"%s\", \"%s\")", a, b);
     }
+
+    /* 18. the demo shows its last pattern (7/7), but the first PLAY still starts the song at its first one;
+     * after that, PLAY follows the pattern on the screen again, as everywhere else */
+    fresh();
+    pm_act = PM_DEMO; pm_do(PM_DEMO);
+    play_toggle();
+    CHECK(sq_start_pos == 0 && prj.song[sq_start_pos].pat == 0 && ui_pat == prj.song_len - 1u,
+          "18. demo: the screen shows pattern %u of %u, the first PLAY starts song entry %u", ui_pat + 1u, prj.song_len, sq_start_pos);
+    sq_play = 0; sq_req = 0;
+    ui_pat = 3; song_cur = 3;
+    play_toggle();
+    CHECK(sq_start_pos == 3, "18. demo: PLAY again follows the screen (entry %u, want 3)", sq_start_pos);
+    sq_play = 0; sq_req = 0;
+
     printf("ui_test: %s\n", fails ? "FAILED" : "passed");
     return fails != 0;
 }

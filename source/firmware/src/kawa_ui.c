@@ -37,6 +37,7 @@ static void preset_commit(void);
 static uint8_t pre_cand = 0xFF, pre_cand_t;     /* an edited sound: the factory sound PRESETS is showing, OCT+ loads it */
 static uint32_t pre_cand_ms;
 static uint8_t song_empty;                      /* nothing written anywhere (the first-start hint) */
+static uint8_t play_from_top;                   /* the demo opens on its last pattern: the first PLAY still starts the song at its first entry */
 static uint8_t home_did;
 static uint32_t boot_eat;                       /* buttons that closed the boot screen: their release does nothing */
 static uint8_t fx_back = PG_TRACK;              /* where FX goes back to (its own: PROJECTS and the help keep page_back) */                        /* HOME + PLAY (panic) happened: its release does nothing */
@@ -2085,6 +2086,17 @@ static void set_page(uint32_t p)
 
 static void play_from_cursor(void)               /* PLAY: the pattern on the screen, or the song from its entry */
 {
+    if (play_from_top) {                        /* the demo, first played: its first entry, not the one on screen */
+        play_from_top = 0;
+        if (prj.mode && prj.song_len) {
+            sq_start_pos = 0;
+            sq_start_pat = (uint8_t)pat_head(prj.song[0].pat);
+            sq_next = 0xFF;
+            follow = 1;
+            sq_req = 1;
+            return;
+        }
+    }
     sq_start_pat = (uint8_t)pat_head(ui_pat);   /* (a 64-step pair: from its first half) */
     sq_start_pos = 0;
     if (prj.mode) {                             /* the song: from the cursor's entry, else from where the pattern is */
@@ -2515,6 +2527,7 @@ static void song_fresh(const char *msg)       /* after a new song, a load, the d
     ui_pat = 0;
     cur_row = 0;
     song_cur = 0;
+    play_from_top = 0;
     pm_state = PMS_MENU;
     toast(msg);
     set_page(PG_TRACK);
@@ -2534,6 +2547,7 @@ static void pm_do(uint32_t act)                 /* the action, its questions ans
         if (act == PM_DEMO) {                   /* the demo opens on its last step (7/7), pattern on the screen */
             song_cur = (uint8_t)(prj.song_len - 1u);
             ui_pat = prj.song[song_cur].pat;
+            play_from_top = 1;                  /* but PLAY, the first time, still starts the song at P01 */
         }
         break;
     case PM_LOAD:
