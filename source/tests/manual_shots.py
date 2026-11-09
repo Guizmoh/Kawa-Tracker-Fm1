@@ -88,6 +88,12 @@ STEPS = [
     ("75-preset-browse", [("btn", 8), ("enc", 1, -10), ("btn", 6), ("enc", 2, 1), ("wait", 200), ("enc", 6, 1)]),
     ("76-preset-loaded", [("wait", 1200), ("btn", 1)]),
     ("77-undo-sound", [("wait", 1200), ("press", 9), ("btn", 0), ("release", 9)]),
+    # 0.10: K-GLITCH's effects: the DESTROY bank (a pad held: the scratch), the FILTER, the FX SEQ
+    ("78-live-destroy", [("btn", 8), ("btn", 12), ("btn", 2), ("btn", 2), ("btn", 0), ("btn", 0), ("btn", 0), ("btn", 1), ("btn", 1), ("hold", WHITE[3]),
+                         ("wait", 900)]),
+    ("79-filter", [("up",), ("btn", 2), ("enc", 2, 8), ("enc", 3, -4), ("enc", 4, 10), ("enc", 5, 30), ("wait", 600)]),
+    ("80-fxseq", [("btn", 2), ("key", WHITE[0]), ("enc", 2, 10), ("key", WHITE[4]), ("enc", 2, 18), ("key", WHITE[7]),
+                  ("key", WHITE[8]), ("wait", 700)]),
 ]
 
 def script(lang):
@@ -124,7 +130,7 @@ def main():
     build.mkdir(parents=True, exist_ok=True)
     exe = ROOT / "build" / "host" / "kawa"
     subprocess.run(["cc", "-O2", "-Wall", "-Wno-unused-function", "-Wno-unused-parameter", "-DDINGHY_HOST",
-                    '-DAPP_VER="0.9"', "-Ifirmware/src", "-Ifirmware/gen", "-o", str(exe), "firmware/src/kawa.c"],
+                    '-DAPP_VER="0.10"', "-Ifirmware/src", "-Ifirmware/gen", "-o", str(exe), "firmware/src/kawa.c"],
                    cwd=ROOT, check=True)
     for code, lang in (("fr", 0), ("en", 1), ("es", 2)):
         s = build / f"shots-{code}.txt"

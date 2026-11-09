@@ -1,4 +1,4 @@
-# A release for each version tag (git tag v0.9 && git push origin v0.9): The Firmware Hub's shared workflow builds
+# A release for each version tag (git tag v0.10 && git push origin v0.10): The Firmware Hub's shared workflow builds
 # KAWA from this commit, signs the package ("Built from source on GitHub") and attaches it to the release.
 name: release
 on:

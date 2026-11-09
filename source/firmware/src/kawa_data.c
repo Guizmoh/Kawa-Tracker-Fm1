@@ -54,11 +54,11 @@ static void theme_set(uint32_t k)
 static const uint16_t KNOB_COL[4] = {RGB(255, 92, 92), RGB(255, 204, 64), RGB(92, 226, 116), RGB(84, 164, 255)};
 /* one page, one colour (the page's pill, the emulator's buttons) */
 enum { PG_TRACK, PG_GRID, PG_SOUND, PG_ENV, PG_MIX, PG_MAGIC, PG_SCALE, PG_SONG, PG_PROJ, PG_OPT, PG_FX, PG_HELP, PG_BOOT,
-       PG_GROOVE, PG_SEND, PG_N };                       /* (GROOVE last: the emulator knows the others by their number) */
+       PG_GROOVE, PG_SEND, PG_FILT, PG_FXSEQ, PG_N };                       /* (GROOVE last: the emulator knows the others by their number) */
 static const uint16_t PAGE_COL[PG_N] = {RGB(169, 139, 255), RGB(255, 96, 146), RGB(62, 216, 255), RGB(98, 242, 154),
                                         RGB(255, 160, 60), RGB(255, 210, 90), RGB(200, 240, 90), RGB(255, 160, 60),
                                         RGB(100, 150, 255), RGB(255, 160, 60), RGB(255, 120, 200), RGB(169, 139, 255),
-                                        RGB(169, 139, 255), RGB(255, 160, 60), RGB(255, 120, 200)};
+                                        RGB(169, 139, 255), RGB(255, 160, 60), RGB(255, 120, 200), RGB(255, 70, 90), RGB(90, 200, 255)};
 
 /* ---- the 24 parameters of a track: SOUND 1, SOUND 2 (the engine's), ENVELOPE, MIX, EFFECT, LFO */
 #define NPARAM 28u
@@ -387,9 +387,11 @@ static const lfx_t LFX[LF_N] = {
     {{"SANS", "NO", "SIN"}, {"MELO", "MELODY", "MELODIA"}, ICO_NOMEL},
     {{"SANS", "NO", "SIN"}, {"BEAT", "BEAT", "RITMO"}, ICO_NOBEAT},
 };
-static const char *const LBANK_NAMES[LANG_N][2] = {{"POCHE", "CASSE"}, {"POCKET", "WRECK"}, {"BOLSA", "ROTO"}};
+static const char *const LBANK_NAMES[LANG_N][4] = {{"POCHE", "CASSE", "DETRUIT", "BEAT"}, {"POCKET", "WRECK", "DESTROY", "BEAT"},
+                                                   {"BOLSA", "ROTO", "DESTRUYE", "BEAT"}};   /* (DESTROY, BEAT: K-GLITCH's, kawa_kg.c) */
 #define LBANK_NAME LBANK_NAMES[lang]
-static const uint16_t LBANK_COL[2] = {RGB(255, 120, 200), RGB(255, 110, 70)};
+static const uint16_t LBANK_COL[4] = {RGB(255, 120, 200), RGB(255, 110, 70), RGB(255, 70, 90), RGB(90, 200, 255)};
+#define NLBANK 4u
 
 /* ---- the magic tools: tap LFO (MAGIE), then a white key; one undo each (SAVE held) */
 enum { MG_CHOP, MG_BEAT, MG_MELO, MG_BASS, MG_ARP, MG_EUCL, MG_VARY, MG_ROLLS, MG_NUANCE, MG_DOUBLE, MG_SHIFT,

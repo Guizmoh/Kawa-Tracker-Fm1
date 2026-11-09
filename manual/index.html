@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KAWA Manual</title>
-<meta name="description" content="The manual of KAWA 0.9 beta, Omnipotard's Pocket Tracker for the M-VAVE FM-1, made for chiptune and IDM: install it, make a song, then the sound and the effects.">
+<meta name="description" content="The manual of KAWA 0.10 beta, Omnipotard's Pocket Tracker for the M-VAVE FM-1, made for chiptune and IDM: install it, make a song, then the sound and the effects.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap">
@@ -168,7 +168,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       <li><a href="#tuto-chaine">Tutorial 4 · Chain the patterns</a></li>
       <li><a href="#tuto-sauver">Tutorial 5 · Save</a></li>
       <li><a href="#son">The sound</a></li>
-      <li><a href="#live">Sends and live effects</a></li>
+      <li><a href="#live">Sends, live effects, filter, FX SEQ</a></li>
       <li><a href="#magie">Magic</a></li>
       <li><a href="#cases">Cell effects</a></li>
       <li><a href="#tables">Tables</a></li>
@@ -178,7 +178,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       <li><a href="#options">Options</a></li>
       <li><a href="#raccourcis">Shortcuts</a></li>
       <li><a href="#aide">Troubleshooting</a></li>
-      <li><a href="#nouveau">What's new in 0.9 (and 0.5 to 0.8)</a></li>
+      <li><a href="#nouveau">What's new in 0.10 (and 0.5 to 0.9)</a></li>
       <li><a href="#soutenir">Support KAWA</a></li>
     </ol>
   </nav>
@@ -188,7 +188,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
       <div>
         <h1>The KAWA manual <span class="beta">BETA</span></h1>
         <p>KAWA turns the <strong>M-VAVE FM-1</strong> into a pocket tracker made above all for <strong>chiptune and IDM</strong>: 4-bit waves, pulse and noise like the old consoles, FM, breakbeats cut into slices, rolls, stutter and glitch effects. It can do other styles, but that is what it is built for.</p>
-        <p>You do not need to know trackers. Start here, follow the five tutorials to make a real song, and come back to the reference when you want to go further. Version <strong>0.9 beta</strong>.</p>
+        <p>You do not need to know trackers. Start here, follow the five tutorials to make a real song, and come back to the reference when you want to go further. Version <strong>0.10 beta</strong>.</p>
       </div>
       <figure class="screen"><img src="img/en/01-boot.png" alt="The start-up screen: KAWA's dog, wearing headphones, and PRESS ANY KEY blinking" width="480" height="480"><figcaption>At power-on, KAWA's dog waits for you: press any key.</figcaption></figure>
     </header>
@@ -208,7 +208,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     <section id="beta">
       <div class="note warn">
         <h3>Beta version: read this first</h3>
-        <p>KAWA 0.9 <strong>has been tested on a real FM-1</strong>. It also passes every automatic check: the simulator, the web emulator, and an install tested against simulated power cuts.</p>
+        <p>KAWA 0.10 <strong>has been tested on a real FM-1</strong>. It also passes every automatic check: the simulator, the web emulator, and an install tested against simulated power cuts.</p>
         <p>Installing an unofficial firmware is at your own risk, but you can always <a href="#revenir">go back to the official one</a>. Use a stable power supply and never unplug the FM-1 during an install. Projects cannot be moved to a computer yet. If something seems odd, say so: that is what a beta is for.</p>
       </div>
     </section>
@@ -299,7 +299,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
           <tr><td><kbd>SCL</kbd></td><td>SCALE: root, scale, lock</td><td>MAGIC: 16 tools on the white keys; then back to the tracks</td></tr>
           <tr><td><kbd>GLO</kbd></td><td>SONG: tempo, swing, the chain</td><td>GROOVE; then OPTIONS</td></tr>
           <tr><td><kbd>SAVE</kbd></td><td>PROJECTS: the song menu (the button blinks while there are unsaved changes)</td><td>Held: the <a href="#outils">tools</a></td></tr>
-          <tr><td><kbd>FX</kbd></td><td>SENDS: drive, echo and reverb of each track</td><td>LIVE: the 32 live effects; a third tap goes back</td></tr>
+          <tr><td><kbd>FX</kbd></td><td>SENDS: drive, echo and reverb of each track</td><td>LIVE: 64 live effects in four banks; then FILTER, FX SEQ, and back</td></tr>
           <tr><td><kbd>PLAY</kbd> <kbd>REC</kbd></td><td>Play / stop; record</td><td></td></tr>
           <tr><td><kbd>OCT−</kbd> <kbd>OCT+</kbd></td><td>The keyboard's octave</td><td>On GRID: the pattern's size. On SONG: remove / copy an entry. On LIVE: the bank. On menus: back / OK</td></tr>
           <tr><td><kbd>ARP</kbd></td><td>The clear / shift key: <a href="#arp">see Shortcuts</a></td><td></td></tr>
@@ -434,12 +434,47 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     </section>
 
     <section id="live">
-      <h2><span class="n">11</span>Sends and live effects</h2>
-      <p>The <kbd>FX</kbd> button has two pages: a tap opens <strong>SENDS</strong>, a second tap <strong>LIVE</strong>, a third goes back (<strong>SELECT</strong> also switches between them). Held from another page, <kbd>FX</kbd> shows LIVE for as long as you hold it. Press a key at the same moment and its effect plays at once.</p>
+      <h2><span class="n">11</span>Sends, live effects, filter and FX SEQ</h2>
+      <p>The <kbd>FX</kbd> button has four pages: a tap opens <strong>SENDS</strong>, then <strong>LIVE</strong>, <strong>FILTER</strong> and <strong>FX SEQ</strong>; one more tap goes back (<strong>SELECT</strong> also turns these pages). Held from another page, <kbd>FX</kbd> shows LIVE for as long as you hold it. Press a key at the same moment and its effect plays at once.</p>
       <ol class="steps">
         <li><figure class="screen"><img src="img/en/70-sends.png" alt="The SENDS page: one row per track, with its DRIVE, ECHO and REVERB levels" width="480" height="480"></figure><div><b>Sends</b><p>One row per track, three columns: <span class="k k1">DRIVE</span>, <span class="k k2">ECHO</span> and <span class="k k3">REVERB</span>, from 0 to 15 (0 is off and shows “-”). <strong>ALGORITHM</strong> picks the track, <span class="k k1">K1</span>, <span class="k k2">K2</span> and <span class="k k3">K3</span> set the three. The keys play the track so you hear what you do.</p><p><strong>DRIVE</strong> is a soft saturation of that track: the louder it is, the more it saturates, and its level is compensated. ECHO and REVERB are the same sends as on MIX.</p></div></li>
         <li><figure class="screen"><img src="img/en/60-fx.png" alt="The live effects" width="480" height="480"></figure><div><b>Live: play the keys</b><p>On LIVE, press white keys: loops, stutters, scratch, reverse… Let go of the key and the sound comes back. If you got here by holding <kbd>FX</kbd>, letting go of <kbd>FX</kbd> closes the page. A banner on other pages names the effect that plays. <kbd>ARP</kbd> clears the LIVE lane.</p></div></li>
-        <li><figure class="screen"><img src="img/en/61-fx-bank2.png" alt="The second bank" width="480" height="480"></figure><div><b>Two banks, one target</b><p><kbd>OCT+</kbd> switches to the WRECK bank: filters, freeze, distort, vinyl… <span class="k k4">K4</span> picks the <strong>target</strong>: the MASTER, or one track (for example, loop only the break). The black keys mute tracks. With <kbd>REC</kbd> on and the song playing, the effects you play are recorded in the thin LIVE lane at the right of the tracker.</p></div></li>
+        <li><figure class="screen"><img src="img/en/61-fx-bank2.png" alt="The second bank" width="480" height="480"></figure><div><b>Four banks, one target</b><p><kbd>OCT−</kbd> / <kbd>OCT+</kbd> (or <span class="k k1">K1</span>) turn the four banks: POCKET, WRECK (filters, freeze, distort, vinyl…), DESTROY and BEAT. <span class="k k4">K4</span> picks the <strong>target</strong>: the MASTER, or one track (for example, loop only the break). The black keys mute tracks. With <kbd>REC</kbd> on and the song playing, the effects you play are recorded in the thin LIVE lane at the right of the tracker, in their bank's colour.</p></div></li>
+        <li><figure class="screen"><img src="img/en/78-live-destroy.png" alt="The DESTROY bank, its SCRATCH pad held" width="480" height="480"></figure><div><b>DESTROY and BEAT</b><p>The third and fourth banks come from <strong>K-GLITCH</strong>, KAWA's glitch sibling. One plays at a time: the last pad you press (let it go, and the one still held takes over). <span class="k k2">K2</span> sets the <strong>INTENSITY</strong> of the last pad you played, and each effect keeps its own: the same pad behaves very differently at 0 and at 100. They lock to the beat and to the bar.</p><p>POCKET's two SCRATCH pads now play K-GLITCH's realistic scratch too: gentle on the first, wild on FAST.</p></div></li>
+      </ol>
+      <div class="table"><table>
+        <thead><tr><th>DESTROY (bank 3)</th><th>What it does (INTENSITY changes how)</th></tr></thead>
+        <tbody>
+          <tr><td>LOOP DESTROY</td><td>The bar cut into 1/2 to 1/32 and looped; higher: some passes backwards, from random quarters</td></tr>
+          <tr><td>STUTTER X</td><td>2x, 3x, 4x or 8x a beat, each repeat fading; high: random bursts</td></tr>
+          <tr><td>GLITCH</td><td>Bit crush and sample rate, chunks of the past instead of now, bursts of digital noise</td></tr>
+          <tr><td>SCRATCH</td><td>A hand on a record: baby scratches and chirps, then tears, transformers, scribbles, drags</td></tr>
+          <tr><td>REVERSE X</td><td>The last beat, 1/2 or 1/4, played backwards, piece after piece</td></tr>
+          <tr><td>PITCH MAD</td><td>A pitch that moves each 16th: a staircase up, random jumps, then a dive</td></tr>
+          <tr><td>GATE X</td><td>Silences on 16ths or 32nds, a new pattern each bar, more holes higher</td></tr>
+          <tr><td>FILTER CHAOS</td><td>A resonant low-pass jumping to a new cutoff each 16th</td></tr>
+          <tr><td>BEAT REPEAT, BEAT SKIP</td><td>The last beat again (fading, then a roll); 16ths dropped or replaced by the one before</td></tr>
+          <tr><td>MICRO STUTTER</td><td>50 to 10 ms grains of the last instant, a new one each 16th</td></tr>
+          <tr><td>TIME STRETCH</td><td>The groove slowed to 3/4 down to 1/4 speed, its pitch kept</td></tr>
+          <tr><td>RING MOD, FUZZ</td><td>A ring modulator, 30 Hz to 2 kHz; a drive into a hard clip, its level kept</td></tr>
+          <tr><td>RANDOMIZER, TOTAL CHAOS</td><td>One of the 14 above each 16th; the same, crushed, with a ring on some 16ths</td></tr>
+        </tbody>
+      </table></div>
+      <div class="table"><table>
+        <thead><tr><th>BEAT (bank 4)</th><th>A program over the bar, on the transport</th></tr></thead>
+        <tbody>
+          <tr><td>RANDOM STUTTER, BAR, FILL</td><td>Stutters on random 8ths; each 16th repeated, reversed, muted, slowed or pitched; the end of the bar becomes a fill</td></tr>
+          <tr><td>ROLL UP</td><td>The downbeat repeated in quarters, 8ths, 16ths, 32nds (and its pitch rising, higher)</td></tr>
+          <tr><td>SKIP 8TH, STAMMER</td><td>The off-8ths dropped or doubled; 3-3-2: the hits kept, what is between them stammers</td></tr>
+          <tr><td>GATE 1/8, 1/16, 3-3-2, RAMP</td><td>Four trance gates, the last one faster and faster</td></tr>
+          <tr><td>REVERSE BEAT, OFFBEAT</td><td>Whole beats backwards; the off-beats backwards</td></tr>
+          <tr><td>SCRATCH BAR, SCRATCH CUT</td><td>A silence, three scratches of the downbeat, then it backwards; beats 2 and 4 scratched under the fader</td></tr>
+          <tr><td>TAPE STOP, HALF TIME</td><td>The end of the bar slows to a stop; each beat's first half at half speed</td></tr>
+        </tbody>
+      </table></div>
+      <ol class="steps">
+        <li><figure class="screen"><img src="img/en/79-filter.png" alt="The FILTER page: METAL, its shape drawn, MOVE on" width="480" height="480"></figure><div><b>FILTER</b><p>A creative filter on LIVE's target (the master, or one track). <span class="k k1">K1</span> its <strong>TYPE</strong>: LP, HP, BP, NOTCH (resonant), DRIVE (acid), COMB+ and COMB− (a tuned ring, a hollow sound), METAL (bells and gongs), VOWEL (a talking filter), PHASER, RESON (the mix rings in a chord). <span class="k k2">K2</span> its frequency, as a note: <strong>the keys tune it</strong> (<kbd>OCT−</kbd> / <kbd>OCT+</kbd> an octave). <span class="k k3">K3</span> the resonance, <span class="k k4">K4</span> MOVE: it sweeps up to three octaves, once a bar. The screen draws its shape. OFF (the first type) takes it away. It is not saved with the song: it starts OFF.</p></div></li>
+        <li><figure class="screen"><img src="img/en/80-fxseq.png" alt="The FX SEQ page: four steps with effects" width="480" height="480"></figure><div><b>FX SEQ</b><p>The pattern's LIVE lane, written by hand. The 16 white keys are 16 steps (<kbd>OCT−</kbd> / <kbd>OCT+</kbd>: rows 1–16 or 17–32). <span class="k k1">K1</span> picks the effect, from all four banks; a key writes it on its step, again clears it. <span class="k k2">K2</span> is its intensity (DESTROY and BEAT). <kbd>ARP</kbd> clears the lane. The steps play with the song, and undo takes them back.</p></div></li>
       </ol>
     </section>
 
@@ -617,8 +652,8 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     </section>
 
     <section id="nouveau">
-      <h2>What's new in 0.9 (and 0.5 to 0.8)</h2>
-      <p>For people coming from 0.4. 0.9: the demo still opens on its last pattern, but PLAY now starts it from the beginning (it used to play the short victory first). 0.8 fixes the saves and updates on FM-1 units sold since autumn 2026 (a different flash chip, 0xB36014: KAWA knew only the first units' chip and ran from RAM only, so nothing survived a power cycle). 0.7 fixed bugs: a slice played an octave up (black key) now shows its own number, the drum tools keep a drum an octave up, and an FM sound with strong feedback no longer risks a glitch. 0.6 added to 0.5 the black keys of kit and slice tracks (a sound of their own, an octave up), the demo opening on its last step, and a new song or demo at 120 BPM.</p>
+      <h2>What's new in 0.10 (and 0.5 to 0.9)</h2>
+      <p>For people coming from 0.4. 0.10: K-GLITCH's effects come to KAWA: the DESTROY and BEAT banks on LIVE (32 more effects, each with its intensity), the realistic scratch (on POCKET's SCRATCH pads too), the FILTER page (11 types) and the FX SEQ page (the LIVE lane written by hand); and a quick tap that closed the boot screen no longer turns the next tap of that button into a hold (HOME's opened the help and left it open). 0.9: the demo still opens on its last pattern, but PLAY now starts it from the beginning (it used to play the short victory first). 0.8 fixes the saves and updates on FM-1 units sold since autumn 2026 (a different flash chip, 0xB36014: KAWA knew only the first units' chip and ran from RAM only, so nothing survived a power cycle). 0.7 fixed bugs: a slice played an octave up (black key) now shows its own number, the drum tools keep a drum an octave up, and an FM sound with strong feedback no longer risks a glitch. 0.6 added to 0.5 the black keys of kit and slice tracks (a sound of their own, an octave up), the demo opening on its last step, and a new song or demo at 120 BPM.</p>
       <ul>
         <li>KAWA starts on an <strong>empty song</strong> (120 BPM) with a first-steps box; the demo (120 BPM too) is in <kbd>SAVE</kbd>, DEMO, and opens on its last step, 7 of 7.</li>
         <li><kbd>FX</kbd> has two pages: <strong>SENDS</strong> (new: a DRIVE, ECHO and REVERB per track), then <strong>LIVE</strong>.</li>
@@ -626,7 +661,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
         <li><strong>Undo covers sounds</strong> as well as patterns (ten steps), and a sound you edited is protected from PRESETS.</li>
         <li><strong>Buttons that moved:</strong> LFO and MODULATION are on <kbd>LFO</kbd>, MAGIC is <kbd>SCL</kbd> twice, the engine is <kbd>ARP</kbd> + PRESETS. SELECT turns pages; ALGORITHM moves along the chain and the groove.</li>
         <li><strong>New:</strong> 16, 32 or 64 steps, a metronome, <kbd>HOME</kbd> + <kbd>PLAY</kbd> panic, a blinking SAVE.</li>
-        <li><strong>Your songs:</strong> those from 0.2 to 0.8 open in 0.9. A 0.9 song also opens in 0.8 down to 0.3 (the DRIVE send and the 64-step link are ignored there).</li>
+        <li><strong>Your songs:</strong> those from 0.2 to 0.9 open in 0.10. A 0.10 song also opens in 0.9 down to 0.3 (DESTROY and BEAT steps of its LIVE lane are ignored there) (the DRIVE send and the 64-step link are ignored there).</li>
       </ul>
     </section>
 
@@ -639,7 +674,7 @@ footer { color: var(--muted); font-size: 14px; max-width: var(--measure); }
     </section>
 
     <footer>
-      <p>KAWA 0.9 beta, Pocket Tracker by Omnipotard. Free software (GPL-3.0), built on Dinghy, Felucca (Hügelton Instruments) and SLOOP; the FM engine comes from msfa (Dexed, Apache-2.0). M-VAVE and FM-1 are trademarks of their owners; KAWA is not an M-VAVE product.</p>
+      <p>KAWA 0.10 beta, Pocket Tracker by Omnipotard. Free software (GPL-3.0), built on Dinghy, Felucca (Hügelton Instruments) and SLOOP; the FM engine comes from msfa (Dexed, Apache-2.0). M-VAVE and FM-1 are trademarks of their owners; KAWA is not an M-VAVE product.</p>
     </footer>
   </main>
 </div>

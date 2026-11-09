@@ -47,7 +47,7 @@ embedded in the page, so `../emulator/index.html` stands alone.
 
 ```sh
 ./build.sh                  # -> build/kawa.fwsc, identity FM-1_957 (KAWA's, every version)
-./build.sh --release 0.9    # -> build/kawa-0.9.fwsc, identity FM-1_957, version "0.9" on the screen
+./build.sh --release 0.10   # -> build/kawa-0.10.fwsc, identity FM-1_957, version "0.10" on the screen
 # a release is then copied twice: install/kawa-X.Y.fwsc (what the installers use, listed in install/SHA256SUMS) and kawa-X.Y.fwsc
 # at the top of the repository (the file people download); source/tests/release_check.sh checks that both are the same
 ```

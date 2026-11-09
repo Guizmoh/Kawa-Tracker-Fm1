@@ -260,7 +260,9 @@ static void seq_next_row(void)
     sq_head = s_head;
     sq_pat = s_pat;
     sq_row = s_row;
-    if (rec_live && lfx_keys) {                 /* recording the live effects into the LIVE lane */
+    if (rec_live && kg_hold >= 0)               /* recording the live effects into the LIVE lane (K-GLITCH's first) */
+        prj.pat[s_pat].live[s_row] = (uint8_t)(KG_LANE + (uint32_t)kg_hold);
+    else if (rec_live && lfx_keys) {
         uint32_t id = 0;
         while (id < LF_N && !(lfx_keys >> id & 1u))
             id++;
@@ -417,6 +419,16 @@ static void app_audio(int32_t *out, uint32_t n)
     } else if (!(on >> LF_AGAIN & 1u))
         s_again = 0;
     fx_block(on);
+    {                                           /* K-GLITCH: the pad held, else the LIVE lane, else POCKET's scratches */
+        int32_t kw = kg_hold;
+        uint32_t lv = sq_play ? prj.pat[s_pat].live[s_row] : 0u;
+        kg_sint_blk = 0;
+        if (kw < 0 && lv >= KG_LANE && lv < KG_LANE + DD_N)
+            kw = (int32_t)(lv - KG_LANE);
+        if (kw < 0 && (on >> LF_SCRF & 1u)) { kw = DD_SCRATCH; kg_sint_blk = 81; }
+        else if (kw < 0 && (on >> LF_SCR & 1u)) { kw = DD_SCRATCH; kg_sint_blk = 21; }
+        kg_want_blk = (int8_t)kw;
+    }
     for (c = 0; c < n; c += CHUNK) {
         int32_t L[CHUNK], R[CHUNK], BL[CHUNK], BR[CHUNK], E[CHUNK], V[CHUNK], mono[CHUNK];
         if (c && fm1_ticks() - t0 > BLOCK_US * FM1_TICKS_PER_US * 9u / 10u) {

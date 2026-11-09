@@ -531,7 +531,7 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       pages: ["TRACKS", "GRID", "SOUND", "ENVELOPE", "MIX", "MAGIC", "SCALE", "SONG", "PROJECTS", "OPTIONS", "EFFECTS", "HELP", "BOOT", "GROOVE", "SENDS"],
       track: "TRACK {n}", master: "MASTER",
       "k.master": "VOLUME", "k.select": "ROW / PAGE", "k.presets": "PATTERN / SOUND", "k.algo": "TRACK", "k.unused": "unused",
-      "b.oct": "OCTAVE", "b.fx": "SENDS / LIVE", "b.scl": "SCALE / MAGIC", "b.env": "ENV / MIX", "b.lfo": "LFO / MOD", "b.edit": "SOUND", "b.glo": "SONG / OPT.",
+      "b.oct": "OCTAVE", "b.fx": "SENDS / LIVE / FILT.", "b.scl": "SCALE / MAGIC", "b.env": "ENV / MIX", "b.lfo": "LFO / MOD", "b.edit": "SOUND", "b.glo": "SONG / OPT.",
       "b.home": "TRACKS", "b.home.alt": "HOLD: HELP", "b.save": "PROJECTS", "b.save.alt": "HOLD: TOOLS", "b.arp": "CLEAR", "b.seq": "GRID", "b.play": "PLAY", "b.rec": "REC",
       colours: ["red", "yellow", "green", "blue"],
       "tt.MASTER": "MASTER: the volume of this page (wheel, drag, or the arrow keys when it has the focus).",
@@ -541,7 +541,7 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       "tt.K": "KNOB {n} ({c}): what it does on this page is written under it and on the bottom line of the screen.",
       "tt.0": "OCT− lowers the keyboard's octave; on the GRID it takes the pattern down to 32, then 16 steps; on PROJECTS it goes back; on SOUND, while a factory sound is shown in gold, it keeps yours; SAVE held + OCT− undoes at once (patterns and sounds).",
       "tt.1": "OCT+ raises the keyboard's octave; on the GRID it takes the pattern up to 32, then 64 steps (this pattern linked to the next one); on PROJECTS it is OK; on LIVE it opens the second bank; on SOUND, while a factory sound is shown in gold, it loads it; SAVE held + OCT+ redoes at once.",
-      "tt.2": "FX: a tap opens SENDS (drive, echo and reverb of each track), a second tap the LIVE effects, a third goes back; SELECT also goes from one to the other. Held from another page, a yellow bar labelled LIVE fills and LIVE shows while you hold: play the white keys for 32 live effects (OCT+ the second bank) on the master or a track. FX held and a key right away: that effect plays without waiting for the bar.",
+      "tt.2": "FX: a tap opens SENDS (drive, echo and reverb of each track), a second tap the LIVE effects, then the FILTER and the FX SEQ, then back; SELECT also turns these pages. Held from another page, a yellow bar labelled LIVE fills and LIVE shows while you hold: play the white keys for 64 live effects in four banks (OCT− / OCT+; DESTROY and BEAT come from K-GLITCH, KNOB 2 their intensity) on the master or a track. FX held and a key right away: that effect plays without waiting for the bar.",
       "tt.3": "SCL opens the scale: its root, its notes, and the lock that keeps the keys in it; press it again for MAGIC (tools on the white keys that chop the break and write a beat, a melody or a bassline in the scale), a third time for TRACKS.",
       "tt.4": "ENV opens the track's envelope; press it again (or turn SELECT) for MIX (levels and the master effect; black keys mute, ARP held + a black key solo).",
       "tt.5": "LFO opens the track's LFO; press it again (or turn SELECT) for MODULATION.",
@@ -602,8 +602,8 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
            "<li>Hold <b>HOME</b>, <b>FX</b> or <b>SAVE</b>: a yellow bar labelled HELP, LIVE or TOOLS fills at the bottom of the screen, and the help, the LIVE effects or the tools appear when it is full.</li>" +
            "<li><b>HOME</b> + <b>PLAY</b>: panic. The song stops, every voice and live effect is cut.</li>",
       g2: "Effects and magic",
-      g2l: "<li><b>FX</b>: SENDS (a drive, an echo and a reverb for each track: ALGORITHM picks the track, KNOB 1–3 set the levels), again the LIVE effects, a third time back.</li>" +
-           "<li>Hold <b>FX</b> and play the white keys: 32 live effects (<b>OCT+</b> the second bank), on the master or a track. Let go and you are back.</li>" +
+      g2l: "<li><b>FX</b>: SENDS (a drive, an echo and a reverb for each track: ALGORITHM picks the track, KNOB 1–3 set the levels), again the LIVE effects, then the FILTER (11 types, the keys tune it) and the FX SEQ (the LIVE lane by hand), then back.</li>" +
+           "<li>Hold <b>FX</b> and play the white keys: 64 live effects in four banks (<b>OCT−</b> / <b>OCT+</b>), on the master or a track. Let go and you are back.</li>" +
            "<li><b>SCL</b> opens the scale, again the magic: chop the break, write a beat, a melody or a bassline in the scale, Euclid, rolls…</li>" +
            "<li><b>MIX</b> (ENV twice): the levels and the master effect. The black keys mute; ARP held + a black key: solo.</li>" +
            "<li>ARP held + SELECT: a row in or out; + ALGORITHM: in the whole pattern.</li>" +
@@ -635,7 +635,7 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       pages: ["PISTES", "GRILLE", "SON", "ENVELOPPE", "MIX", "MAGIE", "GAMME", "CHAÎNE", "PROJETS", "OPTIONS", "EFFETS", "AIDE", "DÉMARRAGE", "GROOVE", "ENVOIS"],
       track: "PISTE {n}", master: "MASTER",
       "k.master": "VOLUME", "k.select": "LIGNE / PAGE", "k.presets": "MOTIF / SON", "k.algo": "PISTE", "k.unused": "inutilisé",
-      "b.oct": "OCTAVE", "b.fx": "ENVOIS / LIVE", "b.scl": "GAMME / MAGIE", "b.env": "ENV / MIX", "b.lfo": "LFO / MOD", "b.edit": "SON", "b.glo": "CHAÎNE / OPT.",
+      "b.oct": "OCTAVE", "b.fx": "ENVOIS / LIVE / FILT.", "b.scl": "GAMME / MAGIE", "b.env": "ENV / MIX", "b.lfo": "LFO / MOD", "b.edit": "SON", "b.glo": "CHAÎNE / OPT.",
       "b.home": "PISTES", "b.home.alt": "TENU : AIDE", "b.save": "PROJETS", "b.save.alt": "TENU : OUTILS", "b.arp": "EFFACE", "b.seq": "GRILLE", "b.play": "JOUE", "b.rec": "ENREG",
       colours: ["rouge", "jaune", "vert", "bleu"],
       "tt.MASTER": "MASTER : le volume de cette page (molette, glisser, ou les flèches quand il a le focus).",
@@ -645,7 +645,7 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       "tt.K": "KNOB {n} ({c}) : ce qu'il fait sur cette page est écrit dessous et sur la ligne du bas de l'écran.",
       "tt.0": "OCT− baisse l'octave du clavier ; sur la GRILLE, il ramène le motif à 32, puis 16 pas ; sur PROJETS, il revient en arrière ; sur SON, quand un son d'usine est montré en doré, il garde le tien ; SAVE tenu + OCT− annule aussitôt (motifs et sons).",
       "tt.1": "OCT+ monte l'octave du clavier ; sur la GRILLE, il passe le motif à 32, puis 64 pas (ce motif lié au suivant) ; sur PROJETS, c'est OK ; sur LIVE, il ouvre la deuxième banque ; sur SON, quand un son d'usine est montré en doré, il le charge ; SAVE tenu + OCT+ refait aussitôt.",
-      "tt.2": "FX : un appui court ouvre ENVOIS (saturation, écho et reverb de chaque piste), un deuxième les effets LIVE, un troisième revient en arrière ; SELECT passe aussi de l'un à l'autre. Tenu depuis une autre page, une barre jaune marquée LIVE se remplit et LIVE s'affiche tant que tu le tiens : joue les touches blanches pour 32 effets live (OCT+ la deuxième banque), sur le master ou une piste. FX tenu et une touche tout de suite : cet effet joue sans attendre la barre.",
+      "tt.2": "FX : un appui court ouvre ENVOIS (saturation, écho et reverb de chaque piste), un deuxième les effets LIVE, puis le FILTRE et la SEQ FX, puis retour ; SELECT tourne aussi ces pages. Tenu depuis une autre page, une barre jaune marquée LIVE se remplit et LIVE s'affiche tant que tu le tiens : joue les touches blanches pour 64 effets live en quatre banques (OCT− / OCT+ ; DETRUIT et BEAT viennent de K-GLITCH, KNOB 2 leur intensité), sur le master ou une piste. FX tenu et une touche tout de suite : cet effet joue sans attendre la barre.",
       "tt.3": "SCL ouvre la gamme : sa tonique, ses notes, et le verrou qui garde les touches dedans ; appuie encore pour la MAGIE (des outils sur les touches blanches qui découpent le break et écrivent un beat, une mélodie ou une basse dans la gamme), une troisième fois pour PISTES.",
       "tt.4": "ENV ouvre l'enveloppe de la piste ; appuie encore (ou tourne SELECT) pour MIX (niveaux et effet master ; touches noires : muet, ARP tenu + touche noire : solo).",
       "tt.5": "LFO ouvre le LFO de la piste ; appuie encore (ou tourne SELECT) pour la MODULATION.",
@@ -706,8 +706,8 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
            "<li>Tiens <b>HOME</b>, <b>FX</b> ou <b>SAVE</b> : une barre jaune marquée AIDE, LIVE ou OUTILS se remplit en bas de l'écran, et l'aide, les effets LIVE ou les outils apparaissent quand elle est pleine.</li>" +
            "<li><b>HOME</b> + <b>PLAY</b> : panique. Le morceau s'arrête, chaque voix et chaque effet live est coupé.</li>",
       g2: "Effets et magie",
-      g2l: "<li><b>FX</b> : ENVOIS (une saturation, un écho et une reverb par piste : ALGORITHM choisit la piste, KNOB 1–3 règlent les niveaux), encore les effets LIVE, une troisième fois retour.</li>" +
-           "<li>Garde <b>FX</b> enfoncé et joue les touches blanches : 32 effets live (<b>OCT+</b> la deuxième banque), sur le master ou une piste. Relâche et tu reviens.</li>" +
+      g2l: "<li><b>FX</b> : ENVOIS (une saturation, un écho et une reverb par piste : ALGORITHM choisit la piste, KNOB 1–3 règlent les niveaux), encore les effets LIVE, puis le FILTRE (11 types, les touches l'accordent) et la SEQ FX (la piste LIVE à la main), puis retour.</li>" +
+           "<li>Garde <b>FX</b> enfoncé et joue les touches blanches : 64 effets live en quatre banques (<b>OCT−</b> / <b>OCT+</b>), sur le master ou une piste. Relâche et tu reviens.</li>" +
            "<li><b>SCL</b> ouvre la gamme, encore la magie : découper le break, écrire un beat, une mélodie ou une basse dans la gamme, Euclide, roulements…</li>" +
            "<li><b>MIX</b> (ENV deux fois) : les niveaux et l'effet master. Les touches noires coupent ; ARP tenu + touche noire : solo.</li>" +
            "<li>ARP tenu + SELECT : une ligne en plus ou en moins ; + ALGORITHM : dans tout le motif.</li>" +
@@ -739,7 +739,7 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       pages: ["PISTAS", "REJILLA", "SONIDO", "ENVOLVENTE", "MEZCLA", "MAGIA", "ESCALA", "CANCIÓN", "PROYECTOS", "OPCIONES", "EFECTOS", "AYUDA", "ARRANQUE", "GROOVE", "ENVÍOS"],
       track: "PISTA {n}", master: "MASTER",
       "k.master": "VOLUMEN", "k.select": "FILA / PÁGINA", "k.presets": "PATRÓN / SONIDO", "k.algo": "PISTA", "k.unused": "sin uso",
-      "b.oct": "OCTAVA", "b.fx": "ENVÍOS / LIVE", "b.scl": "ESCALA / MAGIA", "b.env": "ENV / MEZCLA", "b.lfo": "LFO / MOD", "b.edit": "SONIDO", "b.glo": "CANCIÓN / OPC.",
+      "b.oct": "OCTAVA", "b.fx": "ENVÍOS / LIVE / FILT.", "b.scl": "ESCALA / MAGIA", "b.env": "ENV / MEZCLA", "b.lfo": "LFO / MOD", "b.edit": "SONIDO", "b.glo": "CANCIÓN / OPC.",
       "b.home": "PISTAS", "b.home.alt": "MANT.: AYUDA", "b.save": "PROYECTOS", "b.save.alt": "MANT.: HERRAM.", "b.arp": "BORRAR", "b.seq": "REJILLA", "b.play": "TOCAR", "b.rec": "GRABAR",
       colours: ["rojo", "amarillo", "verde", "azul"],
       "tt.MASTER": "MASTER: el volumen de esta página (rueda, arrastrar, o las flechas cuando tiene el foco).",
@@ -749,7 +749,7 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
       "tt.K": "KNOB {n} ({c}): lo que hace en esta página está escrito debajo y en la línea de abajo de la pantalla.",
       "tt.0": "OCT− baja la octava del teclado; en la REJILLA baja el patrón a 32 y luego a 16 pasos; en PROYECTOS vuelve atrás; en SONIDO, cuando un sonido de fábrica se muestra en dorado, conserva el tuyo; SAVE mantenido + OCT− deshace al instante (patrones y sonidos).",
       "tt.1": "OCT+ sube la octava del teclado; en la REJILLA sube el patrón a 32 y luego a 64 pasos (este patrón enlazado con el siguiente); en PROYECTOS es OK; en LIVE abre el segundo banco; en SONIDO, cuando un sonido de fábrica se muestra en dorado, lo carga; SAVE mantenido + OCT+ rehace al instante.",
-      "tt.2": "FX: un toque corto abre ENVÍOS (saturación, eco y reverb de cada pista), un segundo toque los efectos LIVE, un tercero vuelve atrás; SELECT también pasa de uno a otro. Mantenido desde otra página, se llena una barra amarilla con el nombre LIVE y LIVE se muestra mientras lo mantienes: toca las teclas blancas para 32 efectos en vivo (OCT+ el segundo banco), en el master o en una pista. FX mantenido y una tecla enseguida: ese efecto suena sin esperar a la barra.",
+      "tt.2": "FX: un toque corto abre ENVÍOS (saturación, eco y reverb de cada pista), un segundo toque los efectos LIVE, luego el FILTRO y la SEC FX, luego atrás; SELECT también gira estas páginas. Mantenido desde otra página, se llena una barra amarilla con el nombre LIVE y LIVE se muestra mientras lo mantienes: toca las teclas blancas para 64 efectos en vivo en cuatro bancos (OCT− / OCT+; DESTRUYE y BEAT vienen de K-GLITCH, KNOB 2 su intensidad), en el master o en una pista. FX mantenido y una tecla enseguida: ese efecto suena sin esperar a la barra.",
       "tt.3": "SCL abre la escala: su tónica, sus notas y el bloqueo que mantiene las teclas dentro; púlsalo otra vez para la MAGIA (herramientas en las teclas blancas que trocean el break y escriben un ritmo, una melodía o un bajo en la escala), una tercera vez para PISTAS.",
       "tt.4": "ENV abre la envolvente de la pista; púlsalo otra vez (o gira SELECT) para MEZCLA (niveles y efecto master; teclas negras: silencio, ARP mantenido + tecla negra: solo).",
       "tt.5": "LFO abre el LFO de la pista; púlsalo otra vez (o gira SELECT) para la MODULACIÓN.",
@@ -810,8 +810,8 @@ kbd { font-family: var(--mono); font-size: 12px; background: #2f2a3b; border-rad
            "<li>Mantén <b>HOME</b>, <b>FX</b> o <b>SAVE</b>: una barra amarilla con el nombre AYUDA, LIVE o HERRAM. se llena en la parte de abajo de la pantalla, y la ayuda, los efectos LIVE o las herramientas aparecen cuando está llena.</li>" +
            "<li><b>HOME</b> + <b>PLAY</b>: pánico. La canción se para, cada voz y cada efecto en directo se corta.</li>",
       g2: "Efectos y magia",
-      g2l: "<li><b>FX</b>: ENVÍOS (una saturación, un eco y una reverb por pista: ALGORITHM elige la pista, KNOB 1–3 ajustan los niveles), otra vez los efectos LIVE, una tercera vez atrás.</li>" +
-           "<li>Mantén <b>FX</b> y toca las teclas blancas: 32 efectos en vivo (<b>OCT+</b> el segundo banco), en el master o en una pista. Suéltalo y vuelves.</li>" +
+      g2l: "<li><b>FX</b>: ENVÍOS (una saturación, un eco y una reverb por pista: ALGORITHM elige la pista, KNOB 1–3 ajustan los niveles), otra vez los efectos LIVE, luego el FILTRO (11 tipos, las teclas lo afinan) y la SEC FX (la pista LIVE a mano), luego atrás.</li>" +
+           "<li>Mantén <b>FX</b> y toca las teclas blancas: 64 efectos en vivo en cuatro bancos (<b>OCT−</b> / <b>OCT+</b>), en el master o en una pista. Suéltalo y vuelves.</li>" +
            "<li><b>SCL</b> abre la escala, otra vez la magia: trocear el break, escribir un ritmo, una melodía o un bajo en la escala, Euclides, redobles…</li>" +
            "<li><b>MEZCLA</b> (ENV dos veces): los niveles y el efecto master. Las teclas negras silencian; ARP mantenido + tecla negra: solo.</li>" +
            "<li>ARP mantenido + SELECT: una fila más o menos; + ALGORITHM: en todo el patrón.</li>" +

@@ -9,10 +9,10 @@
 KAWA is a free tracker firmware for the **M-VAVE FM-1**, made above all for **chiptune and IDM**: 4-bit waves,
 pulse and noise like the old consoles, FM, breakbeats cut into slices, rolls and ratchets, stutter and glitch
 live effects, tables, a groove, a drive on every track. (It can do other styles, but that is what it is built
-for.) Six tracks, a step sequencer you write with the keys, a chain of patterns that makes a song, and 32 live
-effects. The screen speaks English, French or Spanish.
+for.) Six tracks, a step sequencer you write with the keys, a chain of patterns that makes a song, 64 live
+effects and a creative filter. The screen speaks English, French or Spanish.
 
-> **Beta 0.9 — tested on a real FM-1.** It also passes every automatic check (size, memory, an install tested
+> **Beta 0.10 — tested on a real FM-1.** It also passes every automatic check (size, memory, an install tested
 > against simulated power cuts, the simulator and the web emulator). Installing an
 > unofficial firmware is at your own risk, but you can always [go back to the official one](#go-back-to-the-official-firmware-or-install-another-one).
 
@@ -20,7 +20,7 @@ effects. The screen speaks English, French or Spanish.
 
 | | |
 | --- | --- |
-| **1. Install** | **[Install from your browser](https://guizmoh.github.io/Kawa-Tracker-Fm1/)** (Chrome or Edge: plug the FM-1 in, click *Install KAWA*). Or download [`kawa-0.9.fwsc`](kawa-0.9.fwsc) and use the [launcher](#install) for your computer. |
+| **1. Install** | **[Install from your browser](https://guizmoh.github.io/Kawa-Tracker-Fm1/)** (Chrome or Edge: plug the FM-1 in, click *Install KAWA*). Or download [`kawa-0.10.fwsc`](kawa-0.10.fwsc) and use the [launcher](#install) for your computer. |
 | **2. Play** | Switch the FM-1 on and press any key. Press **REC**, play the keys, press **PLAY**. **HOME held** shows the help of the page you are on. |
 | **3. Learn** | **[The manual](https://guizmoh.github.io/Kawa-Tracker-Fm1/manual/index.html)** ([FR](https://guizmoh.github.io/Kawa-Tracker-Fm1/manual/fr.html), [ES](https://guizmoh.github.io/Kawa-Tracker-Fm1/manual/es.html)): five short tutorials, from an empty song to a saved one. Or try KAWA right now in the **[web emulator](https://guizmoh.github.io/Kawa-Tracker-Fm1/emulator/index.html)**. |
 | **4. Your sounds** | The **[sample importer](https://guizmoh.github.io/Kawa-Tracker-Fm1/samples.html)** puts your own WAV / MP3 / OGG / FLAC files into KAWA over USB. |
@@ -38,7 +38,9 @@ effects. The screen speaks English, French or Spanish.
   Factory sounds for all of them, an ADSR, an effect, an LFO and a modulation page on every sound.
 - **Made for chiptune and IDM:** 8 synthesised drum kits and 6 breaks to cut into 16 slices, a **table** on every
   track (a little sequence played inside each note: chip arpeggios, pitch drops, ratchets), a **groove** (7 5, 8 4…),
-  Euclid, random and chop tools, 32 live effects (stutter, scratch, retrig, build-up…), a drive per track.
+  Euclid, random and chop tools, 64 live effects in four banks (stutter, retrig, build-up…, and from
+  K-GLITCH: DESTROY, BEAT and a realistic scratch, each with its intensity), an 11-type filter, an FX sequencer,
+  a drive per track.
 - **Your own samples** (4 slots), with an editor: start, end, slices, normalise, reverse.
 - **Easy to live with.** The bottom line always says what the four knobs do (KNOB 1 red, 2 yellow, 3 green, 4 blue).
   HOME held opens the help. **Undo / redo cover patterns and sounds** (10 steps). A sound you edited is never replaced
@@ -53,7 +55,7 @@ effects. The screen speaks English, French or Spanish.
 | **EDIT** | The sound of the track: SOUND, SOUND 2, (FM operators / sample edit), EFFECT, TABLE. Press again: next page |
 | **LFO** | LFO, then MODULATION |
 | **ENV** | ENVELOPE, then MIX (levels, pan, sends, master) |
-| **FX** | SENDS (drive, echo, reverb per track), then LIVE (32 live effects), then back. Held: LIVE while you hold it |
+| **FX** | SENDS (drive, echo, reverb per track), then LIVE (64 live effects, 4 banks), FILTER, FX SEQ, then back. Held: LIVE while you hold it |
 | **SCL** | SCALE, then MAGIC (beats, melodies, break chops), then back |
 | **GLO** | SONG (the chain), GROOVE, OPTIONS (theme, language, clock, font, metronome) |
 | **SAVE** | PROJECTS (it blinks while there are unsaved changes). Held: the tools (OPTIONS, UNDO, REDO, CLEAR, COPY, PASTE, RANDOM). **OCT− / OCT+** while held: undo / redo |

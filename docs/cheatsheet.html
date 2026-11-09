@@ -94,10 +94,10 @@ footer a{color:var(--cyan);text-decoration:none}footer a:hover{text-decoration:u
   .grid{gap:3px}.card{padding:3px 6px 3px;border-radius:7px;margin-bottom:0}.card h2{font-size:7.4px;margin-bottom:2px}.card h2 small{font-size:6.3px}.row{padding:1px 0;gap:5px}
   kbd{font-size:6.3px;padding:1px 2.5px 0.5px;border-bottom-width:1.5px}.hold{font-size:5.6px;padding:1px 2.5px 0.5px}
   .wide.card{margin-top:3px}
-  .mgrid{grid-template-columns:repeat(5,1fr);gap:3px}.m{padding:3px 5px;border-radius:5px}.m h3{font-size:7px;margin-bottom:1.5px}
+  .mgrid{grid-template-columns:repeat(10,1fr);gap:3px}.m{padding:3px 5px;border-radius:5px}.m h3{font-size:7px;margin-bottom:1.5px}
   .m li{font-size:6.5px;padding:0.5px 0 0.5px 12px}.m li::before{width:9px;height:9px;line-height:9px;font-size:5.8px;top:0.5px}
-  .taglist{grid-template-columns:repeat(6,1fr);gap:1px 8px}.tag{padding:1px 0}.tag:nth-child(-n+6){border-top:0}.tag b{font-size:6.1px}.tag span{font-size:6.4px}
-  .note{font-size:6.5px;margin-top:2px}footer{margin-top:3px;font-size:6.5px}
+  .taglist{grid-template-columns:repeat(8,1fr);gap:1px 6px}.tag{padding:1px 0}.tag:nth-child(-n+8){border-top:0}.tag b{font-size:6.1px}.tag span{font-size:6.4px}
+  .note{font-size:6.5px;margin-top:2px}footer{display:none}
 }
 </style>
 </head>
@@ -107,7 +107,7 @@ footer a{color:var(--cyan);text-decoration:none}footer a:hover{text-decoration:u
 <header class="hero">
   <img src="card.png" alt="KAWA">
   <div>
-    <h1>KA<b>WA</b> cheat sheet<span>pocket tracker · M-VAVE FM-1 · firmware 0.9 beta</span></h1>
+    <h1>KA<b>WA</b> cheat sheet<span>pocket tracker · M-VAVE FM-1 · firmware 0.10 beta</span></h1>
     <div class="legend"><span><kbd>BUTTON</kbd> press</span><span><kbd>BUTTON</kbd><span class="hold">HOLD</span> keep it pressed</span><span><kbd class="k">K1</kbd> a knob</span></div>
   </div>
   <div class="tools"><button onclick="print()">Print / PDF</button><button id="th">Light / dark</button></div>
@@ -185,12 +185,13 @@ footer a{color:var(--cyan);text-decoration:none}footer a:hover{text-decoration:u
 </section>
 
 <section class="card c-cyan">
-  <h2>SENDS &amp; LIVE <small>FX button</small></h2>
-  <div class="row"><div><kbd>FX</kbd> tap</div><div class="d">SENDS: each track's DRIVE, ECHO, REVERB (0–15)</div></div>
-  <div class="row"><div><kbd>FX</kbd> again</div><div class="d">LIVE: 32 effects on the white keys · a third tap goes back</div></div>
-  <div class="row"><div><kbd>OCT+</kbd> <em>(LIVE)</em></div><div class="d">the WRECK bank (filters, freeze, distort, vinyl…)</div></div>
-  <div class="row"><div><kbd class="k">K4</kbd> <em>(LIVE)</em></div><div class="d">the target: MASTER, or one track</div></div>
-  <div class="row"><div>black keys <em>(LIVE)</em></div><div class="d">mute the tracks</div></div>
+  <h2>FX <small>four pages</small></h2>
+  <div class="row"><div><kbd>FX</kbd> taps</div><div class="d">SENDS · LIVE · FILTER · FX SEQ · back</div></div>
+  <div class="row"><div>LIVE <kbd>OCT−</kbd>/<kbd>OCT+</kbd></div><div class="d">4 banks: POCKET, WRECK, DESTROY, BEAT</div></div>
+  <div class="row"><div><kbd class="k">K2</kbd> <em>(DESTROY, BEAT)</em></div><div class="d">the last pad's INTENSITY</div></div>
+  <div class="row"><div><kbd class="k">K4</kbd> <em>(LIVE)</em></div><div class="d">the target: MASTER or a track</div></div>
+  <div class="row"><div>FILTER</div><div class="d">K1 type · K2 freq · K3 reso · K4 move · keys tune it</div></div>
+  <div class="row"><div>FX SEQ</div><div class="d">K1 an effect · a white key: on its step · ARP clears</div></div>
 </section>
 
 </div>
@@ -216,6 +217,29 @@ footer a{color:var(--cyan);text-decoration:none}footer a:hover{text-decoration:u
     <div class="tag"><b>HOP</b><span>jumps to row N after this one</span></div>
     <div class="tag"><b>END</b><span>the pattern ends; the song moves on</span></div>
   </div>
+</section>
+
+<section class="card wide">
+  <h2>DESTROY &amp; BEAT <small>LIVE, banks 3 and 4 · one at a time · from K-GLITCH</small></h2>
+  <div class="taglist">
+    <div class="tag"><b>D1</b><span>LOOP DESTROY</span></div><div class="tag"><b>D2</b><span>STUTTER X</span></div>
+    <div class="tag"><b>D3</b><span>GLITCH</span></div><div class="tag"><b>D4</b><span>SCRATCH (a hand)</span></div>
+    <div class="tag"><b>D5</b><span>REVERSE X</span></div><div class="tag"><b>D6</b><span>PITCH MAD</span></div>
+    <div class="tag"><b>D7</b><span>GATE X</span></div><div class="tag"><b>D8</b><span>FILTER CHAOS</span></div>
+    <div class="tag"><b>D9</b><span>BEAT REPEAT</span></div><div class="tag"><b>D10</b><span>BEAT SKIP</span></div>
+    <div class="tag"><b>D11</b><span>MICRO STUTTER</span></div><div class="tag"><b>D12</b><span>TIME STRETCH</span></div>
+    <div class="tag"><b>D13</b><span>RING MOD</span></div><div class="tag"><b>D14</b><span>FUZZ</span></div>
+    <div class="tag"><b>D15</b><span>RANDOMIZER</span></div><div class="tag"><b>D16</b><span>TOTAL CHAOS</span></div>
+    <div class="tag"><b>B1</b><span>RANDOM STUTTER</span></div><div class="tag"><b>B2</b><span>RANDOM BAR</span></div>
+    <div class="tag"><b>B3</b><span>RANDOM FILL</span></div><div class="tag"><b>B4</b><span>ROLL UP</span></div>
+    <div class="tag"><b>B5</b><span>SKIP 8TH</span></div><div class="tag"><b>B6</b><span>STAMMER 3-3-2</span></div>
+    <div class="tag"><b>B7</b><span>GATE 1/8</span></div><div class="tag"><b>B8</b><span>GATE 1/16</span></div>
+    <div class="tag"><b>B9</b><span>GATE 3-3-2</span></div><div class="tag"><b>B10</b><span>GATE RAMP</span></div>
+    <div class="tag"><b>B11</b><span>REVERSE BEAT</span></div><div class="tag"><b>B12</b><span>REVERSE OFFBEAT</span></div>
+    <div class="tag"><b>B13</b><span>SCRATCH BAR</span></div><div class="tag"><b>B14</b><span>SCRATCH CUT</span></div>
+    <div class="tag"><b>B15</b><span>TAPE STOP</span></div><div class="tag"><b>B16</b><span>HALF TIME</span></div>
+  </div>
+  <p class="note">FILTER types: LP · HP · BP · NOTCH · DRIVE · COMB+ · COMB− · METAL · VOWEL · PHASER · RESON.</p>
 </section>
 
 <section class="card wide">
@@ -251,7 +275,7 @@ footer a{color:var(--cyan);text-decoration:none}footer a:hover{text-decoration:u
     <div class="m"><h3><kbd>SCL</kbd></h3><ol><li>SCALE</li><li>MAGIC</li></ol></div>
     <div class="m"><h3><kbd>GLO</kbd></h3><ol><li>SONG</li><li>GROOVE</li><li>OPTIONS</li></ol></div>
     <div class="m"><h3><kbd>SAVE</kbd></h3><ol><li>PROJECTS</li><li>(held: TOOLS)</li></ol></div>
-    <div class="m"><h3><kbd>FX</kbd></h3><ol><li>SENDS</li><li>LIVE</li></ol></div>
+    <div class="m"><h3><kbd>FX</kbd></h3><ol><li>SENDS</li><li>LIVE</li><li>FILTER</li><li>FX SEQ</li></ol></div>
     <div class="m"><h3><kbd>ARP</kbd></h3><ol><li>clear / shift, not a page</li></ol></div>
   </div>
   <p class="note">TABLE: a 16-step sequence inside every note (pitch, volume, a trick) · GROOVE: how long each row lasts, in ticks · OPTIONS: theme, language, MIDI clock, font, the metronome (ALGORITHM: mode, PRESETS: volume).</p>

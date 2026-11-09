@@ -31,6 +31,12 @@ static uint32_t peak_of(uint32_t blocks)         /* the loudest sample of n bloc
 }
 static void enc(uint32_t e, int32_t d) { host_enc[e] += d; ui_input(); }
 static void tap(uint32_t b) { button_down(b); fm1_ms += 80; button_up(b); fm1_ms += 40; }
+static void keyp(uint32_t k, int dn)            /* a key pressed or let go, as the panel's scan gives it */
+{
+    if (dn) { fm1_in.notes |= 1u << k; host_note_edges |= 1u << k; }
+    else fm1_in.notes &= ~(1u << k);
+    keys_input();
+}
 static void fresh(void)
 {
     uint32_t b;
@@ -220,7 +226,11 @@ int main(void)
     enc(ENC_SELECT, 1);
     CHECK(page == PG_FX, "5. SELECT: LIVE");
     button_down(BTN_FX); button_up(BTN_FX);
-    CHECK(page == PG_SOUND, "5. FX a third time: back where it was");
+    CHECK(page == PG_FILT, "5. FX a third time: FILTER");
+    button_down(BTN_FX); button_up(BTN_FX);
+    CHECK(page == PG_FXSEQ, "5. a fourth: FX SEQ");
+    button_down(BTN_FX); button_up(BTN_FX);
+    CHECK(page == PG_SOUND, "5. a fifth: back where it was");
     button_down(BTN_FX);
     fm1_ms += 50;
     ui_input();
@@ -671,6 +681,8 @@ int main(void)
     CHECK(page == PG_PROJ, "15. PROJECTS");
     set_page(PG_SEND);
     button_down(BTN_FX); button_up(BTN_FX);            /* LIVE */
+    button_down(BTN_FX); button_up(BTN_FX);            /* FILTER */
+    button_down(BTN_FX); button_up(BTN_FX);            /* FX SEQ */
     button_down(BTN_FX); button_up(BTN_FX);            /* and back */
     CHECK(page == PG_SOUND, "15. FX goes back where it came from, whatever PROJECTS did (page %u)", page);
     fresh();
@@ -739,6 +751,92 @@ int main(void)
     play_toggle();
     CHECK(sq_start_pos == 3, "18. demo: PLAY again follows the screen (entry %u, want 3)", sq_start_pos);
     sq_play = 0; sq_req = 0;
+
+    /* 19. a tap that closes the boot screen, pressed and let go in one scan: the next tap of that button is a tap
+     * (its release used to be eaten: HOME's next tap opened the help and left it open) */
+    fresh();
+    page = PG_BOOT;
+    host_pressed |= 1u << BTN_HOME; host_released |= 1u << BTN_HOME;
+    ui_input();
+    CHECK(page == PG_TRACK && !(boot_eat >> BTN_HOME & 1u), "19. the boot tap: nothing left to eat (%x)", boot_eat);
+    tap(BTN_FX);
+    host_pressed |= 1u << BTN_HOME; ui_input(); fm1_ms += 40;
+    host_released |= 1u << BTN_HOME; ui_input(); fm1_ms += 600; ui_input();
+    CHECK(page == PG_TRACK, "19. then a HOME tap: the tracks (page %u)", page);
+
+    /* 20. K-GLITCH's effects: FX goes SENDS, LIVE, FILTER, FX SEQ, back; LIVE's banks 3 and 4 play DESTROY and BEAT,
+     * one at a time, KNOB 2 their intensity; the LIVE lane records and plays them; the FILTER's knobs and keys; FX SEQ */
+    fresh();
+    tap(BTN_FX); CHECK(page == PG_SEND, "20. FX: SENDS");
+    tap(BTN_FX); CHECK(page == PG_FX, "20. FX again: LIVE");
+    tap(BTN_FX); CHECK(page == PG_FILT, "20. FX again: FILTER");
+    tap(BTN_FX); CHECK(page == PG_FXSEQ, "20. FX again: FX SEQ");
+    tap(BTN_FX); CHECK(page == PG_TRACK, "20. FX again: back (%u)", page);
+    tap(BTN_FX); tap(BTN_FX);
+    tap(BTN_OCT_UP); tap(BTN_OCT_UP);
+    CHECK(fx_bank == 2u, "20. OCT+ twice: DESTROY (%u)", fx_bank);
+    keyp(KEY_OF_WHITE[3], 1);
+    CHECK(kg_hold == DD_SCRATCH, "20. its 4th pad: SCRATCH (%d)", kg_hold);
+    keyp(KEY_OF_WHITE[0], 1);
+    CHECK(kg_hold == DD_LOOP, "20. another pad: the last pressed plays (%d)", kg_hold);
+    keyp(KEY_OF_WHITE[0], 0);
+    CHECK(kg_hold == DD_SCRATCH, "20. let go: the one still held (%d)", kg_hold);
+    {
+        uint32_t i0 = kd_int[DD_LOOP];
+        enc(ENC_KNOB2, 5);
+        CHECK(kd_int[DD_LOOP] == i0 + 5u, "20. KNOB 2: the intensity of the last pad (%u -> %u)", i0, kd_int[DD_LOOP]);
+    }
+    keyp(KEY_OF_WHITE[3], 0);
+    CHECK(kg_hold < 0, "20. all let go: none (%d)", kg_hold);
+    for (k = 0; k < 20u; k++) block();
+    CHECK(kg_on < 0, "20. and it has faded out (%d)", kg_on);
+    tap(BTN_OCT_UP);
+    keyp(KEY_OF_WHITE[12], 1);
+    CHECK(kg_hold == DD_SCRBAR, "20. BEAT's 13th pad: SCRATCH BAR (%d)", kg_hold);
+    for (k = 0; k < 4u; k++) block();
+    CHECK(kg_on == DD_SCRBAR, "20. it sounds (%d)", kg_on);
+    keyp(KEY_OF_WHITE[12], 0);
+    /* the lane: recorded while REC and PLAY, then played from it */
+    rec = 1;
+    memset(prj.pat[0].live, 0, sizeof prj.pat[0].live);
+    sq_start_pat = 0; sq_start_pos = 0; prj.mode = 0; sq_next = 0xFF; sq_req = 1;
+    block();
+    keyp(KEY_OF_WHITE[1], 1);                   /* BEAT's 2nd pad: RND BAR */
+    for (k = 0; k < 120u; k++) block();
+    keyp(KEY_OF_WHITE[1], 0);
+    for (n = 0, k = 0; k < NROW; k++) n += prj.pat[0].live[k] == KG_LANE + DD_RBAR;
+    CHECK(n > 0, "20. REC: the pad is written in the LIVE lane (%u rows)", n);
+    rec = 0;
+    set_page(PG_TRACK);
+    memset(prj.pat[0].live, 0, sizeof prj.pat[0].live);
+    for (k = 0; k < NROW; k++) prj.pat[0].live[k] = (uint8_t)(KG_LANE + DD_FUZZ);
+    for (k = 0; k < 40u; k++) block();
+    CHECK(kg_on == DD_FUZZ, "20. the lane plays it, on TRACKS (%d)", kg_on);
+    memset(prj.pat[0].live, 0, sizeof prj.pat[0].live);
+    sq_req = 2; block();
+    /* the FILTER */
+    tap(BTN_FX); tap(BTN_FX); tap(BTN_FX);
+    CHECK(page == PG_FILT, "20. FILTER (%u)", page);
+    kf_type = 0;
+    enc(ENC_KNOB1, 1);
+    CHECK(kf_type == KF_LP, "20. KNOB 1: LP (%u)", kf_type);
+    keyp(5, 1); keyp(5, 0);
+    CHECK(kf_note == KEY0 + 5u + 12u * (uint32_t)oct_ofs, "20. a key tunes it (%u)", kf_note);
+    for (k = 0; k < 4u; k++) block();
+    CHECK(kf.cur == KF_LP, "20. it plays (%d)", kf.cur);
+    kf_type = 0;
+    for (k = 0; k < 4u; k++) block();
+    CHECK(kf.cur == KF_OFF, "20. OFF: gone (%d)", kf.cur);
+    /* FX SEQ: a key writes KNOB 1's effect, again clears it */
+    tap(BTN_FX);
+    CHECK(page == PG_FXSEQ, "20. FX SEQ (%u)", page);
+    fs_brush = (uint8_t)(KG_LANE + DD_GLITCH);
+    keyp(KEY_OF_WHITE[2], 1); keyp(KEY_OF_WHITE[2], 0);
+    CHECK(P()->live[2] == KG_LANE + DD_GLITCH, "20. FX SEQ: step 3 has GLITCH (%u)", P()->live[2]);
+    keyp(KEY_OF_WHITE[2], 1); keyp(KEY_OF_WHITE[2], 0);
+    CHECK(P()->live[2] == 0, "20. again: cleared (%u)", P()->live[2]);
+    tap(BTN_FX);
+    CHECK(page == PG_TRACK, "20. FX: back (%u)", page);
 
     printf("ui_test: %s\n", fails ? "FAILED" : "passed");
     return fails != 0;

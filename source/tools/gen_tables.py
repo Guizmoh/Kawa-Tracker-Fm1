@@ -54,12 +54,18 @@ def main():
            " * SVF_F     2 sin(pi fc / fs) of a state-variable filter per MIDI note (fc capped at 10 kHz), Q15",
            " * TON_A     one-pole low-pass coefficient for TON 0..15 (300 Hz .. open), Q15",
            " * WAVES     the ONDE tables: 32 steps of 4 bits (as a Game Boy wave channel)",
-           " * PAN_G     equal-power pan, -7..+7, Q12 */",
+           " * PAN_G     equal-power pan, -7..+7, Q12",
+           " * SVF_G     tan(pi fc / fs) of a trapezoidal (Simper) state-variable filter, fc 30 Hz .. 16 kHz in 128 steps,",
+           " *           Q12 (the live effects of K-GLITCH: kawa_kg.c, as K-GLITCH's tools/gen_tables.py)",
+           " * TANH_Q15  tanh(2 i / 256), Q15: a soft clip */",
            "#pragma once", "#include <stdint.h>",
            arr("FINE", "uint32_t", fine, 6), arr("ENV_RATE", "int32_t", rate, 16), arr("DECAY_K", "int32_t", dk, 16),
            arr("SVF_F", "int32_t", svf, 16), arr("TON_A", "int32_t", ton, 16),
            "static const uint8_t WAVES[8][32] = {\n" + ",\n".join("    {" + ", ".join(map(str, r)) + "}" for r in w) + "};\n",
-           "static const int16_t PAN_G[15][2] = {" + ", ".join("{%d, %d}" % p for p in pan) + "};"] + fm6_tables()
+           "static const int16_t PAN_G[15][2] = {" + ", ".join("{%d, %d}" % p for p in pan) + "};",
+           arr("SVF_G", "uint16_t", [int(4096 * math.tan(math.pi * min(f, 0.45 * FS) / FS))
+                                      for f in [30.0 * ((16000 / 30) ** (v / 127)) for v in range(128)]], 16),
+           arr("TANH_Q15", "int16_t", [int(32767 * math.tanh(i / 256 * 2)) for i in range(257)], 16)] + fm6_tables()
     OUT.write_text("\n".join(out) + "\n")
     print("->", OUT)
 

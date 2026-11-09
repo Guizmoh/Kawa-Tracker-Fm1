@@ -19,7 +19,7 @@ static uint32_t echo_w;
 static int32_t echo_lp;
 
 #define BF_MASK ((1u << LF_LOOP16) | (1u << LF_LOOP12) | (1u << LF_LOOP32) | (1u << LF_LOOP64) | (1u << LF_STUT4) | \
-                 (1u << LF_STUT3) | (1u << LF_SCR) | (1u << LF_SCRF) | (1u << LF_REV) | (1u << LF_ROLLUP) | \
+                 (1u << LF_STUT3) | (1u << LF_REV) | (1u << LF_ROLLUP) | \
                  (1u << LF_TAPE) | (1u << LF_DIVE) | (1u << LF_FREEZE))
 static struct {
     uint8_t act, id;                            /* a buffer effect plays; which (LF_...) */
@@ -39,6 +39,10 @@ static uint8_t lv_target;                       /* the bus the live effects play
 static uint32_t cap_rd(uint32_t a) { return cap[a & CAPM]; }
 static int32_t cap_l(uint32_t w) { return (int16_t)(w & 0xFFFFu); }
 static int32_t cap_r(uint32_t w) { return (int16_t)(w >> 16); }
+
+#include "kawa_kg.c"                             /* K-GLITCH's DESTROY and BEAT banks, the scratch, the FILTER */
+static int8_t kg_want_blk = -1;                 /* ISR: the K-GLITCH effect of this block (kawa_seq.c), -1 none */
+static uint8_t kg_sint_blk;                     /* .. its intensity + 1 (POCKET's scratches), 0: its own */
 
 /* frames back to the last grid line of g frames (the sequencer's beat when it plays) */
 static uint32_t since_grid(uint32_t g) { return g ? g_beatpos % g : 0u; }
@@ -231,10 +235,11 @@ static void fx_live(int32_t *L, int32_t *R, int32_t *E)
     else if (hpf_note) { mode = 2; f = SVF_F[hpf_note + 20u]; q = 12000; }
     else if (on >> LF_WOB & 1u) { mode = 1; f = SVF_F[64 + (sine(lfo_ph) * 28 >> 15)]; q = 7000; }
     else if (on >> LF_VINYL & 1u) { mode = 1; f = SVF_F[98]; q = 20000; }
+    kg_begin(kg_want_blk, kg_sint_blk, afr);
     for (i = 0; i < CHUNK; i++) {
         int32_t l = clampi(L[i], -65535, 65535), r = clampi(R[i], -65535, 65535);   /* (two full scales: the
                                                  * products below stay inside 32 bits) */
-        if (!(bf.act && bf.frozen) || ((afr - (bf.S - 64u)) & CAPM) >= bf.L + 128u)   /* (frozen: all but the */
+        if ((!(bf.act && bf.frozen) || ((afr - (bf.S - 64u)) & CAPM) >= bf.L + 128u) && !kg_owns(afr))   /* (frozen: all but the */
             cap[afr & CAPM] = (uint32_t)(uint16_t)clampi(l, -32767, 32767) | (uint32_t)clampi(r, -32767, 32767) << 16;
         if (bf.act) {
             int32_t fl = l, fr = r;
@@ -301,6 +306,7 @@ static void fx_live(int32_t *L, int32_t *R, int32_t *E)
             l += (int32_t)(x >> 24) - 128;
             r += (int32_t)(x >> 24) - 128;
         }
+        kg_frame(&l, &r, afr);                  /* K-GLITCH's effect, the FILTER */
         if (on >> LF_ECHO & 1u)
             E[i] += (l + r) >> 1;
         L[i] = l;
@@ -311,6 +317,7 @@ static void fx_live(int32_t *L, int32_t *R, int32_t *E)
         }
         afr++;
     }
+    kg_end();
 }
 
 /* ---- the reverb: four combs and two all-pass filters a side (Freeverb's), 14 KiB */

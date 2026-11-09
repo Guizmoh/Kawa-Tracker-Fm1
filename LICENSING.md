@@ -14,6 +14,7 @@ das un firmware construido a partir de él, da también su código fuente.*
 | | |
 | --- | --- |
 | KAWA: `source/firmware/src/kawa*.c`, `source/firmware/gen/kawa_*.h`, `source/tools/gen_*.py`, `source/tests/`, `source/web/`, `emulator/`, `manual/`, the install launchers and the docs | Omnipotard |
+| The live effects of K-GLITCH in `source/firmware/src/kawa_kg.c` (the DESTROY and BEAT banks, the scratch, the FILTER), from K-GLITCH's `kg_dd.c`, `kg_beat.c` and `kg_filter.c`; its trapezoidal state-variable filter after Andrew Simper's (Cytomic) published design | Omnipotard ([K-GLITCH](https://github.com/Guizmoh/K-Glitch)), GPL-3.0-only |
 | KAWA's dog: `source/art/boot-dog.png` (the boot picture, the dog in 32 bits) and `source/art/mascot-dog.png` (the 16-bit dog the mascot is drawn after) | Omnipotard |
 | The platform: `source/firmware/hal/`, `source/firmware/loader/`, `crt0.S`, `app.ld`, `source/firmware/src/` (`usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `gfx.c`, `libc.c`, `bootguard.h`, `uac_fir.h`), `source/tools/build.py`, `install/fm1_install.py`, `source/tools/fm1pkg_make.py`, `source/tools/lz4blk.py`, `source/tools/get_toolchain.sh` | Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments ([Felucca](https://github.com/hugelton/Felucca)), with the changes of [SLOOP](https://github.com/isod89/sloop-fm1) (isod89) |
 | The wiring `source/firmware/src/platform.c` and the host mode that `source/tests/host.c` started from | zvenson ([Dinghy](https://github.com/zvenson/dinghy)) |
