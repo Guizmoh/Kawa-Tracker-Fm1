@@ -1,0 +1,93 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face { font-family: Plex; src: url(/home/user/kawa-tracker-fm1/k-wa-sub/source/assets/fonts/IBMPlexMono-SemiBold.ttf); }
+:root { --bg:#0b1214; --panel:#111b1e; --line:#283438; --lime:#c8f03c; --cyan:#50d8d0; --org:#f08c3c; --white:#ecf2f2; --grey:#829294; --mod:#aa8cfa; }
+body { margin:0; background:#1b1b1b; font-family:"DejaVu Sans", sans-serif; color:var(--white); }
+.wrap { display:flex; flex-wrap:wrap; gap:14px; padding:14px; width:1060px; }
+.card { width:250px; } .cap { font:11px/1.35 "DejaVu Sans"; color:#cfd6d6; margin-top:6px; } .cap b { color:#fff; }
+.scr { width:240px; height:240px; background:var(--bg); position:relative; overflow:hidden; border:5px solid #000; border-radius:4px; }
+.hd { position:absolute; left:6px; top:3px; right:6px; }
+.t1 { font:bold 9px "DejaVu Sans"; color:var(--lime); letter-spacing:.04em; }
+.t2 { font:bold 15px "DejaVu Sans"; letter-spacing:.02em; margin-top:1px; white-space:nowrap; }
+.t3 { font:bold 8px "DejaVu Sans"; color:var(--grey); margin-top:1px; }
+.pg { position:absolute; right:0; top:0; font:bold 8px "DejaVu Sans"; color:var(--grey); }
+.ch { position:absolute; top:46px; height:12px; width:74px; font:bold 8px "DejaVu Sans"; text-align:center; border-radius:2px; line-height:12px; }
+.grid { position:absolute; top:60px; left:0; }
+.k { position:absolute; left:1px; width:10px; font:bold 7px "DejaVu Sans"; color:var(--grey); text-align:center; }
+.c { position:absolute; width:74px; height:36px; background:var(--panel); border:1px solid var(--line); border-radius:3px; box-sizing:border-box; padding:2px 4px; }
+.c .n { font:bold 8px "DejaVu Sans"; } .c .v { font:bold 12px "DejaVu Sans"; margin-top:1px; white-space:nowrap; }
+.c .b { position:absolute; left:4px; right:4px; bottom:3px; height:3px; background:#1d2a2d; border-radius:2px; } .c .b i { display:block; height:100%; border-radius:2px; }
+.c.dim { opacity:.38; } .c.sel { border-width:2px; }
+.c .m { position:absolute; right:3px; top:2px; font:bold 7px "DejaVu Sans"; color:var(--mod); }
+.ft { position:absolute; left:0; right:0; bottom:0; height:18px; border-top:1px solid var(--line); font:bold 7px/18px "DejaVu Sans"; color:var(--grey); padding:0 5px; display:flex; justify-content:space-between; }
+.sg { display:inline-block; width:9px; height:9px; line-height:9px; border-radius:2px; color:#0b1214; font:bold 9px/9px "DejaVu Sans"; text-align:center; vertical-align:-1px; }
+.pop { position:absolute; left:6px; right:6px; top:2px; height:40px; background:var(--panel); border:1px solid; border-radius:3px; }
+.pop .a { font:bold 8px "DejaVu Sans"; padding:3px 5px 0; } .pop .z { font:bold 17px "DejaVu Sans"; padding:0 5px; }
+.pop .w { position:absolute; right:6px; bottom:4px; font:bold 8px "DejaVu Sans"; color:var(--mod); }
+svg { position:absolute; }
+/* the panel */
+.panel { width:500px; height:250px; background:#d9d9d4; border-radius:10px; position:relative; color:#222; font:bold 10px "DejaVu Sans"; }
+.pb { position:absolute; width:40px; height:24px; border-radius:5px; background:#3b3b3b; color:#ddd; font:bold 8px/24px "DejaVu Sans"; text-align:center; }
+.kn { position:absolute; width:34px; height:34px; border-radius:50%; background:#2b2b2b; border:3px solid #777; color:#ddd; font:bold 8px/34px "DejaVu Sans"; text-align:center; }
+.lab { position:absolute; font:bold 9px "DejaVu Sans"; color:#333; }
+</style></head><body><div class="wrap" id="w"></div>
+<script>
+const C = { "-": "var(--cyan)", "0": "var(--lime)", "+": "var(--org)" };
+function cell(col, row, n, v, f, st, mod) {
+  const x = 12 + col * 76, y = row * 38;
+  const k = col === 0 ? "-" : col === 1 ? "0" : "+";
+  return `<div class="c ${st||""}" style="left:${x}px;top:${y}px;${st==="sel"?"border-color:"+C[k]:""}"><div class="n" style="color:${C[k]}">${n}</div><div class="v">${v}</div>${mod?`<div class="m">${mod}</div>`:""}<div class="b"><i style="width:${f}%;background:${C[k]}"></i></div></div>`;
+}
+function screen(o) {
+  let h = `<div class="scr">`;
+  if (o.pop) h += `<div class="pop" style="border-color:${C[o.pop.k]}"><div class="a" style="color:${C[o.pop.k]}">${o.pop.a}</div><div class="z">${o.pop.z}</div><div class="w">${o.pop.w||""}</div></div>`;
+  else h += `<div class="hd"><div class="t1">${o.t1}</div><div class="t2">${o.t2}</div><div class="t3">${o.t3}</div><div class="pg">${o.pg}</div></div>`;
+  o.heads.forEach((t, i) => { const k = i === 0 ? "-" : i === 1 ? "0" : "+"; const on = o.act === k;
+    h += `<div class="ch" style="left:${12+i*76}px;background:${on?C[k]:"transparent"};color:${on?"#0b1214":C[k]};border:1px solid ${C[k]}">${t}</div>`; });
+  h += `<div class="grid">`;
+  for (let r = 0; r < 4; r++) h += `<div class="k" style="top:${r*38+13}px">K${r+1}</div>`;
+  o.cells.forEach((col, ci) => col.forEach((c, r) => { if (!c) return;
+    const k = ci === 0 ? "-" : ci === 1 ? "0" : "+"; let st = o.act === k ? "" : "dim"; if (o.sel && o.sel[0] === ci && o.sel[1] === r) st = "sel";
+    h += cell(ci, r, c[0], c[1], c[2], st, c[3]); }));
+  h += `</div>${o.svg||""}<div class="ft">${o.ft}</div></div>`;
+  return h;
+}
+const S = (k) => `<span class="sg" style="background:${C[k]}">${k==="-"?"−":"+"}</span>`;
+const FT = `<span>${S("-")} OCT− HOLD</span><span>TAP = OCTAVE</span><span>OCT+ HOLD ${S("+")}</span>`;
+const OSC = {
+  heads: ["− OSC A", "MIX", "OSC B +"],
+  cells: [
+    [["WV","SAW",60],["PW","50%",50],["DR","12%",12],["PT","0 st",50]],
+    [["A","78%",78],["B","55%",55],["SB","90%",90],["XM","ADD",0]],
+    [["DT","42%",42],["MX","30%",30],["VC","5",70],["PT","-12 st",25,"L1"]]],
+};
+const cards = [
+ [screen({ ...OSC, t1:"EDIT · OSCILLATORS", t2:"ANALOG  +  REESE", t3:"ALGO = ENGINE A · SHIFT+ALGO = ENGINE B", pg:"BASS 1/2", act:"0", ft:FT }),
+  "<b>1. EDIT, rien de maintenu.</b> Les 4 potards règlent la colonne du milieu (MIX : niveau A, niveau B, SUB, X-MOD). Les colonnes − et + sont grisées, juste les initiales : WV = wave, DT = detune…"],
+ [screen({ ...OSC, cells:[OSC.cells[0], OSC.cells[1], [["DT","48%",48], ...OSC.cells[2].slice(1)]], pop:{k:"+", a:"OSC B · REESE · K1", z:"DETUNE  48%", w:"AVANT 42%"}, act:"+", sel:[2,0], ft:FT }),
+  "<b>2. OCT+ maintenu + K1.</b> La colonne + (OSC B, orange) s'allume ; le nom complet n'apparaît qu'au moment où on tourne, en haut, avec l'ancienne valeur. On relâche : retour au MIX."],
+ [screen({ ...OSC, cells:[[["WV","SQR",80], ...OSC.cells[0].slice(1)], OSC.cells[1], OSC.cells[2]], pop:{k:"-", a:"OSC A · ANALOG · K1", z:"WAVE  SQR", w:"AVANT SAW"}, act:"-", sel:[0,0], ft:FT }),
+  "<b>3. OCT− maintenu + K1.</b> La colonne − (OSC A, cyan). Pas de SELECT, pas d'ALGO : 12 réglages au bout des doigts sur une seule page."],
+ [screen({ heads:["− AMP","FILTER","MOD +"], t1:"ENVELOPES", t2:"PLUCK · 3 ENV", t3:"MOD ENV → PITCH", pg:"ENV 1/1", act:"0",
+   cells:[[["A","2 ms",5],["D","180 ms",40],["S","70%",70],["R","90 ms",30]],[["A","0 ms",0],["D","240 ms",48],["S","20%",20],["R","120 ms",35]],[["A","0 ms",0],["D","60 ms",20],["AM","+24",68],["DS","PITCH",0]]],
+   ft:FT }), "<b>4. ENV : les 3 enveloppes côte à côte.</b> AMP à gauche, FILTRE au milieu, MOD à droite. Plus besoin de changer de vue."],
+ [screen({ heads:["− LFO 1","WOBBLE","LFO 2 +"], t1:"LFO · LIVE", t2:"WOB 1/8 · CUTOFF", t3:"LFO 2: TRI 2 BAR → A SHAPE", pg:"LFO 1/2", act:"0",
+   cells:[[["SH","WUB",60],["PH","0%",0],["SM","20%",20],["TR","NOTE",100]],[["RT","1/8",50],["DP","+48",80,"↕"],["DS","CUTOFF",0],["GR","STRAIGHT",100]],[["SH","TRI",20],["RT","2 BAR",15],["DP","+20",60],["DS","A SHAPE",0]]],
+   ft:FT }), "<b>5. LFO.</b> Au milieu ce qui se joue en live (vitesse, profondeur, destination). OCT− : la forme du LFO 1. OCT+ : le LFO 2 entier."],
+ [screen({ heads:["− DRIVE","SPACE","MASTER +"], t1:"FX RACK", t2:"SAT TUBE · DELAY 3/16", t3:"VERB 40% · GLUE 30%", pg:"FX 1/2", act:"0",
+   cells:[[["TY","TUBE",30],["AM","35%",35],["MX","80%",80],["BT","12 bit",70]],[["DT","3/16",40],["FB","45%",45],["DL","25%",25],["RV","18%",18]],[["GL","30%",30],["SB","+2 dB",40],["VO","90%",90],["CR","OFF",0]]],
+   ft:FT }), "<b>6. FX.</b> Même principe : les mix au milieu, la saturation à gauche, le master à droite. La 2e vue (SELECT) garde les réglages fins."],
+];
+let h = cards.map(([s, c]) => `<div class="card">${s}<div class="cap">${c}</div></div>`).join("");
+h += `<div class="card" style="width:510px"><div class="panel">
+ <div class="lab" style="left:16px;top:10px">FM-1 (schéma, pas à l'échelle) · couleurs à l'écran = bouton à tenir</div>
+ <div class="pb" style="left:20px;top:40px;background:#0f6f69;outline:3px solid var(--cyan)">OCT −</div>
+ <div class="pb" style="left:66px;top:40px;background:#8a4612;outline:3px solid var(--org)">OCT +</div>
+ ${["FX","SEL","ENV","LFO","EDIT","GLO","HOME","SAVE","ARP","SEQ","PLAY","REC"].map((n,i)=>`<div class="pb" style="left:${130+(i%6)*58}px;top:${i<6?40:74}px">${n}</div>`).join("")}
+ ${["K1","K2","K3","K4"].map((n,i)=>`<div class="kn" style="left:${40+i*56}px;top:130px">${n}</div>`).join("")}
+ ${["SELECT","ALGO","PRESETS"].map((n,i)=>`<div class="kn" style="left:${290+i*64}px;top:130px;border-color:#555">${n.slice(0,4)}</div><div class="lab" style="left:${286+i*64}px;top:176px;color:#777">${n}</div>`).join("")}
+ <div class="lab" style="left:16px;top:190px;width:470px;line-height:1.5;font-weight:normal">
+ <b>OCT− tenu</b> = colonne cyan · <b>OCT+ tenu</b> = colonne orange · <b>OCT− ou OCT+ tapé</b> (sans potard) = octave comme avant · <b>les deux</b> = tout couper.<br>
+ SELECT / ALGO / PRESETS ne servent presque plus qu'aux listes (destinations, presets, réglages fins).</div>
+</div><div class="cap"><b>7. Le panneau.</b> Les mêmes couleurs que les colonnes : cyan = OCT−, orange = OCT+.</div></div>`;
+document.getElementById("w").innerHTML = h;
+</script></body></html>

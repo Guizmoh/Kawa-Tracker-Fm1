@@ -1,0 +1,380 @@
+<title>K-WA SUB Emulator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* a hardware emulator: one dark world (the FM-1 and K-WA SUB's screen), the device centred, the help below */
+:root {
+  color-scheme: dark;
+  --room: #0a0d0e;          /* behind the device */
+  --body: #1b2124;          /* the FM-1's case */
+  --body-hi: #262e32;
+  --edge: #323c40;
+  --ink: #e8eeee;
+  --mute: #8c9a9c;
+  --lime: #c8f03c;          /* the firmware's accent */
+  --cyan: #50d8d0;
+  --key-w: #dfe5e3;
+  --key-b: #20272a;
+  --f-disp: "Chakra Petch", "Arial Narrow", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+html, body { background: var(--room); color: var(--ink); }
+body { font: 14px/1.5 var(--f-mono); padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px 20px; }
+h1 { font: 700 26px/1 var(--f-disp); letter-spacing: .04em; margin: 0; text-wrap: balance; }
+h1 span { color: var(--lime); }
+.tag { color: var(--mute); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button { font: 600 12px/1 var(--f-mono); letter-spacing: .06em; color: var(--ink); background: var(--body-hi);
+  border: 1px solid var(--edge); border-radius: 6px; padding: 9px 12px; cursor: pointer; }
+button:focus-visible, .knob:focus-visible, .key:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+button.primary { background: var(--lime); color: #11160a; border-color: var(--lime); }
+label.vol { display: flex; align-items: center; gap: 8px; color: var(--mute); font-size: 12px; }
+#status { color: var(--mute); font-size: 12px; min-height: 1.5em; }
+
+.device { background: linear-gradient(180deg, var(--body-hi), var(--body)); border: 1px solid var(--edge); border-radius: 18px;
+  padding: 18px; display: grid; gap: 18px; box-shadow: 0 20px 50px rgba(0,0,0,.45); }
+.top { display: grid; grid-template-columns: minmax(0, 480px) minmax(0, 1fr); gap: 22px; align-items: start; }
+.screen { background: #000; border: 6px solid #0d1112; border-radius: 10px; width: 100%; aspect-ratio: 1; max-width: 480px; }
+.screen canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; border-radius: 4px; }
+.ctl { display: grid; gap: 16px; min-width: 0; }
+.encs, .knobs { display: flex; flex-wrap: wrap; gap: 14px; }
+.enc { display: grid; justify-items: center; gap: 6px; width: 74px; }
+.knob { width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #4a565b, #1a2023 70%);
+  border: 1px solid #0c0f10; position: relative; touch-action: none; cursor: ns-resize; }
+.knob::after { content: ""; position: absolute; left: 50%; top: 6px; width: 3px; height: 14px; margin-left: -1.5px; border-radius: 2px;
+  background: var(--ink); transform-origin: 50% 22px; transform: rotate(var(--a, 0deg)); }
+.enc.k .knob::after { background: var(--lime); }
+.enc b { font: 700 11px/1.2 var(--f-disp); letter-spacing: .08em; text-align: center; }
+.enc i { font: 400 10px/1.2 var(--f-mono); color: var(--cyan); font-style: normal; min-height: 1.2em; text-align: center; }
+.btns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.btn { display: grid; gap: 4px; justify-items: center; padding: 8px 4px; position: relative; min-width: 0; }
+.btn small { font: 400 9px/1 var(--f-mono); color: var(--mute); }
+.btn strong { font: 700 11px/1.1 var(--f-disp); letter-spacing: .05em; text-align: center; }
+.btn .led { position: absolute; top: 5px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: #2c3437; }
+.btn .led.l1 { background: #4d5a2a; } .btn .led.l2 { background: var(--lime); box-shadow: 0 0 6px var(--lime); }
+.btn.down { background: #39444a; }
+.keys-scroll { overflow-x: auto; padding-bottom: 4px; }
+.keys { position: relative; height: 130px; min-width: 620px; user-select: none; touch-action: none; }
+.key { position: absolute; top: 0; border-radius: 0 0 6px 6px; cursor: pointer; }
+.key.w { height: 128px; background: var(--key-w); border: 1px solid #9aa4a2; }
+.key.b { height: 80px; background: var(--key-b); border: 1px solid #000; z-index: 2; }
+.key.on.w { background: var(--lime); } .key.on.b { background: #7a9a20; }
+.key span { position: absolute; bottom: 6px; left: 0; right: 0; text-align: center; font-size: 10px; color: #56605e; }
+.help { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.help section { background: var(--body); border: 1px solid var(--edge); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.help h2 { font: 700 14px/1.2 var(--f-disp); letter-spacing: .08em; margin: 0 0 8px; color: var(--lime); }
+.help ul { margin: 0; padding-left: 18px; color: var(--mute); }
+.help li { margin: 3px 0; } .help kbd { font: 600 11px var(--f-mono); color: var(--ink); background: var(--body-hi);
+  border: 1px solid var(--edge); border-radius: 4px; padding: 0 4px; }
+@media (max-width: 760px) {
+  .top { grid-template-columns: 1fr; }
+  .screen { margin: 0 auto; }
+  .btns { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>K-WA <span>SUB</span></h1>
+      <div class="tag">FM-1 bass synthesizer &middot; emulator &middot; v__KSUB_VER__</div>
+    </div>
+    <div class="bar">
+      <button id="midi" type="button">MIDI</button>
+      <label class="vol" for="master">MASTER <input id="master" type="range" min="0" max="100" value="70"></label>
+    </div>
+  </header>
+  <div id="status" role="status">Le son démarre au premier appui (touche, bouton ou clavier de l'ordinateur).</div>
+
+  <div class="device">
+    <div class="top">
+      <div class="screen"><canvas id="lcd" width="240" height="240" aria-label="Écran du FM-1"></canvas></div>
+      <div class="ctl">
+        <div class="encs" id="encs"></div>
+        <div class="knobs" id="knobs"></div>
+        <div class="btns" id="btns"></div>
+      </div>
+    </div>
+    <div class="keys-scroll"><div class="keys" id="keys" aria-label="Clavier 27 touches"></div></div>
+  </div>
+
+  <div class="help">
+    <section>
+      <h2>PAGES</h2>
+      <ul>
+        <li><b>HOME</b> 01 PLAY &middot; <b>EDIT</b> 02 BASS &middot; <b>ENV</b> 03 ENVELOPE &middot; <b>SEQ</b> 04 FILTER</li>
+        <li><b>LFO</b> 05 LFO &middot; <b>FX</b> 06 FX &middot; <b>ARP</b> 07 PRESETS &middot; <b>GLO</b> 08 SYSTEM</li>
+        <li>Le même bouton ou <b>SEL</b> : vue suivante (OSC A, OSC B, SUB, COMBINE…) ; les points en haut à droite de l'écran montrent les vues de la page</li>
+        <li><b>LFO</b> : LFO 1 WOBBLE, encore <b>LFO</b> : LFO 2, encore : la matrice. Leurs destinations reprennent tous les réglages des oscillateurs actifs</li>
+        <li><b>SELECT</b> choisit la ligne, <b>ALGO</b> change sa valeur, <b>K1–K4</b> font ce que dit le bas de l'écran</li>
+        <li><b>PRESETS</b> charge le patch suivant, où que l'on soit</li>
+      </ul>
+    </section>
+    <section>
+      <h2>JOUER EN LIVE</h2>
+      <ul>
+        <li>Page PLAY : <b>K1</b> cutoff, <b>K2</b> vitesse du wobble (calée sur le tempo), <b>K3</b> profondeur, <b>K4</b> résonance</li>
+        <li><b>PLAY</b> = HOLD : la note reste, les mains sont libres pour le wobble</li>
+        <li><b>REC</b> = TAP tempo ; le LFO se recale sur la frappe</li>
+        <li><b>SAVE</b> ouvre l'enregistrement (banque B), <b>SAVE</b> encore pour écrire</li>
+        <li><b>SAVE maintenu</b> : annule la dernière modification (undo), et continue tant qu'il reste appuyé</li>
+        <li><b>OCT-</b> + <b>OCT+</b> ensemble : tout couper</li>
+      </ul>
+    </section>
+    <section>
+      <h2>CLAVIER DE L'ORDINATEUR</h2>
+      <ul>
+        <li>Notes : <kbd>Z</kbd><kbd>S</kbd><kbd>X</kbd>… et <kbd>Q</kbd><kbd>2</kbd><kbd>W</kbd>…</li>
+        <li><kbd>↑</kbd><kbd>↓</kbd> ligne &middot; <kbd>←</kbd><kbd>→</kbd> valeur &middot; <kbd>PgUp</kbd><kbd>PgDn</kbd> preset</li>
+        <li><kbd>Shift</kbd>+<kbd>1</kbd>…<kbd>8</kbd> pages &middot; <kbd>Tab</kbd> SEL (FX LIVE, MACROS) &middot; <kbd>Espace</kbd> SEQ PLAY/STOP &middot; <kbd>Entrée</kbd> TAP (vue SEQ : REC) &middot; <kbd>⌫</kbd> SAVE (maintenu : undo) &middot; <kbd>-</kbd> / <kbd>=</kbd> OCT− / OCT+ (version B, maintenus : colonnes jaune / orange)</li>
+        <li><kbd>-</kbd> <kbd>=</kbd> octave &middot; molette ou glisser sur un bouton rotatif</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<script>
+"use strict";
+const WASM_B64 = "__KSUB_WASM__";
+const BTN = { OCT_DOWN: 0, OCT_UP: 1, FX: 2, SEL: 3, ENV: 4, LFO: 5, EDIT: 6, GLO: 7, HOME: 8, SAVE: 9, ARP: 10, SEQ: 11, PLAY: 12, REC: 13 };
+const BTN_LAYOUT = [["HOME", "PLAY"], ["EDIT", "BASS"], ["ENV", "ENVELOPE"], ["SEQ", "FILTER · SEQ"], ["LFO", "LFO"], ["FX", "FX"], ["ARP", "PRESETS · ARP"],
+                    ["GLO", "SYSTEM"], ["SEL", "FX LIVE · MACROS"], ["SAVE", "SAVE"], ["PLAY", "SEQ ▶ (tenu: HOLD)"], ["REC", "TAP · REC"], ["OCT_DOWN", "OCT -"], ["OCT_UP", "OCT +"]];
+const ENC = { SELECT: 0, ALGO: 1, K1: 2, K2: 3, K3: 4, K4: 5, PRESETS: 6 };
+const LS = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const $ = id => document.getElementById(id);
+const b64dec = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const b64enc = u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const wasmBytes = b64dec(WASM_B64);
+
+/* ---- the engine: the firmware as WebAssembly; the same code runs in the audio worklet or on the page */
+const ENGINE_SRC = `
+class Engine {
+  constructor(bytes, boot) {
+    this.x = new WebAssembly.Instance(new WebAssembly.Module(bytes), {}).exports;
+    const x = this.x;
+    if (boot.mem) {                                 /* the running engine handed over whole: same patch, same notes */
+      const grow = boot.mem.length - x.memory.buffer.byteLength;
+      if (grow > 0) x.memory.grow(Math.ceil(grow / 65536));
+      new Uint8Array(x.memory.buffer).set(boot.mem);
+    } else {
+      if (boot.store) new Uint8Array(x.memory.buffer, x.ksub_store(), x.ksub_store_size()).set(boot.store);
+      if (boot.settings) new Uint8Array(x.memory.buffer, x.ksub_settings(), 260).set(boot.settings);
+      x.ksub_init();
+    }
+    this.pos = 256; this.buf = null; this.n = 0; this.sg = -1; this.stg = x.ksub_store_gen(); this.seg = x.ksub_settings_gen(); this.lab = "";
+    this.emit = () => {};
+  }
+  input(d) {
+    const x = this.x;
+    if (d.t === "keys") x.ksub_keys(d.mask >>> 0);
+    else if (d.t === "btn") x.ksub_button(d.id, d.down ? 1 : 0);
+    else if (d.t === "turn") x.ksub_turn(d.enc, d.steps | 0);
+    else if (d.t === "master") x.ksub_master(d.v | 0);
+    else if (d.t === "midi") x.ksub_midi(d.st, d.d1, d.d2);
+  }
+  str(p, n) { const m = new Uint8Array(this.x.memory.buffer, p, n); let s = ""; for (let i = 0; i < n && m[i]; i++) s += String.fromCharCode(m[i]); return s; }
+  publish() {
+    const x = this.x, g = x.ksub_screen_gen(), out = { t: "ui" };
+    if (g !== this.sg) { this.sg = g; out.fb = new Uint16Array(x.memory.buffer, x.ksub_screen(), 57600).slice(); }
+    out.leds = new Uint8Array(x.memory.buffer, x.ksub_leds(), 41).slice();
+    const lab = [0, 1, 2, 3].map(i => this.str(x.ksub_knob_label(i), 16)).join("|");
+    if (lab !== this.lab) { this.lab = lab; out.labels = lab.split("|"); }
+    if (x.ksub_store_gen() !== this.stg) { this.stg = x.ksub_store_gen(); out.store = new Uint8Array(x.memory.buffer, x.ksub_store(), x.ksub_store_size()).slice(); }
+    if (x.ksub_settings_gen() !== this.seg) { this.seg = x.ksub_settings_gen(); out.settings = new Uint8Array(x.memory.buffer, x.ksub_settings(), 260).slice(); }
+    this.emit(out, out.fb ? [out.fb.buffer] : []);
+  }
+  render(L, R) {
+    const x = this.x;
+    for (let i = 0; i < L.length; i++) {
+      if (this.pos >= 256) { this.buf = new Float32Array(x.memory.buffer, x.ksub_audio(), 512); this.pos = 0; x.ksub_step(); }
+      L[i] = this.buf[2 * this.pos]; R[i] = this.buf[2 * this.pos + 1]; this.pos++;
+    }
+    if ((++this.n & 7) === 0) this.publish();
+  }
+}`;
+const WORKLET_SRC = ENGINE_SRC + `
+class KsubProc extends AudioWorkletProcessor {
+  constructor(o) {
+    super();
+    this.e = new Engine(o.processorOptions.bytes, o.processorOptions.boot);
+    this.e.emit = (m, tr) => this.port.postMessage(m, tr);
+    this.port.onmessage = ev => this.e.input(ev.data);
+  }
+  process(_, outs) { const o = outs[0]; this.e.render(o[0], o[1] || o[0]); return true; }
+}
+registerProcessor("ksub", KsubProc);`;
+const Engine = new Function(ENGINE_SRC + "; return Engine;")();
+
+/* ---- the screen, the LEDs, the knob labels */
+const lcd = $("lcd").getContext("2d"), img = lcd.createImageData(240, 240);
+function drawScreen(fb) {
+  const d = img.data;
+  for (let i = 0; i < 57600; i++) {
+    const v = fb[i], j = i * 4;
+    d[j] = (v >> 11) * 255 / 31; d[j + 1] = ((v >> 5) & 63) * 255 / 63; d[j + 2] = (v & 31) * 255 / 31; d[j + 3] = 255;
+  }
+  lcd.putImageData(img, 0, 0);
+}
+const btnEls = [], knobLab = [];
+function onUi(m) {
+  if (m.fb) drawScreen(m.fb);
+  if (m.leds) btnEls.forEach((b, id) => { if (b) b.led.className = "led" + (m.leds[id] ? " l" + m.leds[id] : ""); });
+  if (m.labels) m.labels.forEach((s, i) => { knobLab[i].textContent = s || " "; });
+  if (m.store) LS.set("ksub.store", b64enc(m.store));
+  if (m.settings) LS.set("ksub.settings", b64enc(m.settings));
+}
+
+/* ---- one engine runs from the start (screen, LFOs); the first touch or key adds the sound.
+   Browsers only open audio inside a gesture, so the context is created and resumed right there, before any await. */
+let send = () => {}, idle = null, eng = null, ac = null;
+function boot() {
+  const b = {}, s = LS.get("ksub.store"), t = LS.get("ksub.settings");
+  try { if (s) b.store = b64dec(s); if (t) b.settings = b64dec(t); } catch (e) {}
+  return b;
+}
+function startIdle() {
+  try {
+    const L = new Float32Array(256), R = new Float32Array(256);
+    eng = new Engine(wasmBytes, boot());
+    eng.emit = onUi;
+    send = d => eng.input(d);
+    idle = setInterval(() => { for (let k = 0; k < 4; k++) eng.render(L, R); }, 23);
+  } catch (err) {
+    $("status").textContent = "Ce navigateur refuse WebAssembly ici : ouvrez emulator/index.html depuis le dépôt.";
+  }
+}
+function onPage(why) {                              /* the worklet can't run here: the same engine feeds the speakers */
+  const sp = ac.createScriptProcessor(1024, 0, 2);
+  clearInterval(idle);
+  sp.onaudioprocess = ev => eng.render(ev.outputBuffer.getChannelData(0), ev.outputBuffer.getChannelData(1));
+  sp.connect(ac.destination);
+  send = d => eng.input(d);
+  $("status").textContent = "Son actif (moteur sur la page, " + ac.sampleRate + " Hz).";
+  if (why) console.info("audio worklet unavailable:", why);
+}
+function startAudio() {
+  if (ac) { if (ac.state !== "running") ac.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC || !eng) { $("status").textContent = "Pas d'audio Web dans ce navigateur."; return; }
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}   /* iPhone: play even on silent */
+  try { ac = new AC({ sampleRate: 44100, latencyHint: "interactive" }); } catch (e) { ac = new AC(); }
+  ac.resume();
+  const one = ac.createBufferSource(); one.buffer = ac.createBuffer(1, 1, ac.sampleRate); one.connect(ac.destination); one.start();
+  (async () => {
+    try {
+      if (!ac.audioWorklet) throw new Error("no audioWorklet");
+      const url = URL.createObjectURL(new Blob([WORKLET_SRC], { type: "application/javascript" }));
+      await ac.audioWorklet.addModule(url);
+      const mem = new Uint8Array(eng.x.memory.buffer).slice();
+      const node = new AudioWorkletNode(ac, "ksub", { numberOfInputs: 0, outputChannelCount: [2], processorOptions: { bytes: wasmBytes, boot: { mem } } });
+      clearInterval(idle);                          /* same tick as the snapshot: no input lost */
+      node.port.onmessage = ev => onUi(ev.data);
+      node.onprocessorerror = () => { node.disconnect(); onPage("processor error"); };
+      node.connect(ac.destination);
+      send = d => node.port.postMessage(d);
+      $("status").textContent = "Son actif (audio worklet, " + ac.sampleRate + " Hz).";
+    } catch (err) { onPage(err && err.message); }
+    setMaster();
+  })();
+}
+["pointerdown", "keydown", "touchstart"].forEach(t => window.addEventListener(t, startAudio, { capture: true, passive: true }));
+document.addEventListener("visibilitychange", () => { if (!document.hidden && ac && ac.state !== "running") ac.resume(); });
+
+/* ---- the panel */
+function setMaster() { const v = $("master").value / 100; send({ t: "master", v: Math.round(v * v * 4096) }); }
+$("master").addEventListener("input", setMaster);
+function press(id, down) { send({ t: "btn", id, down }); const b = btnEls[id]; if (b) b.el.classList.toggle("down", down); }
+for (const [name, fn] of BTN_LAYOUT) {
+  const id = BTN[name], el = document.createElement("button");
+  el.type = "button"; el.className = "btn";
+  el.innerHTML = `<span class="led"></span><small>${name.replace("_DOWN", " -").replace("_UP", " +")}</small><strong>${fn}</strong>`;
+  el.addEventListener("pointerdown", e => { e.preventDefault(); press(id, true); });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(t => el.addEventListener(t, () => { if (el.classList.contains("down")) press(id, false); }));
+  el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); press(id, true); setTimeout(() => press(id, false), 80); } });
+  $("btns").appendChild(el);
+  btnEls[id] = { el, led: el.querySelector(".led") };
+}
+function makeEnc(parent, name, enc, cls) {
+  const w = document.createElement("div"), k = document.createElement("div"), b = document.createElement("b"), i = document.createElement("i");
+  w.className = "enc" + (cls ? " " + cls : ""); k.className = "knob"; k.tabIndex = 0; k.setAttribute("role", "slider"); k.setAttribute("aria-label", name);
+  b.textContent = name; i.textContent = " ";
+  w.append(k, b, i); parent.appendChild(w);
+  let ang = 0, y0 = null, acc = 0;
+  const turn = s => { if (!s) return; ang += s * 12; k.style.setProperty("--a", ang + "deg"); send({ t: "turn", enc, steps: s }); };
+  k.addEventListener("pointerdown", e => { y0 = e.clientY; acc = 0; k.setPointerCapture(e.pointerId); });
+  k.addEventListener("pointermove", e => { if (y0 === null) return; acc += (y0 - e.clientY); y0 = e.clientY; const s = Math.trunc(acc / 6); if (s) { acc -= s * 6; turn(s); } });
+  k.addEventListener("pointerup", () => { y0 = null; });
+  k.addEventListener("wheel", e => { e.preventDefault(); turn(e.deltaY < 0 ? 1 : -1); }, { passive: false });
+  k.addEventListener("keydown", e => { if (e.key === "ArrowUp" || e.key === "ArrowRight") { e.preventDefault(); e.stopPropagation(); turn(1); } else if (e.key === "ArrowDown" || e.key === "ArrowLeft") { e.preventDefault(); e.stopPropagation(); turn(-1); } });
+  return { turn, label: i };
+}
+const encs = {};
+encs.SELECT = makeEnc($("encs"), "SELECT", ENC.SELECT);
+encs.ALGO = makeEnc($("encs"), "ALGO", ENC.ALGO);
+encs.PRESETS = makeEnc($("encs"), "PRESETS", ENC.PRESETS);
+encs.SELECT.label.textContent = "ligne"; encs.ALGO.label.textContent = "valeur"; encs.PRESETS.label.textContent = "patch";
+["K1", "K2", "K3", "K4"].forEach((n, i) => { encs[n] = makeEnc($("knobs"), n, ENC[n], "k"); knobLab[i] = encs[n].label; });
+
+/* ---- the 27 keys, F3 .. G5 */
+const NAMES = ["F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E"];
+const keyEls = [];
+let mask = 0;
+(function layoutKeys() {
+  const host = $("keys"), whites = [];
+  for (let k = 0; k < 27; k++) if (!NAMES[k % 12].includes("#")) whites.push(k);
+  const ww = 100 / whites.length;
+  for (let k = 0; k < 27; k++) {
+    const el = document.createElement("div"), black = NAMES[k % 12].includes("#");
+    el.className = "key " + (black ? "b" : "w");
+    if (black) { const wi = whites.indexOf(k - 1); el.style.left = `calc(${(wi + 1) * ww}% - ${ww * 0.3}%)`; el.style.width = ww * 0.6 + "%"; }
+    else { const wi = whites.indexOf(k); el.style.left = wi * ww + "%"; el.style.width = `calc(${ww}% - 2px)`; if (NAMES[k % 12] === "C") el.innerHTML = "<span>C</span>"; }
+    el.addEventListener("pointerdown", e => { e.preventDefault(); el.setPointerCapture(e.pointerId); setKey(k, true); });
+    ["pointerup", "pointercancel"].forEach(t => el.addEventListener(t, () => setKey(k, false)));
+    host.appendChild(el); keyEls[k] = el;
+  }
+})();
+function setKey(k, on) {
+  const m = mask;
+  mask = on ? mask | (1 << k) : mask & ~(1 << k);
+  if (m !== mask) { send({ t: "keys", mask }); keyEls[k].classList.toggle("on", on); }
+}
+
+/* ---- the computer's keyboard */
+const LOW = ["KeyZ", "KeyS", "KeyX", "KeyD", "KeyC", "KeyF", "KeyV", "KeyB", "KeyH", "KeyN", "KeyJ", "KeyM", "Comma", "KeyL", "Period", "Semicolon", "Slash"];
+const HIGH = ["KeyQ", "Digit2", "KeyW", "Digit3", "KeyE", "Digit4", "KeyR", "KeyT", "Digit6", "KeyY", "Digit7", "KeyU", "KeyI", "Digit9", "KeyO"];
+const PAGE_KEYS = ["HOME", "EDIT", "ENV", "SEQ", "LFO", "FX", "ARP", "GLO"];
+function keyOf(code) { let i = LOW.indexOf(code); if (i >= 0) return i; i = HIGH.indexOf(code); return i >= 0 ? 12 + i : -1; }
+function tapBtn(id) { press(id, true); setTimeout(() => press(id, false), 70); }
+window.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target.tagName === "INPUT") return;
+  if (e.shiftKey && /^Digit[1-8]$/.test(e.code)) { e.preventDefault(); tapBtn(BTN[PAGE_KEYS[+e.code[5] - 1]]); return; }
+  const k = keyOf(e.code);
+  if (k >= 0) { e.preventDefault(); if (!e.repeat) setKey(k, true); return; }
+  if (e.code === "Backspace") { e.preventDefault(); if (!e.repeat) press(BTN.SAVE, true); return; }   /* held: undo */
+  if (e.code === "Minus" || e.code === "Equal") { e.preventDefault(); if (!e.repeat) press(e.code === "Minus" ? BTN.OCT_DOWN : BTN.OCT_UP, true); return; }   /* held: SHIFT (version B) */
+  const map = { ArrowUp: () => encs.SELECT.turn(-1), ArrowDown: () => encs.SELECT.turn(1), ArrowLeft: () => encs.ALGO.turn(-1),
+    ArrowRight: () => encs.ALGO.turn(1), PageUp: () => encs.PRESETS.turn(-1), PageDown: () => encs.PRESETS.turn(1),
+    Tab: () => tapBtn(BTN.SEL), Space: () => tapBtn(BTN.PLAY), Enter: () => tapBtn(BTN.REC) };
+  const f = map[e.code];
+  if (f && !(e.code === "Enter" && e.target.tagName === "BUTTON")) { e.preventDefault(); if (!e.repeat || e.code.startsWith("Arrow") || e.code.startsWith("Page")) f(); }
+});
+window.addEventListener("keyup", e => { const k = keyOf(e.code); if (k >= 0) setKey(k, false); if (e.code === "Backspace") press(BTN.SAVE, false);
+  if (e.code === "Minus") press(BTN.OCT_DOWN, false); if (e.code === "Equal") press(BTN.OCT_UP, false); });
+window.addEventListener("blur", () => { for (let k = 0; k < 27; k++) setKey(k, false); });
+
+/* ---- MIDI in (a controller, a DAW's clock) */
+$("midi").addEventListener("click", async () => {
+  if (!navigator.requestMIDIAccess) { $("status").textContent = "Web MIDI n'est pas disponible dans ce navigateur."; return; }
+  try {
+    const acc = await navigator.requestMIDIAccess();
+    const hook = () => { let n = 0; acc.inputs.forEach(i => { n++; i.onmidimessage = m => { const d = m.data; if (d.length && d[0] !== 0xFE) send({ t: "midi", st: d[0], d1: d[1] || 0, d2: d[2] || 0 }); }; }); $("status").textContent = n + " entrée(s) MIDI branchée(s)."; };
+    acc.onstatechange = hook; hook();
+  } catch (err) { $("status").textContent = "Accès MIDI refusé."; }
+});
+
+startIdle();
+</script>
