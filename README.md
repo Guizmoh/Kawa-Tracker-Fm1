@@ -127,3 +127,5 @@ also receives its source code. Built on [Dinghy](https://github.com/zvenson/ding
 [LICENSING.md](LICENSING.md). "M-VAVE" and "FM-1" belong to their owners; KAWA is neither made nor endorsed by them.
 
 *For developers:* the source, the build, the tests and the file formats are in [`source/`](source/BUILDING.md).
+
+You can also try KAWA in the browser, no flashing needed, in the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
